@@ -1,0 +1,10 @@
+# misc
+.DS_Store
+
+# vim temp files
+*.swp
+*.swo
+*~
+
+# logs
+*.log

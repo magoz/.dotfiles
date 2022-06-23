@@ -1,0 +1,9 @@
+[user]
+  name = magoz
+  email = apps@magoz.is
+[core]
+  editor = nvim
+[pull]
+	ff = only
+[init]
+	defaultBranch = main
