@@ -1,0 +1,16 @@
+# Start / attach a new tmux session on launch
+if [ -z "$TMUX" ]
+then
+    tmux attach -t TMUX || tmux new -s TMUX
+fi
+
+# ls after cd
+# https://blog.meain.io/2019/automatically-ls-after-cd/
+function list_all() {
+  emulate -L zsh
+  ls
+}
+
+if [[ ${chpwd_functions[(r)list_all]} != "list_all" ]];then
+  chpwd_functions=(${chpwd_functions[@]} "list_all")
+fi

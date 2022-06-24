@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# User shell colors
+export CLICOLOR=1
+
+# Environment variables set everywhere
+export EDITOR="nvim"
+export TERMINAL="iterm2"
+export BROWSER="chrome"
+
+# nnn
+export NNN_PLUG='v:imgview'
+
+# -------------------------------
+#         ANDROID STUDIO
+# -------------------------------
+export ANDROID_HOME=$HOME/Library/Android/sdk
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH=$PATH:$ANDROID_HOME/tools
+export PATH=$PATH:$ANDROID_HOME/tools/bin
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+
+# ---------------------------------------------
+#               ORIGINAL CONFIG
+# https://github.com/Mach-OS/Machfiles/blob/6373a1fd1e42ca2fd8babd95ef4acce9164c86c3/zsh/.config/zsh/zsh-exports
+#
+# ---------------------------------------------
+
+# HISTFILE="$XDG_DATA_HOME"/zsh/history
+HISTSIZE=1000000
+SAVEHIST=1000000
+export PATH="$HOME/.local/bin":$PATH
+export MANPAGER='nvim +Man!'
+export MANWIDTH=999
+export PATH=$HOME/.cargo/bin:$PATH
+export PATH=$HOME/.local/share/go/bin:$PATH
+export GOPATH=$HOME/.local/share/go
+export PATH="$PATH:./node_modules/.bin"
+
+
+

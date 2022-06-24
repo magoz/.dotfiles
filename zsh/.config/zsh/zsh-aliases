@@ -1,0 +1,40 @@
+#!/bin/sh
+
+# VIM
+alias vim='nvim'
+alias vi='nvim'
+
+# Quicklook
+alias ql='function _qlfunc(){ qlmanage -p $@ >/dev/null 2>&1 &};_qlfunc'
+
+# ---------------------------------------------
+#               ORIGINAL CONFIG
+# https://github.com/Mach-OS/Machfiles/blob/6373a1fd1e42ca2fd8babd95ef4acce9164c86c3/zsh/.config/zsh/zsh-aliases
+#
+# ---------------------------------------------
+
+alias j='z'
+alias f='zi'
+alias g='lazygit'
+alias zsh-update-plugins="find "$ZDOTDIR/plugins" -type d -exec test -e '{}/.git' ';' -print0 | xargs -I {} -0 git -C {} pull -q"
+alias nvimrc='nvim ~/.config/nvim/'
+
+# Colorize grep output (good for log files)
+alias grep='grep --color=auto'
+alias egrep='egrep --color=auto'
+alias fgrep='fgrep --color=auto'
+
+# confirm before overwriting something
+alias cp="cp -i"
+alias mv='mv -i'
+alias rm='rm -i'
+
+# easier to read disk
+alias df='df -h'     # human-readable sizes
+alias free='free -m' # show sizes in MB
+
+# get top process eating memory
+alias psmem='ps auxf | sort -nr -k 4 | head -5'
+
+# get top process eating cpu ##
+alias pscpu='ps auxf | sort -nr -k 3 | head -5'

@@ -12,14 +12,6 @@ brew install \
   stow \
   zsh \
 
-# -------------------------------------- 
-# --------------- ZSH ------------------
-# -------------------------------------- 
-echo "✨ Installing zsh plugins"
-brew install \
-  zsh-autosuggestions \
-  zsh-syntax-highlighting
-
 
 # -------------------------------------- 
 # --------------  STOW -----------------
