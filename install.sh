@@ -37,6 +37,12 @@ sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.
 # -------------  ITERM2 ----------------
 # -------------------------------------- 
 
+
+echo "🔤 Installing Powerline fonts"
+git clone https://github.com/powerline/fonts.git --depth=1
+./fonts/install.sh
+rm -rf fonts
+
 echo "🤖 Installing Iterm2 config"
 # Specify the preferences directory
 defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "~/.dotfiles/iterm2"
