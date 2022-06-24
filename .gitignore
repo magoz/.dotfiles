@@ -1,6 +1,9 @@
 # misc
 .DS_Store
 
+# plugged
+nvim/.config/nvim/plugged/
+
 # vim temp files
 *.swp
 *.swo
