@@ -1359,7 +1359,7 @@
 			<key>Non Ascii Font</key>
 			<string>SymbolNeuForPowerline 12</string>
 			<key>Non-ASCII Anti Aliased</key>
-			<true/>
+			<false/>
 			<key>Non-ASCII Ligatures</key>
 			<false/>
 			<key>Normal Font</key>
