@@ -13,15 +13,6 @@ brew install \
   zsh \
 
 # -------------------------------------- 
-# ------------ OH MY ZSH ---------------
-# -------------------------------------- 
-
-rm -rf ~/.zshrc
-rm -rf ~/.oh-my-zsh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-rm -rf ~/.zshrc
-
-# -------------------------------------- 
 # --------------- ZSH ------------------
 # -------------------------------------- 
 echo "✨ Installing zsh plugins"
@@ -54,7 +45,7 @@ sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.
 # -------------  ITERM2 ----------------
 # -------------------------------------- 
 
-echo "🪄 Installing vim-plug"
+echo "🤖 Installing Iterm2 config"
 # Specify the preferences directory
 defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "~/.dotfiles/iterm2"
 

@@ -1,25 +1,9 @@
+# User shell colors
+export CLICOLOR=1;
+
 alias vim='nvim'
 alias vi='nvim'
-
-# Enable VIM mode
-bindkey -v
-
-export ZSH=/Users/magoz/.oh-my-zsh
-ZSH_CUSTOM=$HOME/.config/oh-my-zsh/custom
-
-ZSH_THEME="hyperzsh"
-
-plugins=(
-  git
-  macos
-)
-
-source $ZSH/oh-my-zsh.sh
-
-zstyle ':omz:update' mode auto
-
 cd ~/dev/core-projects
-
 
 # nnn
 export NNN_PLUG='v:imgview'
