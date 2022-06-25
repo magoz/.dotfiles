@@ -5,6 +5,7 @@ require "user.colorscheme"
 
 require "user.plugins"
 require "user.plugins.cmp"
+require "user.plugins.harpoon"
 require "user.plugins.telescope"
 require "user.plugins.treesitter"
 require "user.plugins.autopairs"
