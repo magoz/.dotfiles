@@ -1,8 +1,11 @@
 # misc
 .DS_Store
 
-# plugged
-nvim/.config/nvim/plugged/
+# nvim
+nvim/.config/nvim/plugin/packer_compiled.lua
+
+# iterm2
+iterm2/.config/iterm2/AppSupport
 
 # vim temp files
 *.swp

@@ -8,6 +8,7 @@ cd "$(dirname "$0")"
 echo "🍺 Installing packages with Homebrew"
 brew install \
   bat \
+  iterm2 \
   neovim \
   stow \
   zsh \
@@ -18,34 +19,24 @@ brew install \
 # -------------------------------------- 
 
 echo "🔗 Running Stow"
+stow stow
 stow nvim
+stow iterm2 
 stow zsh
-stow oh-my-zsh
 stow tmux
 stow git
-
-# -------------------------------------- 
-# -----------  VIM PLUG ----------------
-# -------------------------------------- 
-
-echo "🔌 Installing vim-plug"
-sh -c 'curl -fLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
-       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
-
 
 # -------------------------------------- 
 # -------------  ITERM2 ----------------
 # -------------------------------------- 
 
-
-echo "🔤 Installing Powerline fonts"
-git clone https://github.com/powerline/fonts.git --depth=1
-./fonts/install.sh
-rm -rf fonts
+echo "✨ Install Hack Nerd font for symbols"
+brew tap homebrew/cask-fonts
+brew install --cask font-hack-nerd-font
 
 echo "🤖 Installing Iterm2 config"
 # Specify the preferences directory
-defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "~/.dotfiles/iterm2"
+defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "~/.config/iterm2/profile"
 
 # Tell iTerm2 to use the custom preferences in the directory
 defaults write com.googlecode.iterm2.plist LoadPrefsFromCustomFolder -bool true
