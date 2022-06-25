@@ -19,3 +19,8 @@
 - Add prettier
 - Add ts linting
 
+- See if we can find lsp for mdx
+  - [https://github.com/mdx-js/eslint-mdx]
+  - [https://github.com/mdx-js/vscode-mdx]
+
+
