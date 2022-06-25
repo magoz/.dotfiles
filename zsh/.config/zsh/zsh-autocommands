@@ -1,3 +1,6 @@
+# starting directory on launch
+cd ~/.dotfiles
+
 # Start / attach a new tmux session on launch
 if [ -z "$TMUX" ]
 then
@@ -8,7 +11,7 @@ fi
 # https://blog.meain.io/2019/automatically-ls-after-cd/
 function list_all() {
   emulate -L zsh
-  ls
+  ls -a
 }
 
 if [[ ${chpwd_functions[(r)list_all]} != "list_all" ]];then
