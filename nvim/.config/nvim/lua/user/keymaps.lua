@@ -15,12 +15,23 @@ vim.g.mapleader = " "
 --   term_mode = "t",
 --   command_mode = "c",
 
--- Normal --
+-- --------------------------------------------------
+-- ---------------- Normal Mode ---------------------
+-- --------------------------------------------------
+-- Move lines up and down
+-- https://dockyard.com/blog/2013/09/26/vim-moving-lines-aint-hard
+keymap("n", "<C-j>", "<ESC>:m .+1<CR>==", opts)
+keymap("n", "<C-k>", "<ESC>:m .-2<CR>==", opts)
+
+-- Duplicate lines up and down
+keymap("n", "<C-h>", ":t-1<CR>==", opts)
+keymap("n", "<C-l>", ":t.<CR>==", opts)
+
 -- Better window navigation
-keymap("n", "<C-h>", "<C-w>h", opts)
-keymap("n", "<C-j>", "<C-w>j", opts)
-keymap("n", "<C-k>", "<C-w>k", opts)
-keymap("n", "<C-l>", "<C-w>l", opts)
+-- keymap("n", "<C-h>", "<C-w>h", opts)
+-- keymap("n", "<C-j>", "<C-w>j", opts)
+-- keymap("n", "<C-k>", "<C-w>k", opts)
+-- keymap("n", "<C-l>", "<C-w>l", opts)
 
 -- Resize with arrows
 keymap("n", "<C-Up>", ":resize -2<CR>", opts)
@@ -38,28 +49,48 @@ keymap("n", "<leader>h", "<cmd>nohlsearch<CR>", opts)
 -- Close buffers
 keymap("n", "<S-q>", "<cmd>Bdelete!<CR>", opts)
 
--- Better paste
-keymap("v", "p", '"_dP', opts)
+-- --------------------------------------------------
+-- ---------------- Insert Mode ---------------------
+-- --------------------------------------------------
+-- Move lines up and down
+keymap("i", "<C-j>", "<ESC>:m .+1<CR>==gi", opts)
+keymap("i", "<C-k>", "<ESC>:m .-2<CR>==gi", opts)
 
--- Insert --
--- Press jk fast to enter
+-- Duplicate lines up and down
+keymap("i", "<C-h>", "<ESC> :t-1<CR>==i", opts)
+keymap("i", "<C-l>", "<ESC> :t.<CR>==i", opts)
+
+-- Press jj ,kk, jk to exit insert mode
+keymap("i", "jj", "<ESC>", opts)
+keymap("i", "kk", "<ESC>", opts)
 keymap("i", "jk", "<ESC>", opts)
 
--- Visual --
+-- --------------------------------------------------
+-- ---------------- Visual Mode ---------------------
+-- --------------------------------------------------
+-- Move lines up and down
+keymap("v", "<C-j>", ":m '>+1<CR>gv=gv", opts)
+keymap("v", "<C-k>", ":m '<-2<CR>gv=gv", opts)
+
+-- Duplicate lines up and down
+keymap("v", "<C-h>", ":t '<-1<CR>==", opts)
+keymap("v", "<C-l>", ":t '>.<CR>==", opts)
+
 -- Stay in indent mode
 keymap("v", "<", "<gv", opts)
 keymap("v", ">", ">gv", opts)
 
--- Plugins --
+-- Better paste
+-- keymap("v", "p", '"_dP', opts)
+
+-- --------------------------------------------------------
+-- --------------------------------------------------------
+-- ---------------------- Plugins -------------------------
+-- --------------------------------------------------------
+-- --------------------------------------------------------
 
 -- NvimTree
 keymap("n", "<leader>e", ":NvimTreeToggle<CR>", opts)
-
--- Telescope
-keymap("n", "<leader>ff", ":Telescope find_files<CR>", opts)
-keymap("n", "<leader>ft", ":Telescope live_grep<CR>", opts)
-keymap("n", "<leader>fp", ":Telescope projects<CR>", opts)
-keymap("n", "<leader>fb", ":Telescope buffers<CR>", opts)
 
 -- Git
 keymap("n", "<leader>gg", "<cmd>lua _LAZYGIT_TOGGLE()<CR>", opts)
