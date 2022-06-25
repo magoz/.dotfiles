@@ -38,3 +38,12 @@ function _LAZYGIT_TOGGLE()
 	lazygit:toggle()
 end
 
+
+-- ---------------------------------
+-- ----------- REMAPS --------------
+-- ---------------------------------
+local keymap = vim.keymap.set
+local opts = { silent = true }
+
+keymap("n", "<leader>gg", "<cmd>lua _LAZYGIT_TOGGLE()<CR>", opts)
+

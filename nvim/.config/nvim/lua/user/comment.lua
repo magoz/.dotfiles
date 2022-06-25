@@ -20,3 +20,12 @@ comment.setup {
     }
   end,
 }
+
+-- ---------------------------------
+-- ----------- REMAPS --------------
+-- ---------------------------------
+local keymap = vim.keymap.set
+local opts = { silent = true }
+
+keymap("n", "<leader>/", "<cmd>lua require('Comment.api').toggle_current_linewise()<CR>", opts)
+keymap("x", "<leader>/", '<ESC><CMD>lua require("Comment.api").toggle_linewise_op(vim.fn.visualmode())<CR>')

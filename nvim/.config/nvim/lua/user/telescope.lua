@@ -27,7 +27,6 @@ telescope.setup {
 -- ---------------------------------
 -- ----------- REMAPS --------------
 -- ---------------------------------
--- Shorten function name
 local keymap = vim.keymap.set
 local opts = { silent = true }
 

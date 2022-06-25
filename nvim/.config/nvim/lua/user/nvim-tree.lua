@@ -66,3 +66,11 @@ nvim_tree.setup {
     },
   },
 }
+
+-- ---------------------------------
+-- ----------- REMAPS --------------
+-- ---------------------------------
+local keymap = vim.keymap.set
+local opts = { silent = true }
+
+keymap("n", "<leader>e", ":NvimTreeToggle<CR>", opts)
