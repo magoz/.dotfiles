@@ -13,14 +13,17 @@
 
 ### Neovim
 
-- Rremove bufferline
+- Display diagnostics
+- Remove bufferline
 - Format on save
+  - [https://github.com/jose-elias-alvarez/null-ls.nvim/discussions/548]
+    - Configure [https://github.com/jose-elias-alvarez/nvim-lsp-ts-utils]
 - Test a react project
   - go to definition
   - linting
   - code formatting
   - additional resources we might want
-    - Configure https://github.com/jose-elias-alvarez/nvim-lsp-ts-utils
+    - Configure [https://github.com/jose-elias-alvarez/nvim-lsp-ts-utils]
     - [https://github.com/jose-elias-alvarez/typescript.nvim]
 - See if we can find lsp for mdx
   - [https://github.com/mdx-js/eslint-mdx]
