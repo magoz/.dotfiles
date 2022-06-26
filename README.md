@@ -25,6 +25,7 @@
   - additional resources we might want
     - Configure [https://github.com/jose-elias-alvarez/nvim-lsp-ts-utils]
     - [https://github.com/jose-elias-alvarez/typescript.nvim]
+- Try `which-key`: [https://github.com/folke/which-key.nvim]
 - See if we can find lsp for mdx
   - [https://github.com/mdx-js/eslint-mdx]
   - [https://github.com/mdx-js/vscode-mdx]
