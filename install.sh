@@ -14,6 +14,7 @@ rm -rf tmux/.config/tmux/plugins
 echo "🍺 Installing packages with Homebrew"
 brew install \
   bat \
+  git \
   iterm2 \
   lazygit \
   neovim \

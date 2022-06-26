@@ -19,8 +19,12 @@ zle_highlight=('paste:none')
 # beeping is annoying
 unsetopt BEEP
 
-# completions
-autoload -Uz compinit
+# Completions
+# autoload -Uz compinit
+fpath=(/usr/local/share/zsh-completions $fpath)
+rm -f "$HOME/.dotfiles/zsh/.config/zsh/.zcompdump"
+
+autoload -U compinit; compinit
 zstyle ':completion:*' menu select
 # zstyle ':completion::complete:lsof:*' menu yes select
 zmodload zsh/complist
@@ -48,12 +52,11 @@ zsh_add_file "zsh-prompt"
 # Plugins
 zsh_add_plugin "zsh-users/zsh-autosuggestions"
 zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
+zsh_add_file "zsh-users/zsh-completions"
 zsh_add_plugin "hlissner/zsh-autopair"
 zsh_add_plugin "sindresorhus/pure"
 
-
 # For more plugins: https://github.com/unixorn/awesome-zsh-plugins
-# More completions https://github.com/zsh-users/zsh-completions
 
 # Key-bindings
 bindkey -s '^o' 'ranger^M'
