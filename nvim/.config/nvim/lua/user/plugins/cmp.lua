@@ -1,3 +1,7 @@
+-- Based on
+-- https://github.com/LunarVim/nvim-basic-ide/blob/49d8b68a139421b9f7cbe80650b30d6bad84c540/lua/user/cmp.lua
+-- https://www.youtube.com/watch?v=GuIcGxYqaQQ
+
 local cmp_status_ok, cmp = pcall(require, "cmp")
 if not cmp_status_ok then
 	return
@@ -17,11 +21,11 @@ end
 
 local kind_icons = {
 	Text = "",
-	Method = "",
-	Function = "",
-	Constructor = "",
+	Method = "m",
+	Function = "",
+	Constructor = "",
 	Field = "",
-	Variable = "",
+	Variable = "",
 	Class = "",
 	Interface = "",
 	Module = "",
@@ -30,7 +34,7 @@ local kind_icons = {
 	Value = "",
 	Enum = "",
 	Keyword = "",
-	Snippet = "",
+	Snippet = "",
 	Color = "",
 	File = "",
 	Reference = "",
@@ -63,6 +67,8 @@ cmp.setup({
 		-- Accept currently selected item. If none selected, `select` first item.
 		-- Set `select` to `false` to only confirm explicitly selected items.
 		["<CR>"] = cmp.mapping.confirm({ select = true }),
+
+    -- Supertab. the ability to jump into next step into the snippet
 		["<Tab>"] = cmp.mapping(function(fallback)
 			if cmp.visible() then
 				cmp.select_next_item()
@@ -97,12 +103,11 @@ cmp.setup({
 		format = function(entry, vim_item)
 			vim_item.kind = kind_icons[vim_item.kind]
 			vim_item.menu = ({
-				nvim_lsp = "",
-				nvim_lua = "",
-				luasnip = "",
-				buffer = "",
-				path = "",
-				emoji = "",
+        nvim_lsp = "LSP",
+        luasnip = "Snippet",
+        buffer = "Buffer",
+        path = "Path",
+				emoji = "Emoji",
 			})[entry.source.name]
 			return vim_item
 		end,
