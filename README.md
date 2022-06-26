@@ -8,8 +8,12 @@
 
 ### ZSH
 
-- add padding-bottom to promt, sine it's too close to the edge.
 - customize completion colors [https://github.com/finnurtorfa/zsh/blob/master/completion.zsh]
+
+### Tmux
+
+- add padding-bottom to promt, sine it's too close to the edge.
+  - [https://www.reddit.com/r/tmux/comments/rascjp/comment/hnmqe69/?utm_source=share&utm_medium=web2x&context=3]
 
 ### Neovim
 
