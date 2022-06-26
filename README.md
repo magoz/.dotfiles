@@ -13,12 +13,10 @@
 
 ### Neovim
 
-- Port vscode to neovim
-- Fix telescope  not finding files
 - Check if go to definition works in a real project
 - Add prettier
 - Add ts linting
-
+- Configure https://github.com/jose-elias-alvarez/nvim-lsp-ts-utils
 - See if we can find lsp for mdx
   - [https://github.com/mdx-js/eslint-mdx]
   - [https://github.com/mdx-js/vscode-mdx]
