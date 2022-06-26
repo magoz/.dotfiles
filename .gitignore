@@ -1,6 +1,10 @@
 # misc
 .DS_Store
 
+# tmux
+tmux/.config/plugins
+
+
 # nvim
 nvim/.config/nvim/plugin/packer_compiled.lua
 
