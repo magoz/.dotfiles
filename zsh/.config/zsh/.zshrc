@@ -1,78 +1,102 @@
 #!/bin/sh
 
-# ---------------------------------------------
-#               ORIGINAL CONFIG
+# based on
 # https://github.com/Mach-OS/Machfiles/blob/6373a1fd1e42ca2fd8babd95ef4acce9164c86c3/zsh/.config/zsh/.zshrc
-#
-# ---------------------------------------------
+# https://www.youtube.com/watch?v=bTLYiNvRIVI
 
+# Set zsh direcory
 export ZDOTDIR=$HOME/.config/zsh
-HISTFILE=~/.zsh_history
-setopt appendhistory
 
-# some useful options (man zshoptions)
-setopt autocd extendedglob nomatch menucomplete
-setopt interactive_comments
-stty stop undef		# Disable ctrl-s to freeze terminal.
-zle_highlight=('paste:none')
+# ---------------------------------
+# ---------- OPTIONS --------------
+# ---------------------------------
+# More: https://linux.die.net/man/1/zshoptions 
 
-# beeping is annoying
-unsetopt BEEP
+# General 
+setopt no_beep                             # Prevent making sounds on erros
+setopt auto_cd                             # If a command is issued that can't be executed as a normal command, perform the cd command to that directory. 
+setopt extended_glob                       # Treat the '#', '~' and '^' characters as part of patterns for filename generation.
+setopt nomatch                             # If a pattern for filename generation has no matches, print an error.
+setopt menu_complete                       # On an ambiguous completion, instead of listing possibilities or beeping, insert the first match immediately.
+setopt interactive_comments                # Allow comments even in interactive shells.
 
-# Completions
-# autoload -Uz compinit
-fpath=(/usr/local/share/zsh-completions $fpath)
-rm -f "$HOME/.dotfiles/zsh/.config/zsh/.zcompdump"
+# History
+export HISTFILE=ZDOTDIR/.zsh_history       # History file
+export HISTFILESIZE=1000000000             # History file size
+export SAVEHIST=500000                     # Number of commands that are stored in the zsh history file
+export HISTSIZE=500000                     # Number of commands that are loaded into memory from the history file
+setopt append_history                      # zsh sessions will append their history list to the history file, rather than replace it.
+setopt inc_append_history                  # Ensure that commands are added to the history immediately
+setopt extended_history                    # Records the timestamp of each command in HISTFILE
+setopt hist_find_no_dups                   # Up and down arrows skip duplicates and show each command only once with (duplicate commands are still written to the history)
+setopt hist_ignore_space                   # ignore commands that start with space
+setopt hist_verify                         # show command with history expansion to user before running it
+setopt share_history                       # share command history data
 
-autoload -U compinit; compinit
-zstyle ':completion:*' menu select
-# zstyle ':completion::complete:lsof:*' menu yes select
+# Colors 
+autoload -Uz colors && colors              # color support
+stty stop undef		                         # Disable ctrl-s to freeze terminal.
+zle_highlight=('paste:none')               # Stop pasted text being highlighted.
+
+# ---------------------------------
+# --------- COMPLETIONS -----------
+# ---------------------------------
+
+# Remove inferior completions that the git package provide.
+# That will force zsh to use it's own completion for git that is much better. More info:
+# https://github.com/Homebrew/homebrew-core/pull/59062#issuecomment-1084908889
+rm -f "$(brew --prefix)/share/zsh/site-functions/_git"
+
+FIGNORE=DS_Store # List of files to ignore in completion
+
+# Completions colors
+# https://github.com/finnurtorfa/zsh/blob/master/completion.zsh
+zstyle ':completion:*' list-colors '' # Color completions
+zstyle ':completion:*' menu select # Enable selected completion
+zstyle ":completion:*:default" list-colors ${(s.:.)LS_COLORS} "ma=48;5;153;1" # Color selected completion
+zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-]#)*=01;34=0=01'
+
+# Enable completions
 zmodload zsh/complist
-# compinit
-_comp_options+=(globdots)		# Include hidden files.
+autoload -U compinit; compinit
+_comp_options+=(globdots) # Include hidden files
 
-autoload -U up-line-or-beginning-search
-autoload -U down-line-or-beginning-search
-zle -N up-line-or-beginning-search
-zle -N down-line-or-beginning-search
+# case insensitive (all), partial-word and substring completion
+# https://github.com/ohmyzsh/ohmyzsh/blob/master/lib/completion.zsh
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z-_}={A-Za-z_-}' 'r:|=*' 'l:|=* r:|=*'
 
-# Colors
-autoload -Uz colors && colors
+# Completion settings
+unsetopt menu_complete                     # Do not autoselect the first completion entry
+setopt auto_menu                           # Show completion menu on successive tab press
+setopt complete_in_word                    # Cursor stays where it is and completion is done from both ends.
+setopt always_to_end                       # If a completion is performed with the cursor within a word, and a full completion is inserted, the cursor is moved to the end of the word
 
-# Useful Functions
+# ---------------------------------
+# ------- EDIT LINE IN VIM --------
+# ---------------------------------
+autoload edit-command-line; zle -N edit-command-line
+bindkey '^e' edit-command-line # use `ctrl + e` to edit current line in vim
+
+# ---------------------------------
+# ----- LOCAL FILES & UTILS -------
+# ---------------------------------
 source "$ZDOTDIR/zsh-functions"
-
-# Normal files to source
 zsh_add_file "zsh-autocommands"
 zsh_add_file "zsh-exports"
 zsh_add_file "zsh-vim-mode"
 zsh_add_file "zsh-aliases"
 zsh_add_file "zsh-prompt"
 
-# Plugins
+# ---------------------------------
+# ----------- PLUGINS -------------
+# ---------------------------------
+# For more plugins: https://github.com/unixorn/awesome-zsh-plugins
 zsh_add_plugin "zsh-users/zsh-autosuggestions"
 zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
 zsh_add_file "zsh-users/zsh-completions"
 zsh_add_plugin "hlissner/zsh-autopair"
 zsh_add_plugin "sindresorhus/pure"
 
-# For more plugins: https://github.com/unixorn/awesome-zsh-plugins
+#zsh-autosuggestions color
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=244'
 
-# Key-bindings
-bindkey -s '^o' 'ranger^M'
-bindkey -s '^f' 'zi^M'
-bindkey -s '^s' 'ncdu^M'
-# bindkey -s '^n' 'nvim $(fzf)^M'
-# bindkey -s '^v' 'nvim\n'
-bindkey -s '^z' 'zi^M'
-bindkey '^[[P' delete-char
-bindkey "^p" up-line-or-beginning-search # Up
-bindkey "^n" down-line-or-beginning-search # Down
-bindkey "^k" up-line-or-beginning-search # Up
-bindkey "^j" down-line-or-beginning-search # Down
-bindkey -r "^u"
-bindkey -r "^d"
-
-# Edit line in vim with ctrl-e:
-autoload edit-command-line; zle -N edit-command-line
-# bindkey '^e' edit-command-line

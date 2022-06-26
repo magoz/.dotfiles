@@ -8,8 +8,8 @@
 
 ### ZSH
 
-- fix git checkout autocompletion.
 - add padding-bottom to promt, sine it's too close to the edge.
+- customize completion colors [https://github.com/finnurtorfa/zsh/blob/master/completion.zsh]
 
 ### Neovim
 
