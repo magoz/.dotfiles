@@ -1,3 +1,7 @@
+-- Based on
+-- https://github.com/LunarVim/nvim-basic-ide/blob/master/lua/user/gitsigns.lua
+-- https://www.youtube.com/watch?v=ZgyVY7tArwg
+
 local status_ok, gitsigns = pcall(require, "gitsigns")
 if not status_ok then
   return
