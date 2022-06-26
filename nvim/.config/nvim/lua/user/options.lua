@@ -35,15 +35,15 @@ vim.opt.splitbelow = true                       -- force all horizontal splits t
 vim.opt.splitright = true                       -- force all vertical splits to go to the right of current window
 
 -- Interface
+vim.opt.showtabline = 0                         -- hide tabs and buffers
 vim.opt.cmdheight = 1                           -- more space in the neovim command line for displaying messages
 vim.opt.pumheight = 10                          -- pop up menu height
 vim.opt.signcolumn = "yes"                      -- always show the sign column, otherwise it would shift the text each time
 vim.opt.numberwidth = 4                         -- set number column width to 2 {default 4}
 vim.opt.showmode = false                        -- we don't need to see things like -- INSERT -- anymore
-vim.opt.showtabline = 0                         -- always show tabs
 vim.opt.showcmd = false
 vim.opt.ruler = false
-vim.opt.guifont = "monospace:h17"               -- the font used in graphical neovim applications
+-- vim.opt.guifont = "monospace:h17"               -- the font used in graphical neovim applications
 vim.opt.fillchars.eob=" "
 vim.opt.laststatus = 3                          -- Status bar
 

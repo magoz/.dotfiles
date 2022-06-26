@@ -13,8 +13,6 @@
 
 ### Neovim
 
-- Display diagnostics
-- Remove bufferline
 - Format on save
   - [https://github.com/jose-elias-alvarez/null-ls.nvim/discussions/548]
     - Configure [https://github.com/jose-elias-alvarez/nvim-lsp-ts-utils]
