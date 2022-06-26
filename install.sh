@@ -18,7 +18,7 @@ brew install \
   neovim \
   stow \
   tmux \
-  zsh \
+  zsh
 
 # -------------------------------------- 
 # --------------  STOW -----------------
@@ -34,8 +34,14 @@ stow git
 # -------------------------------------- 
 # -------------  NEOVIM ----------------
 # -------------------------------------- 
-# jsonls lsp
+# LSP
 npm i -g vscode-langservers-extracted
+
+# Formatters & Linters (diagnostics)
+brew install \
+  eslint \
+  prettier \
+  stylua
 
 # -------------------------------------- 
 # -------------  ITERM2 ----------------
