@@ -1,3 +1,7 @@
+-- Based on 
+-- https://github.com/LunarVim/nvim-basic-ide/blob/master/lua/user/lsp/handlers.lua
+-- https://www.youtube.com/watch?v=6F3ONwrCxMg&t=829s
+
 local M = {}
 
 M.setup = function()
