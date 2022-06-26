@@ -1,6 +1,7 @@
--- Based on 
+-- Based on
 -- https://github.com/LunarVim/nvim-basic-ide/blob/master/lua/user/lsp/handlers.lua
 -- https://www.youtube.com/watch?v=6F3ONwrCxMg&t=829s
+-- https://youtu.be/b7OguLuaYvE?t=1052
 
 local M = {}
 
@@ -64,6 +65,9 @@ local function lsp_keymaps(bufnr)
   keymap(bufnr, "n", "<leader>lr", "<cmd>lua vim.lsp.buf.rename()<cr>", opts)
   keymap(bufnr, "n", "<leader>ls", "<cmd>lua vim.lsp.buf.signature_help()<CR>", opts)
   keymap(bufnr, "n", "<leader>lq", "<cmd>lua vim.diagnostic.setloclist()<CR>", opts)
+
+  -- Create a command accessible via :Format that formats the document
+  vim.cmd [[ command! Format execute 'lua vim.lsp.buf.formatting()']]
 end
 
 M.on_attach = function(client, bufnr)
@@ -72,6 +76,9 @@ M.on_attach = function(client, bufnr)
     return
   end
 
+  -- Sometimes when opening a file, it asks to select a language server.
+  -- That's because the lsp is providing formatting and linting in addition to null-lsp.
+  -- We can force to use null-lsp by default for spefic clients like this:
   if client.name == "tsserver" then
     client.resolved_capabilities.document_formatting = false
   end
