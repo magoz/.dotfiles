@@ -8,7 +8,7 @@ local servers = {
   "cssls",
   "html",
   "eslint",
-  "remark_ls",
+  "marksman",
   "tsserver",
   "bashls",
   "jsonls",
@@ -31,11 +31,6 @@ for _, server in pairs(servers) do
     on_attach = require("user.plugins.lsp.handlers").on_attach,
     capabilities = require("user.plugins.lsp.handlers").capabilities,
   }
-
-  if server == "sumneko_lua" then
-    local sumneko_opts = require "user.plugins.lsp.settings.sumneko_lua"
-    opts = vim.tbl_deep_extend("force", sumneko_opts, opts)
-  end
 
   if server == "sumneko_lua" then
     local sumneko_opts = require "user.plugins.lsp.settings.sumneko_lua"
