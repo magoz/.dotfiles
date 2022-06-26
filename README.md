@@ -13,10 +13,15 @@
 
 ### Neovim
 
-- Check if go to definition works in a real project
-- Add prettier
-- Add ts linting
-- Configure https://github.com/jose-elias-alvarez/nvim-lsp-ts-utils
+- Rremove bufferline
+- Format on save
+- Test a react project
+  - go to definition
+  - linting
+  - code formatting
+  - additional resources we might want
+    - Configure https://github.com/jose-elias-alvarez/nvim-lsp-ts-utils
+    - [https://github.com/jose-elias-alvarez/typescript.nvim]
 - See if we can find lsp for mdx
   - [https://github.com/mdx-js/eslint-mdx]
   - [https://github.com/mdx-js/vscode-mdx]
