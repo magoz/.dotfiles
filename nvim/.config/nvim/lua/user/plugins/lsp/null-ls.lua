@@ -17,7 +17,7 @@ local formatting = null_ls.builtins.formatting
 -- Hover: https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/hover
 
 null_ls.setup {
-  debug = true,
+  debug = false,
   sources = {
     formatting.prettier.with {
       extra_filetypes = { "toml" }
