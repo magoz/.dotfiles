@@ -1,11 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
 # VIM
 alias vim='nvim'
 alias vi='nvim'
 
 # Quicklook
-alias ql='function _qlfunc(){ qlmanage -p $@ >/dev/null 2>&1 &};_qlfunc'
+ql() {
+  qlmanage -p "$@" >&/dev/null
+}
 
 # ---------------------------------------------
 #               ORIGINAL CONFIG

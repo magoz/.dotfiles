@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+
 fpath+="$ZDOTDIR/plugins/pure"
 
 autoload -U promptinit; promptinit
@@ -10,3 +11,4 @@ zstyle :prompt:pure:git:dirty color yellow
 zstyle :prompt:pure:git:stash show yes
 
 prompt pure
+
