@@ -21,6 +21,18 @@ telescope.setup {
         ["<C-k>"] = actions.move_selection_previous,
       },
     },
+
+     vimgrep_arguments = {
+      'rg',
+      '--color=never',
+      '--no-heading',
+      '--with-filename',
+      '--line-number',
+      '--column',
+      '--smart-case',
+      '-uu' -- search hidden files
+    },
+
   },
 }
 
