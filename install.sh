@@ -1,5 +1,7 @@
 #!/bin/bash
-cd "$(dirname "$0")"
+
+# set current directory, in case the script is called from another directory.
+cd "$(dirname "$0")" || exit
 
 # -------------------------------------- 
 # ------ CLEANUP EXISTING CONF ---------
@@ -9,7 +11,6 @@ rm -rf tmux/.config/tmux/plugins
 # -------------------------------------- 
 # ---------  INSTALL PACKAGES ----------
 # -------------------------------------- 
-
 echo "🍺 Installing packages with Homebrew"
 brew install \
   bat \
@@ -18,7 +19,6 @@ brew install \
   stow \
   tmux \
   zsh \
-
 
 # -------------------------------------- 
 # --------------  STOW -----------------
@@ -34,10 +34,8 @@ stow git
 # -------------------------------------- 
 # -------------  NEOVIM ----------------
 # -------------------------------------- 
-
-
-
-
+# jsonls lsp
+npm i -g vscode-langservers-extracted
 
 # -------------------------------------- 
 # -------------  ITERM2 ----------------
@@ -48,11 +46,10 @@ brew install --cask font-hack-nerd-font
 
 echo "🤖 Installing Iterm2 config"
 # Specify the preferences directory
-defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "~/.config/iterm2/profile"
+defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "$HOME/.config/iterm2/profile"
 
 # Tell iTerm2 to use the custom preferences in the directory
 defaults write com.googlecode.iterm2.plist LoadPrefsFromCustomFolder -bool true
-
 
 # -------------------------------------- 
 # ------------- TMUX ----------------
