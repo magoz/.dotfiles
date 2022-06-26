@@ -15,6 +15,7 @@ echo "🍺 Installing packages with Homebrew"
 brew install \
   bat \
   iterm2 \
+  lazygit \
   neovim \
   stow \
   tmux \
