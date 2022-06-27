@@ -7,7 +7,7 @@ local servers = {
   "sumneko_lua",
   "cssls",
   "html",
-  "eslint",
+  -- "eslint",
   "marksman",
   "tsserver",
   "bashls",
