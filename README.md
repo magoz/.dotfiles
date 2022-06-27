@@ -17,9 +17,6 @@
 
 ### Neovim
 
-- Format on save
-  - [https://github.com/jose-elias-alvarez/null-ls.nvim/discussions/548]
-    - Configure [https://github.com/jose-elias-alvarez/nvim-lsp-ts-utils]
 - Test a react project
   - go to definition
   - linting
