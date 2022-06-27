@@ -17,6 +17,9 @@
 
 ### Neovim
 
+- Git history to review old version of file
+ - https://github.com/tanvirtin/vgit.nvim
+ - https://github.com/tpope/vim-fugitive
 - Test a react project
   - go to definition
   - linting
