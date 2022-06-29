@@ -63,6 +63,7 @@ defaults write com.googlecode.iterm2.plist LoadPrefsFromCustomFolder -bool true
 # -------------------------------------- 
 # ------------- TMUX ----------------
 # -------------------------------------- 
+tmux kill-server
 tmux source ~/.config/tmux/.tmux.conf
 echo "✅ Sourced Tmux"
 
