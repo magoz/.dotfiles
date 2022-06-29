@@ -7,6 +7,7 @@ cd "$(dirname "$0")" || exit
 # ------ CLEANUP EXISTING CONF ---------
 # -------------------------------------- 
 rm -rf tmux/.config/tmux/plugins
+rm ~/.gitconfig
 
 # -------------------------------------- 
 # ---------  INSTALL PACKAGES ----------
