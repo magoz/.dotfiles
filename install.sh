@@ -39,6 +39,7 @@ stow git
 # -------------------------------------- 
 # LSP
 npm i -g vscode-langservers-extracted
+npm i -g cssmodules-language-server
 
 # Formatters & Linters (diagnostics)
 brew install \

@@ -6,8 +6,8 @@ end
 local servers = {
   "sumneko_lua",
   "cssls",
+  "csssmodules_ls",
   "html",
-  -- "eslint",
   "marksman",
   "tsserver",
   "bashls",
