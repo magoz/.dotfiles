@@ -56,6 +56,11 @@ return packer.startup(function(use)
 	use({ "lukas-reineke/indent-blankline.nvim", commit = "6177a59552e35dfb69e1493fd68194e673dc3ee2" })
 	use({ "goolord/alpha-nvim", commit = "ef27a59e5b4d7b1c2fe1950da3fe5b1c5f3b4c94" }) -- display a screen when nvim opens
 	use({ "RRethy/vim-illuminate", commit = "c82e6d04f27a41d7fdcad9be0bce5bb59fcb78e5" }) -- highlight the word or group of words under the cursor
+	use({
+		"RRethy/vim-hexokinase",
+		commit = "62324b43ea858e268fb70665f7d012ae67690f43",
+		run = "cd ~/.local/share/nvim/site/pack/packer/start/vim-hexokinase && make hexokinase",
+	}) -- dislay the color next to hex value
 
 	-- Colorschemes
 	use({ "folke/tokyonight.nvim", commit = "8223c970677e4d88c9b6b6d81bda23daf11062bb" })
@@ -77,10 +82,10 @@ return packer.startup(function(use)
 	use({ "neovim/nvim-lspconfig", commit = "148c99bd09b44cf3605151a06869f6b4d4c24455" }) -- enable LSP
 	use({ "williamboman/nvim-lsp-installer", commit = "e9f13d7acaa60aff91c58b923002228668c8c9e6" }) -- simple to use language server installer
 	use({ "jose-elias-alvarez/null-ls.nvim", commit = "ff40739e5be6581899b43385997e39eecdbf9465" }) -- for formatters and linters
-  use({ "jose-elias-alvarez/typescript.nvim", commit = "2b139a2032de0e3dafaae914f4def62234214469" }) -- Import all missing imports, refactor on move, etc.
-  use({ "b0o/schemastore.nvim" }) -- import json schemas from SchemaStore catalog
+	use({ "jose-elias-alvarez/typescript.nvim", commit = "2b139a2032de0e3dafaae914f4def62234214469" }) -- Import all missing imports, refactor on move, etc.
+	use({ "b0o/schemastore.nvim" }) -- import json schemas from SchemaStore catalog
 	use({ "folke/trouble.nvim", commit = "da61737d860ddc12f78e638152834487eabf0ee5" }) -- show diagnostics
-  use({ "folke/lua-dev.nvim", commit = "f5c31936fe06fcbeb59b98f69f74f9c2f91abaec" }) -- better sumneko_lua settings
+	use({ "folke/lua-dev.nvim", commit = "f5c31936fe06fcbeb59b98f69f74f9c2f91abaec" }) -- better sumneko_lua settings
 
 	-- Harpoon
 	use({ "ThePrimeagen/harpoon", commit = "d3d3d22b6207f46f8ca64946f4d781e975aec0fc" })

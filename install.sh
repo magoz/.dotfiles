@@ -17,7 +17,6 @@ brew install \
   bat \
   git \
   iterm2 \
-  lazygit \
   neovim \
   stow \
   tmux \
@@ -37,6 +36,12 @@ stow git
 # -------------------------------------- 
 # -------------  NEOVIM ----------------
 # -------------------------------------- 
+# Plugins dependencies
+# # used by hexokinase uses go
+brew install \
+  go \
+  lazygit 
+
 # LSP
 npm i -g bash-language-server # bash
 npm i -g yaml-language-server # yamlls
