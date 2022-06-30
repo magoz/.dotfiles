@@ -8,7 +8,7 @@
 
 ### ZSH
 
-- [ ] customize completion colors [https://github.com/finnurtorfa/zsh/blob/master/completion.zsh]
+- [ ] customize completion colors <https://github.com/finnurtorfa/zsh/blob/master/completion.zsh/>
 
 ### Tmux
 
@@ -17,6 +17,7 @@
 
 ### Neovim
 
+- [ ] Add https://github.com/RRethy/vim-hexokinase
 - [ ] Test a react project
   - [ ] go to definition
   - [ ] linting
