@@ -38,8 +38,9 @@ stow git
 # -------------  NEOVIM ----------------
 # -------------------------------------- 
 # LSP
-npm i -g vscode-langservers-extracted
-npm i -g cssmodules-language-server
+npm i -g vscode-langservers-extracted # cssls
+npm i -g cssmodules-language-server # cssls
+brew install lua-language-server  # sumneko_lua
 
 # Formatters & Linters (diagnostics)
 brew install \
@@ -64,7 +65,6 @@ defaults write com.googlecode.iterm2.plist LoadPrefsFromCustomFolder -bool true
 # -------------------------------------- 
 # ------------- TMUX ----------------
 # -------------------------------------- 
-tmux kill-server
-tmux source ~/.config/tmux/.tmux.conf
+tmux source "$HOME/.config/tmux/tmux.conf"
 echo "✅ Sourced Tmux"
 
