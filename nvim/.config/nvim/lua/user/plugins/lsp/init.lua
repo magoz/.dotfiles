@@ -145,7 +145,7 @@ for _, server in ipairs({
 	--
 	"sumneko_lua",
 	"cssls",
-	-- "cssmodules_ls",
+	"cssmodules_ls",
 	-- "html",
 	-- "marksman",
 	"tsserver",
