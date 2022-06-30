@@ -38,6 +38,7 @@ stow git
 # -------------  NEOVIM ----------------
 # -------------------------------------- 
 # LSP
+npm i -g bash-language-server # bash
 npm i -g vscode-langservers-extracted # cssls
 npm i -g cssmodules-language-server # cssmodules_ls
 brew install lua-language-server  # sumneko_lua

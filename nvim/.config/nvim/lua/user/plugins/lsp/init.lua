@@ -150,7 +150,7 @@ for _, server in ipairs({
 	-- "marksman",
 	"tsserver",
 	"null-ls",
-	-- "bashls",
+	"bashls",
 	"jsonls",
 	-- "yamlls",
 }) do
