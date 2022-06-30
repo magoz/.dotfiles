@@ -150,7 +150,7 @@ for _, server in ipairs({
 	"null-ls",
 	"bashls",
 	"jsonls",
-	-- "yamlls",
+	"yamlls",
 }) do
 	require("user.plugins.lsp.servers." .. server).setup(on_attach, capabilities)
 end

@@ -39,6 +39,7 @@ stow git
 # -------------------------------------- 
 # LSP
 npm i -g bash-language-server # bash
+npm i -g yaml-language-server # yamlls
 npm i -g vscode-langservers-extracted # cssls
 npm i -g cssmodules-language-server # cssmodules_ls
 brew install lua-language-server  # sumneko_lua
