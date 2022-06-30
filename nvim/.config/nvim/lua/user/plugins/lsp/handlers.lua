@@ -3,6 +3,8 @@
 -- https://www.youtube.com/watch?v=6F3ONwrCxMg&t=829s
 -- https://youtu.be/b7OguLuaYvE?t=1052
 
+local u = require("user.utils")
+
 local M = {}
 
 M.setup = function()
@@ -65,6 +67,13 @@ local function lsp_keymaps(bufnr)
   keymap(bufnr, "n", "gl", "<cmd>lua vim.diagnostic.open_float()<CR>", opts) -- Tell me what's wrong
   keymap(bufnr, "n", "<leader>lj", "<cmd>lua vim.diagnostic.goto_next({buffer=0})<cr>", opts)
   keymap(bufnr, "n", "<leader>lk", "<cmd>lua vim.diagnostic.goto_prev({buffer=0})<cr>", opts)
+
+  -- -- Typescript
+  u.buf_map(bufnr, "n", "<leader>ti", ":TypescriptAddMissingImports<CR>")
+  u.buf_map(bufnr, "n", "<leader>tr", ":TypescriptRemoveUnused<CR>")
+  u.buf_map(bufnr, "n", "<leader>to", ":TypescriptOrganizeImports<CR>")
+  u.buf_map(bufnr, "n", "<leader>tf", ":TypescriptFixAll<CR>")
+  u.buf_map(bufnr, "n", "<leader>tr", ":TypescriptRenameFile<CR>")
 
   -- Lsp Info
 	keymap(bufnr, "n", "<leader>li", "<cmd>LspInfo<cr>", opts)

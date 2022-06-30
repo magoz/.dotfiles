@@ -6,10 +6,10 @@ end
 local servers = {
   "sumneko_lua",
   "cssls",
-  "csssmodules_ls",
+  "cssmodules_ls",
   "html",
   "marksman",
-  "tsserver",
+  -- "tsserver",
   "bashls",
   "jsonls",
   "yamlls",
@@ -42,6 +42,12 @@ for _, server in pairs(servers) do
     opts = vim.tbl_deep_extend("force", sumneko_opts, opts)
   end
 
-
   lspconfig[server].setup(opts)
 end
+
+require("typescript").setup({
+  server = {
+    on_attach = require("user.plugins.lsp.handlers").on_attach,
+    capabilities = require("user.plugins.lsp.handlers").capabilities,
+  }
+})
