@@ -37,8 +37,6 @@ local diagnostic_config = {
 
 vim.diagnostic.config(diagnostic_config)
 
-local eslint_disabled_buffers = {}
-
 local border_opts = { border = "single", focusable = false, scope = "line" }
 
 lsp.handlers["textDocument/signatureHelp"] = lsp.with(lsp.handlers.signature_help, border_opts)
