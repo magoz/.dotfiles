@@ -1,6 +1,5 @@
 -- Source
 -- https://github.com/jose-elias-alvarez/dotfiles/blob/c645925651598ef296ce7c04f0f4dbbc4e3ee48d/config/nvim/lua/config/utils.lua
-
 local api = vim.api
 
 local get_map_options = function(custom_options)
@@ -34,6 +33,10 @@ M.command = function(name, fn, opts)
     api.nvim_create_user_command(name, fn, opts or {})
 end
 
+M.buf_command = function(bufnr, name, fn, opts)
+    api.nvim_buf_create_user_command(bufnr, name, fn, opts or {})
+end
+
 M.t = function(str)
     return vim.api.nvim_replace_termcodes(str, true, true, true)
 end
@@ -46,6 +49,17 @@ M.gfind = function(str, substr, cb, init)
         return M.gfind(str, substr, cb, end_pos + 1)
     end
 end
+
+M.table = {
+    some = function(tbl, cb)
+        for k, v in pairs(tbl) do
+            if cb(k, v) then
+                return true
+            end
+        end
+        return false
+    end,
+}
 
 M.input = function(keys, mode)
     api.nvim_feedkeys(M.t(keys), mode or "m", true)

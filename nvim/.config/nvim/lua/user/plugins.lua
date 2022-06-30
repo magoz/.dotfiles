@@ -78,7 +78,9 @@ return packer.startup(function(use)
 	use({ "williamboman/nvim-lsp-installer", commit = "e9f13d7acaa60aff91c58b923002228668c8c9e6" }) -- simple to use language server installer
 	use({ "jose-elias-alvarez/null-ls.nvim", commit = "ff40739e5be6581899b43385997e39eecdbf9465" }) -- for formatters and linters
   use({ "jose-elias-alvarez/typescript.nvim", commit = "2b139a2032de0e3dafaae914f4def62234214469" }) -- Import all missing imports, refactor on move, etc.
+  use({ "b0o/schemastore.nvim" }) -- import json schemas from SchemaStore catalog
 	use({ "folke/trouble.nvim", commit = "da61737d860ddc12f78e638152834487eabf0ee5" }) -- show diagnostics
+  use({ "folke/lua-dev.nvim", commit = "f5c31936fe06fcbeb59b98f69f74f9c2f91abaec" }) -- better sumneko_lua settings
 
 	-- Harpoon
 	use({ "ThePrimeagen/harpoon", commit = "d3d3d22b6207f46f8ca64946f4d781e975aec0fc" })
