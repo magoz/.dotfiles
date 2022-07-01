@@ -55,6 +55,10 @@ brew install \
   prettier \
   stylua
 
+# Install plugins
+# https://github.com/wbthomason/packer.nvim#bootstrapping
+nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+
 # -------------------------------------- 
 # -------------  ITERM2 ----------------
 # -------------------------------------- 
