@@ -1,21 +1,27 @@
-local u = require("user.utils")
+local wk = require("which-key")
 
 local M = {}
 
 M.setup = function(on_attach, capabilities)
-    require("typescript").setup({
-        server = {
-            on_attach = function(client, bufnr)
-                u.buf_map(bufnr, "n", "<leader>ti", ":TypescriptAddMissingImports<CR>")
-                u.buf_map(bufnr, "n", "<leader>tr", ":TypescriptRemoveUnused<CR>")
-                u.buf_map(bufnr, "n", "<leader>to", ":TypescriptOrganizeImports<CR>")
-                u.buf_map(bufnr, "n", "<leader>tf", ":TypescriptFixAll<CR>")
-                u.buf_map(bufnr, "n", "<leader>tr", ":TypescriptRenameFile<CR>")
-                on_attach(client, bufnr)
-            end,
-            capabilities = capabilities,
-        },
-    })
+	require("typescript").setup({
+		server = {
+			on_attach = function(client, bufnr)
+				wk.register({
+					t = {
+						name = "Typescript", -- optional group name
+						i = { ":TypescriptAddMissingImports<CR>", "Add missing imports" },
+						I = { ":TypescriptRemoveUnused<CR>", "Remove unused imports" },
+						o = { ":TypescriptOrganizeImports<CR>", "Organize imports" },
+						f = { ":TypescriptFixAll<CR>", "Fix all issues" },
+						r = { ":TypescriptRenameFile<CR>", "Rename file" },
+					},
+				}, { prefix = "<leader>" })
+
+				on_attach(client, bufnr)
+			end,
+			capabilities = capabilities,
+		},
+	})
 end
 
 return M

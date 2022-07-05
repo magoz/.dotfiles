@@ -1,4 +1,5 @@
 local u = require("user.utils")
+local wk = require("which-key")
 
 local status_ok, _ = pcall(require, "lspconfig")
 if not status_ok then
@@ -74,37 +75,64 @@ local on_attach = function(client, bufnr)
 	-- -- Create a command accessible via :Format that formats the document
 	-- vim.cmd([[ command! Format execute 'lua vim.lsp.buf.formatting()']])
 
-	-- Elias config
 	-- commands
+	u.buf_command(bufnr, "LspReferences", vim.lsp.buf.references)
+	u.buf_command(bufnr, "LspImplementation", vim.lsp.buf.implementation)
+	u.buf_command(bufnr, "LspDeclaration", vim.lsp.buf.declaration)
+	u.buf_command(bufnr, "LspDefinition", vim.lsp.buf.definition)
+	u.buf_command(bufnr, "LspTypeDefinition", vim.lsp.buf.type_definition)
+	u.buf_command(bufnr, "LspRangeAct", vim.lsp.buf.range_code_action)
+
+	wk.register({
+		g = {
+			name = "Go to..", -- group name
+			i = { ":LspImplementation<CR>", "Go to Implementation" },
+			r = { ":LspReferences<CR>", "Show References" },
+			d = { ":LspDefinition<CR>", "Go to Definition" },
+			D = { ":LspDeclaration<CR>", "Go to Declaration (not supported in ts/js/css)" },
+			t = { ":LspTypeDefinition<CR>", "Go to Type Definition" },
+			a = { ":LspAct<CR>", "LSP Act" }, -- Not sure what this does
+			A = { "<Esc><cmd> LspRangeAct<CR>", "Actions (extract code, move to file, etc)", mode = "v" },
+		},
+	}, { prefix = "<leader>" })
+	-- u.buf_map(bufnr, "n", "gr", ":LspRef<CR>") -- go to reference
+	-- u.buf_map(bufnr, "n", "gd", ":LspTypeDef<CR>") -- go to definition
+	-- u.buf_map(bufnr, "n", "gD", ":LspDef<CR>") -- go to declation
+	-- u.buf_map(bufnr, "n", "ga", ":LspAct<CR>")
+	-- u.buf_map(bufnr, "v", "gA", "<Esc><cmd> LspRangeAct<CR>")
+
 	u.buf_command(bufnr, "LspHover", vim.lsp.buf.hover)
 	u.buf_command(bufnr, "LspDiagPrev", vim.diagnostic.goto_prev)
 	u.buf_command(bufnr, "LspDiagNext", vim.diagnostic.goto_next)
 	u.buf_command(bufnr, "LspDiagLine", vim.diagnostic.open_float)
 	u.buf_command(bufnr, "LspDiagQuickfix", vim.diagnostic.setqflist)
 	u.buf_command(bufnr, "LspSignatureHelp", vim.lsp.buf.signature_help)
-	u.buf_command(bufnr, "LspTypeDef", vim.lsp.buf.type_definition)
-	u.buf_command(bufnr, "LspRangeAct", vim.lsp.buf.range_code_action)
-	-- not sure why this is necessary?
 	u.buf_command(bufnr, "LspRename", function()
 		vim.lsp.buf.rename()
 	end)
 
-	-- bindings
-	u.buf_map(bufnr, "n", "gi", ":LspRename<CR>") -- Rename variable
-	u.buf_map(bufnr, "n", "K", ":LspHover<CR>") -- Hover equivalent of VScode
-	u.buf_map(bufnr, "n", "<Leader>a", ":LspDiagLine<CR>") -- Tell me what's wrong
-	u.buf_map(bufnr, "n", "[a", ":LspDiagPrev<CR>") -- Prev what's wrong
-	u.buf_map(bufnr, "n", "]a", ":LspDiagNext<CR>") -- Next what's wrong
-	u.buf_map(bufnr, "i", "<C-x><C-x>", "<cmd> LspSignatureHelp<CR>")
+	wk.register({
+		i = {
+			name = "IntelliSense", -- group name
+			f = { "<cmd>lua vim.lsp.buf.formatting()<cr>", "Format code" },
+			r = { ":LspRename<CR>", "Rename Variable" },
+			i = { ":LspHover<CR>", "Show Intellisense" },
+			d = { ":LspDiagLine<CR>", "Show Diagnostics" },
+			n = { ":LspDiagNext<CR>", "Show Next Diagnostic" },
+			h = { "<cmd> LspSignatureHelp<CR>", "Show Signature Help" },
+		},
+	}, { prefix = "<leader>" })
 
-	u.buf_map(bufnr, "n", "gy", ":LspRef<CR>") -- go to reference
-	u.buf_map(bufnr, "n", "gh", ":LspTypeDef<CR>") -- go to definition
-	u.buf_map(bufnr, "n", "gd", ":LspDef<CR>") -- go to declation
-	u.buf_map(bufnr, "n", "ga", ":LspAct<CR>")
-	u.buf_map(bufnr, "v", "ga", "<Esc><cmd> LspRangeAct<CR>")
+	-- bindings
+	-- u.buf_map(bufnr, "n", "gR", ":LspRename<CR>") -- Rename variable
+	-- u.buf_map(bufnr, "n", "K", ":LspHover<CR>") -- Hover equivalent of VScode
+	-- u.buf_map(bufnr, "n", "<Leader>a", ":LspDiagLine<CR>") -- Tell me what's wrong
+	-- u.buf_map(bufnr, "n", "[a", ":LspDiagPrev<CR>") -- Prev what's wrong
+	-- u.buf_map(bufnr, "n", "]a", ":LspDiagNext<CR>") -- Next what's wrong
+	-- u.buf_map(bufnr, "i", "<C-x><C-x>", "<cmd> LspSignatureHelp<CR>")
 
 	-- Format code
-	u.buf_map(bufnr, "n", "<leader>lf", "<cmd>lua vim.lsp.buf.formatting()<cr>")
+	-- u.buf_map(bufnr, "n", "<leader>lf", "<cmd>lua vim.lsp.buf.formatting()<cr>")
 
 	-- Format on save
 	if client.supports_method("textDocument/formatting") then
@@ -122,6 +150,7 @@ local on_attach = function(client, bufnr)
 	-- Sometimes when opening a file, it asks to select a language server.
 	-- That's because the lsp is providing formatting and linting in addition to null-lsp.
 	-- We can force to use null-lsp by default for spefic clients like this:
+
 	if client.name == "tsserver" then
 		client.resolved_capabilities.document_formatting = false
 	end
