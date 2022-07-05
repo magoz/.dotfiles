@@ -33,16 +33,12 @@ keymap("n", "<C-Down>", ":resize +2<CR>", opts)
 keymap("n", "<C-Left>", ":vertical resize -2<CR>", opts)
 keymap("n", "<C-Right>", ":vertical resize +2<CR>", opts)
 
--- Clear highlights
-keymap("n", "<leader>h", "<cmd>nohlsearch<CR>", opts)
-
 -- Clear search highlights on double <ESC>
 -- https://stackoverflow.com/a/19877212
 keymap("n", "<ESC><ESC>", "<ESC>:nohlsearch<CR><ESC>", opts)
 
 -- Remove Seach highlights after hitting enter
 keymap("n", "<cr>", ":noh<CR><CR>", opts)
-
 
 -- Close buffers
 keymap("n", "<S-q>", "<cmd>Bdelete!<CR>", opts)
