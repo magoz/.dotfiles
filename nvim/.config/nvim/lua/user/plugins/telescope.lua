@@ -49,9 +49,3 @@ wk.register({
 		p = { ":Telescope projects<CR>", "Search Projects" },
 	},
 }, { prefix = "<leader>" })
-
--- -- keymap("n", "<leader>ff", "<cmd>lua require'telescope.builtin'.find_files()<cr>", opts)
--- keymap("n", "<leader>ff", ":Telescope find_files hidden=true <CR>", opts)
--- keymap("n", "<leader>fp", ":Telescope projects<CR>", opts)
--- keymap("n", "<leader>fb", ":Telescope buffers<CR>", opts)
--- keymap("n", "<leader>ft", ":Telescope live_grep<CR>", opts)
