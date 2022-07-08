@@ -37,10 +37,13 @@ stow git
 # -------------  NEOVIM ----------------
 # -------------------------------------- 
 # Plugins dependencies
-# # used by hexokinase uses go
+# hexokinase uses go
+# telescope uses fd and ripgrep
 brew install \
+  fd \
   go \
-  lazygit 
+  lazygit \
+  ripgrep
 
 # LSP
 npm i -g bash-language-server # bash
