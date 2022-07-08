@@ -47,6 +47,7 @@ npm i -g bash-language-server # bash
 npm i -g yaml-language-server # yamlls
 npm i -g vscode-langservers-extracted # cssls
 npm i -g cssmodules-language-server # cssmodules_ls
+npm i -g typescript-language-server # typescript
 brew install lua-language-server  # sumneko_lua
 
 # Formatters & Linters (diagnostics)
