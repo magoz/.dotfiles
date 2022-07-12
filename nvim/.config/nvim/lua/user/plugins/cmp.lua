@@ -68,7 +68,7 @@ cmp.setup({
 		-- Set `select` to `false` to only confirm explicitly selected items.
 		["<CR>"] = cmp.mapping.confirm({ select = true }),
 
-    -- Supertab. the ability to jump into next step into the snippet
+		-- Supertab. the ability to jump into next step into the snippet
 		["<Tab>"] = cmp.mapping(function(fallback)
 			if cmp.visible() then
 				cmp.select_next_item()
@@ -103,11 +103,11 @@ cmp.setup({
 		format = function(entry, vim_item)
 			vim_item.kind = kind_icons[vim_item.kind]
 			vim_item.menu = ({
-        nvim_lsp = "LSP",
-        luasnip = "Snippet",
-        buffer = "Buffer",
-        path = "Path",
-				emoji = "Emoji",
+				nvim_lsp = "LSP",
+				luasnip = "Snippet",
+				-- buffer = "Buffer",
+				path = "Path",
+				-- emoji = "Emoji",
 			})[entry.source.name]
 			return vim_item
 		end,
@@ -116,7 +116,7 @@ cmp.setup({
 		{ name = "nvim_lsp" },
 		{ name = "nvim_lua" },
 		{ name = "luasnip" },
-		{ name = "buffer" },
+		-- { name = "buffer" },
 		{ name = "path" },
 	},
 	confirm_opts = {
