@@ -7,3 +7,7 @@
 	ff = only
 [init]
 	defaultBranch = main
+
+# `git push` new branches without `--set-upstream origin`
+[push]
+	autoSetupRemote = true
