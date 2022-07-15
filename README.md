@@ -20,11 +20,6 @@ Follow the instructions: <https://github.com/github/copilot.vim>
 
 ### Neovim
 
-- [ ] Test a react project
-  - [ ] go to definition
-  - [ ] linting
-  - [ ] code formatting
-  - [ ] additional resources we might want
 - [ ] See if we can find lsp for mdx
   - <https://github.com/mdx-js/eslint-mdx>
   - <https://github.com/mdx-js/vscode-mdx>
