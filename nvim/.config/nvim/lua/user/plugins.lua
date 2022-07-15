@@ -108,6 +108,9 @@ return packer.startup(function(use)
 	use({ "rcarriga/nvim-dap-ui", commit = "d76d6594374fb54abf2d94d6a320f3fd6e9bb2f7" })
 	use({ "ravenxrz/DAPInstall.nvim", commit = "8798b4c36d33723e7bba6ed6e2c202f84bb300de" })
 
+	-- GITHUB COPILOT
+	use({ "github/copilot.vim", commit = "c2e75a3a7519c126c6fdb35984976df9ae13f564" }) -- Node.js v18 not supported yet
+
 	-- Automatically set up your configuration after cloning packer.nvim
 	-- Put this at the end after all plugins
 	if PACKER_BOOTSTRAP then

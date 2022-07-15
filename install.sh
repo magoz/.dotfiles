@@ -39,10 +39,12 @@ stow git
 # Plugins dependencies
 # hexokinase uses go
 # telescope uses fd and ripgrep
+# Copilot is not yet compatible with node 18, so we have to additionally install node 16
 brew install \
   fd \
   go \
   lazygit \
+  node@16 \
   ripgrep
 
 # LSP
