@@ -62,6 +62,7 @@ return packer.startup(function(use)
 		commit = "62324b43ea858e268fb70665f7d012ae67690f43",
 		run = "cd ~/.local/share/nvim/site/pack/packer/start/vim-hexokinase && make hexokinase",
 	}) -- dislay the color next to hex value
+	use({ "kylechui/nvim-surround" }) -- add, change, and delete surrounding tags
 
 	-- Colorschemes
 	use({ "folke/tokyonight.nvim", commit = "8223c970677e4d88c9b6b6d81bda23daf11062bb" })
