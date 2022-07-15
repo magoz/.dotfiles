@@ -26,5 +26,5 @@ Follow the instructions: <https://github.com/github/copilot.vim>
   - [ ] code formatting
   - [ ] additional resources we might want
 - [ ] See if we can find lsp for mdx
-  - <https://github.com/mdx-js/eslint-mdx]
-  - > https://github.com/mdx-js/vscode-mdx]
+  - <https://github.com/mdx-js/eslint-mdx>
+  - <https://github.com/mdx-js/vscode-mdx>
