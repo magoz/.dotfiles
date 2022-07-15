@@ -112,6 +112,21 @@ return packer.startup(function(use)
 	-- GITHUB COPILOT
 	use({ "github/copilot.vim", commit = "c2e75a3a7519c126c6fdb35984976df9ae13f564" }) -- Node.js v18 not supported yet
 
+	-- copilot via cmp
+	-- Right now is very early in development but there is way of integrating copilot with cmp
+	-- The install is a bit clunky, and it didn't work well for me.
+	-- TODO: review this in the future when it's more mature
+	-- use({
+	-- 	"zbirenbaum/copilot.lua",
+	-- 	event = { "VimEnter" },
+	-- 	config = function()
+	-- 		vim.defer_fn(function()
+	-- 			require("copilot").setup()
+	-- 		end, 100)
+	-- 	end,
+	-- })
+	-- use({ "zbirenbaum/copilot-cmp", module = "copilot_cmp" })
+
 	-- Automatically set up your configuration after cloning packer.nvim
 	-- Put this at the end after all plugins
 	if PACKER_BOOTSTRAP then
