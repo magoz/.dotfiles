@@ -101,8 +101,8 @@ return packer.startup(function(use)
 	})
 
 	-- Git
+	use({ "tpope/vim-fugitive" })
 	use({ "lewis6991/gitsigns.nvim", commit = "c18e016864c92ecf9775abea1baaa161c28082c3" })
-	use({ "sindrets/diffview.nvim", commit = "a1ab9602ee1d4c78e81bc6032edca6df480aa296" }) -- History and diff
 
 	-- DAP
 	use({ "mfussenegger/nvim-dap", commit = "014ebd53612cfd42ac8c131e6cec7c194572f21d" })
