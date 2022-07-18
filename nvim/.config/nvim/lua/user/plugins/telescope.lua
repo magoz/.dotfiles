@@ -10,10 +10,37 @@ local actions = require("telescope.actions")
 telescope.setup({
 	defaults = {
 
-		prompt_prefix = " ",
+		prompt_prefix = " ",
 		selection_caret = " ",
 		path_display = { "smart" },
-		file_ignore_patterns = { ".git/", "node_modules" },
+		file_ignore_patterns = {
+			".DS_Store",
+			".git/",
+
+			-- TS
+			".next/",
+			"%.lock",
+			"node_modules/",
+			"%.tsbuildinfo",
+			"npm-debug.log",
+			"yarn-debug.log",
+			"yarn-error.log",
+
+			-- Media
+			"%.jpg",
+			"%.jpgeg",
+			"%.png",
+			"%.mp4",
+			"%.webp",
+			"%.svg",
+			"%.pdf",
+
+			-- Fonts
+			"%.woff",
+			"%.woff2",
+			"%.otf",
+			"%.ttf",
+		},
 
 		mappings = {
 			i = {
@@ -22,18 +49,22 @@ telescope.setup({
 				["<C-j>"] = actions.move_selection_next,
 				["<C-k>"] = actions.move_selection_previous,
 			},
+
+			n = {
+				["q"] = actions.close,
+			},
 		},
 
-		vimgrep_arguments = {
-			"rg",
-			"--color=never",
-			"--no-heading",
-			"--with-filename",
-			"--line-number",
-			"--column",
-			"--smart-case",
-			"-uu", -- search hidden files
-		},
+		-- vimgrep_arguments = {
+		-- 	"rg",
+		-- 	"--color=never",
+		-- 	"--no-heading",
+		-- 	"--with-filename",
+		-- 	"--line-number",
+		-- 	"--column",
+		-- 	"--smart-case",
+		-- 	"-uu", -- search hidden files
+		-- },
 	},
 })
 
@@ -43,7 +74,7 @@ telescope.setup({
 wk.register({
 	f = {
 		name = "Telescope", -- group name
-		f = { ":Telescope find_files hidden=true <CR>", "Search files" },
+		f = { ":Telescope find_files hidden=true no_ignore=true<CR>", "Search files" },
 		t = { ":Telescope live_grep<CR>", "Search inside files" },
 		b = { ":Telescope buffers<CR>", "Search Buffers" },
 		p = { ":Telescope projects<CR>", "Search Projects" },
