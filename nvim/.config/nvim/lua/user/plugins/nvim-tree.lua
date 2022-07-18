@@ -21,6 +21,9 @@ nvim_tree.setup({
 			".env.local",
 		},
 	},
+	git = {
+		ignore = false, -- show listed files in .gitignore by default. Can be toggled with I
+	},
 	update_focused_file = {
 		enable = true,
 		update_cwd = true,
@@ -49,7 +52,6 @@ nvim_tree.setup({
 					untracked = "U",
 					deleted = "",
 					ignored = "◌",
-					igore = false, -- show listed files in .gitignore by default. Can be toggled with I
 				},
 			},
 		},
