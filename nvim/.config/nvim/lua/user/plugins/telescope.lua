@@ -30,8 +30,9 @@ telescope.setup({
 			"%.jpg",
 			"%.jpgeg",
 			"%.png",
-			"%.mp4",
+			"%.gif",
 			"%.webp",
+			"%.mp4",
 			"%.svg",
 			"%.pdf",
 
