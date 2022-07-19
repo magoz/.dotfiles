@@ -5,6 +5,9 @@ alias v='nvim'
 alias vi='nvim'
 alias vim='nvim'
 
+# Common directories 
+alias dot='cd ~/.dotfiles'
+
 # Quicklook
 ql() {
   qlmanage -p "$@" >&/dev/null
