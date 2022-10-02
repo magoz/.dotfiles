@@ -87,12 +87,16 @@ local on_attach = function(client, bufnr)
 		g = {
 			name = "Go to..", -- group name
 			i = { ":LspImplementation<CR>", "Go to Implementation" },
-			r = { ":LspReferences<CR>", "Show References" },
+			r = { ":Telescope lsp_references<CR>", "Show References" },
 			d = { ":LspDefinition<CR>", "Go to Definition" },
 			D = { ":LspDeclaration<CR>", "Go to Declaration (not supported in ts/js/css)" },
 			t = { ":LspTypeDefinition<CR>", "Go to Type Definition" },
-			a = { ":LspAct<CR>", "LSP Act" }, -- Not sure what this does
-			A = { "<Esc><cmd> LspRangeAct<CR>", "Actions (extract code, move to file, etc)", mode = "v" },
+			a = { ":lua vim.lsp.buf.code_action()<CR>", "Show Actions (extract code, move to file, etc)" },
+			-- FIX: actions for when in visual mode
+			-- A = {
+			-- 	":lua vim.lsp.buf.range_code_action()<CR>",
+			-- 	"Visual Mode Show Actions (extract code, move to file, etc)",
+			-- },
 		},
 	}, { prefix = "<leader>" })
 	-- u.buf_map(bufnr, "n", "gr", ":LspRef<CR>") -- go to reference
