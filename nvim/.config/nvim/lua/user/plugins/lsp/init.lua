@@ -1,5 +1,5 @@
-local u = require("user.utils")
 local wk = require("which-key")
+local u = require("user.utils")
 
 local status_ok, _ = pcall(require, "lspconfig")
 if not status_ok then
@@ -47,50 +47,42 @@ lsp.handlers["textDocument/hover"] = lsp.with(lsp.handlers.hover, border_opts)
 local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
 
 local on_attach = function(client, bufnr)
-	--  -- Navigation
-	-- keymap(bufnr, "n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", opts)
-	-- keymap(bufnr, "n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", opts)
-	-- keymap(bufnr, "n", "gI", "<cmd>lua vim.lsp.buf.implementation()<CR>", opts)
-	-- keymap(bufnr, "n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>", opts)
-	--
-	--  -- Formatting
-	--  keymap(bufnr, "n", "<leader>lf", "<cmd>lua vim.lsp.buf.formatting()<cr>", opts)
-	--
-	--  -- Linting
-	--  keymap(bufnr, "n", "K", "<cmd>lua vim.lsp.buf.hover()<CR>", opts) -- Hover equivalent of vscode
-	--  keymap(bufnr, "n", "gl", "<cmd>lua vim.diagnostic.open_float()<CR>", opts) -- Tell me what's wrong
-	--  -- keymap(bufnr, "n", "<leader>lj", "<cmd>lua vim.diagnostic.goto_next({buffer=0})<cr>", opts)
-	--  keymap(bufnr, "n", "<leader>lk", "<cmd>lua vim.diagnostic.goto_prev({buffer=0})<cr>", opts)
-	--
-	--  -- Lsp Info
-	-- keymap(bufnr, "n", "<leader>li", "<cmd>LspInfo<cr>", opts)
-	-- keymap(bufnr, "n", "<leader>lI", "<cmd>LspInstallInfo<cr>", opts)
-	--
-	--  -- Not sure what this does
-	--  keymap(bufnr, "n", "<leader>ls", "<cmd>lua vim.lsp.buf.signature_help()<CR>", opts) -- Not sure what this does
-	--  keymap(bufnr, "n", "<leader>lq", "<cmd>lua vim.diagnostic.setloclist()<CR>", opts) -- Not sure what this does
-	-- keymap(bufnr, "n", "<leader>la", "<cmd>lua vim.lsp.buf.code_action()<cr>", opts) -- Not sure what this does
-	-- keymap(bufnr, "n", "<leader>lr", "<cmd>lua vim.lsp.buf.rename()<cr>", opts) -- Not sure what this does
-	--
-	-- -- Create a command accessible via :Format that formats the document
-	-- vim.cmd([[ command! Format execute 'lua vim.lsp.buf.formatting()']])
-
-	-- commands
+	-- COMMANDS
+	-- Jump
 	u.buf_command(bufnr, "LspReferences", vim.lsp.buf.references)
 	u.buf_command(bufnr, "LspImplementation", vim.lsp.buf.implementation)
 	u.buf_command(bufnr, "LspDeclaration", vim.lsp.buf.declaration)
 	u.buf_command(bufnr, "LspDefinition", vim.lsp.buf.definition)
 	u.buf_command(bufnr, "LspTypeDefinition", vim.lsp.buf.type_definition)
-	u.buf_command(bufnr, "LspRangeAct", vim.lsp.buf.range_code_action)
+
+	-- Actions
+	u.buf_command(bufnr, "LspHover", vim.lsp.buf.hover)
+	u.buf_command(bufnr, "LspSignatureHelp", vim.lsp.buf.signature_help)
+	u.buf_command(bufnr, "LspRename", function()
+		vim.lsp.buf.rename()
+	end)
+
+	-- Issues / Diagnostics
+	u.buf_command(bufnr, "LspDiagLine", vim.diagnostic.open_float)
+	u.buf_command(bufnr, "LspDiagPrev", vim.diagnostic.goto_prev)
+	u.buf_command(bufnr, "LspDiagNext", vim.diagnostic.goto_next)
+	u.buf_command(bufnr, "LspDiagQuickfix", vim.diagnostic.setqflist)
 
 	wk.register({
-		g = {
-			name = "Go to..", -- group name
-			i = { ":LspImplementation<CR>", "Go to Implementation" },
-			r = { ":Telescope lsp_references<CR>", "Show References" },
-			d = { ":LspDefinition<CR>", "Go to Definition" },
-			D = { ":LspDeclaration<CR>", "Go to Declaration (not supported in ts/js/css)" },
-			t = { ":LspTypeDefinition<CR>", "Go to Type Definition" },
+		j = {
+			name = "Jump to..", -- group name
+			i = { ":LspImplementation<CR>", "Implementation" },
+			r = { ":Telescope lsp_references<CR>", "References" },
+			d = { ":LspDefinition<CR>", "Definition" },
+			D = { ":LspDeclaration<CR>", "Declaration (not supported in ts/js/css)" },
+			t = { ":LspTypeDefinition<CR>", "Type Definition" },
+		},
+		a = {
+			name = "Actions", -- group name
+			h = { ":LspHover<CR>", "Hover" },
+			-- h = { "<cmd> LspSignatureHaelp<CR>", "Show Signature Help" },
+			f = { "<cmd>lua vim.lsp.buf.formatting()<cr>", "Format code" },
+			r = { ":LspRename<CR>", "Rename Variable" },
 			a = { ":lua vim.lsp.buf.code_action()<CR>", "Show Actions (extract code, move to file, etc)" },
 			-- FIX: actions for when in visual mode
 			-- A = {
@@ -98,45 +90,12 @@ local on_attach = function(client, bufnr)
 			-- 	"Visual Mode Show Actions (extract code, move to file, etc)",
 			-- },
 		},
-	}, { prefix = "<leader>" })
-	-- u.buf_map(bufnr, "n", "gr", ":LspRef<CR>") -- go to reference
-	-- u.buf_map(bufnr, "n", "gd", ":LspTypeDef<CR>") -- go to definition
-	-- u.buf_map(bufnr, "n", "gD", ":LspDef<CR>") -- go to declation
-	-- u.buf_map(bufnr, "n", "ga", ":LspAct<CR>")
-	-- u.buf_map(bufnr, "v", "gA", "<Esc><cmd> LspRangeAct<CR>")
-
-	u.buf_command(bufnr, "LspHover", vim.lsp.buf.hover)
-	u.buf_command(bufnr, "LspDiagPrev", vim.diagnostic.goto_prev)
-	u.buf_command(bufnr, "LspDiagNext", vim.diagnostic.goto_next)
-	u.buf_command(bufnr, "LspDiagLine", vim.diagnostic.open_float)
-	u.buf_command(bufnr, "LspDiagQuickfix", vim.diagnostic.setqflist)
-	u.buf_command(bufnr, "LspSignatureHelp", vim.lsp.buf.signature_help)
-	u.buf_command(bufnr, "LspRename", function()
-		vim.lsp.buf.rename()
-	end)
-
-	wk.register({
 		i = {
-			name = "IntelliSense", -- group name
-			f = { "<cmd>lua vim.lsp.buf.formatting()<cr>", "Format code" },
-			r = { ":LspRename<CR>", "Rename Variable" },
-			i = { ":LspHover<CR>", "Show Intellisense" },
+			name = "Issues", -- group name
 			d = { ":LspDiagLine<CR>", "Show Diagnostics" },
 			n = { ":LspDiagNext<CR>", "Show Next Diagnostic" },
-			h = { "<cmd> LspSignatureHelp<CR>", "Show Signature Help" },
 		},
 	}, { prefix = "<leader>" })
-
-	-- bindings
-	-- u.buf_map(bufnr, "n", "gR", ":LspRename<CR>") -- Rename variable
-	-- u.buf_map(bufnr, "n", "K", ":LspHover<CR>") -- Hover equivalent of VScode
-	-- u.buf_map(bufnr, "n", "<Leader>a", ":LspDiagLine<CR>") -- Tell me what's wrong
-	-- u.buf_map(bufnr, "n", "[a", ":LspDiagPrev<CR>") -- Prev what's wrong
-	-- u.buf_map(bufnr, "n", "]a", ":LspDiagNext<CR>") -- Next what's wrong
-	-- u.buf_map(bufnr, "i", "<C-x><C-x>", "<cmd> LspSignatureHelp<CR>")
-
-	-- Format code
-	-- u.buf_map(bufnr, "n", "<leader>lf", "<cmd>lua vim.lsp.buf.formatting()<cr>")
 
 	-- Format on save
 	if client.supports_method("textDocument/formatting") then
