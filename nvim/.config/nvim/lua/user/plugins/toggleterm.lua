@@ -7,8 +7,8 @@ end
 
 toggleterm.setup({
 	size = 20,
-	open_mapping = [[<c-\>]],
 	hide_numbers = true,
+	open_mapping = [[<c-\>]],
 	shade_terminals = true,
 	shading_factor = 2,
 	start_in_insert = true,
@@ -34,7 +34,18 @@ end
 vim.cmd("autocmd! TermOpen term://* lua set_terminal_keymaps()")
 
 local Terminal = require("toggleterm.terminal").Terminal
-local lazygit = Terminal:new({ cmd = "lazygit", hidden = true })
+local lazygit = Terminal:new({
+	cmd = "lazygit",
+	hidden = true,
+	direction = "float",
+	float_opts = {
+		-- width = function()
+		-- 	return math.ceil(vim.o.columns * 0.95)
+		-- end,
+		width = 100000,
+		height = 100000,
+	},
+})
 
 function _LAZYGIT_TOGGLE()
 	lazygit:toggle()
@@ -45,15 +56,4 @@ end
 -- ---------------------------------
 wk.register({
 	gg = { "<cmd>lua _LAZYGIT_TOGGLE()<CR>", "Toggle Lazy Git" },
-	-- g = {
-	-- 	name = "Go to..", -- group name
-	-- 	r = { ":LspReferences<CR>", "Show References" },
-	-- 	d = { ":LspDefinition<CR>", "Go to Definition" },
-	-- 	D = { ":LspDeclaration<CR>", "Go to Declaration (not supported in ts/js/css)" },
-	-- 	t = { ":LspTypeDefinition<CR>", "Go to Type Definition" },
-	-- 	a = { ":LspAct<CR>", "LSP Act" }, -- Not sure what this does
-	-- 	A = { "<Esc><cmd> LspRangeAct<CR>", "Actions (extract code, move to file, etc)", mode = "v" },
-	-- },
 }, { prefix = "<leader>" })
-
--- keymap("n", "<leader>gg", "<cmd>lua _LAZYGIT_TOGGLE()<CR>", opts)
