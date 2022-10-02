@@ -76,7 +76,7 @@ wk.register({
 	f = {
 		name = "Telescope", -- group name
 		f = { ":Telescope find_files hidden=true no_ignore=true<CR>", "Search files" },
-		t = { ":Telescope live_grep<CR>", "Search inside files" },
+		c = { ":Telescope live_grep<CR>", "Search files contents" },
 		b = { ":Telescope buffers<CR>", "Search Buffers" },
 		p = { ":Telescope projects<CR>", "Search Projects" },
 	},
