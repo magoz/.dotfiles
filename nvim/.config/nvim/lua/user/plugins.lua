@@ -62,6 +62,7 @@ return packer.startup(function(use)
 		commit = "62324b43ea858e268fb70665f7d012ae67690f43",
 		run = "cd ~/.local/share/nvim/site/pack/packer/start/vim-hexokinase && make hexokinase",
 	}) -- dislay the color next to hex value
+	-- UPDATE: investigate replacing it with https://github.com/NvChad/nvim-colorizer.lua
 	use({ "kylechui/nvim-surround" }) -- add, change, and delete surrounding tags
 
 	-- Writing mode
