@@ -25,5 +25,6 @@ require("user.plugins.alpha")
 require("user.plugins.trouble")
 require("user.plugins.git")
 require("user.plugins.lsp")
-require("user.plugins.dap")
-require("user.plugins.copilot")
+-- require("user.plugins.dap")
+-- require("user.plugins.copilot")
+
