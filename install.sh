@@ -20,6 +20,7 @@ brew install \
   neovim \
   stow \
   tmux \
+  koekeishiya/formulae/yabai \
   zsh
 
 # -------------------------------------- 
@@ -32,6 +33,7 @@ stow iterm2
 stow zsh
 stow tmux
 stow git
+stow yabai
 
 # -------------------------------------- 
 # -------------  NEOVIM ----------------
@@ -62,6 +64,11 @@ brew install \
 # Install plugins
 # https://github.com/wbthomason/packer.nvim#bootstrapping
 nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+
+# -------------------------------------- 
+# -------------- YABAI -----------------
+# -------------------------------------- 
+brew services restart yabai
 
 # -------------------------------------- 
 # -------------  ITERM2 ----------------
