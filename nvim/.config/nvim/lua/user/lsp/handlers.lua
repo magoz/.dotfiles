@@ -1,5 +1,9 @@
-local wk = require("which-key")
 local u = require("user.utils")
+
+local status_which_key_ok, wk = pcall(require, "which-key")
+if not status_which_key_ok then
+	return
+end
 
 local status_cmp_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
 if not status_cmp_ok then
@@ -10,7 +14,7 @@ local M = {}
 
 M.capabilities = vim.lsp.protocol.make_client_capabilities()
 M.capabilities.textDocument.completion.completionItem.snippetSupport = true
-M.capabilities = cmp_nvim_lsp.default_capabilities(M.capabilities) 
+M.capabilities = cmp_nvim_lsp.default_capabilities(M.capabilities)
 
 M.setup = function()
 	local signs = {
@@ -123,15 +127,15 @@ end
 local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
 
 M.on_attach = function(client, bufnr)
-	if client.name == "tsserver" then
-		client.server_capabilities.documentFormattingProvider = false
-	end
+	-- if client.name == "tsserver" then
+	-- 	client.server_capabilities.documentFormattingProvider = false
+	-- end
+	--
+	-- if client.name == "sumneko_lua" then
+	-- 	client.server_capabilities.documentFormattingProvider = false
+	-- end
 
-	if client.name == "sumneko_lua" then
-		client.server_capabilities.documentFormattingProvider = false
-	end
-
-  -- keymaps
+	-- keymaps
 	lsp_keymaps(bufnr)
 
 	-- Format on save
@@ -147,13 +151,12 @@ M.on_attach = function(client, bufnr)
 		})
 	end
 
-  -- illuminate
+	-- illuminate
 	local illuminate_status_ok, illuminate = pcall(require, "illuminate")
 	if not illuminate_status_ok then
 		return
 	end
 	illuminate.on_attach(client)
-
 end
 
 return M

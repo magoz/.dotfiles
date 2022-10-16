@@ -4,7 +4,8 @@ require("user.autocommands")
 require("user.colorscheme")
 
 require("user.plugins")
-require("user.lsp") -- IMPORTANT: make sure to setup neodev BEFORE lspconfig
+
+require("user.lsp")
 require("user.plugins.cmp")
 require("user.plugins.harpoon")
 require("user.plugins.telescope")

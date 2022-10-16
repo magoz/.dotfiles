@@ -1,14 +1,14 @@
 local servers = {
-		"sumneko_lua",
-		"cssls",
-		"cssmodules_ls",
-		"html",
-		-- "marksman",
-		"tsserver",
-		"null-ls",
-		"bashls",
-		"jsonls",
-		"yamlls",
+	"sumneko_lua",
+	"cssls",
+	"cssmodules_ls",
+	"html",
+	-- "marksman",
+	"tsserver",
+	"null-ls",
+	"bashls",
+	"jsonls",
+	"yamlls",
 }
 
 local settings = {
