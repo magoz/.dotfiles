@@ -89,7 +89,7 @@ return packer.startup({
 		use({ "jose-elias-alvarez/typescript.nvim" }) -- Import all missing imports, refactor on move, etc.
 		use({ "b0o/schemastore.nvim" }) -- import json schemas from SchemaStore catalog
 		use({ "folke/trouble.nvim" }) -- show diagnostics
-		use({ "folke/lua-dev.nvim" }) -- better sumneko_lua settings
+		use({ "folke/neodev.nvim" }) -- previously named lua-dev
 
 		-- Harpoon
 		use({ "ThePrimeagen/harpoon" })

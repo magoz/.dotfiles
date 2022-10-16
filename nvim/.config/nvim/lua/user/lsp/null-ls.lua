@@ -25,16 +25,7 @@ local sources = {
 -- Hover
 -- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/hover
 --
-
-local M = {}
-M.setup = function(on_attach)
-	if not vim.g.started_by_firenvim then
-		null_ls.setup({
-			-- debug = true,
-			sources = sources,
-			on_attach = on_attach,
-		})
-	end
-end
-
-return M
+null_ls.setup {
+  debug = false,
+  sources = sources,
+}
