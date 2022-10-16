@@ -67,7 +67,7 @@ nvim_tree.setup({
 		},
 	},
 	view = {
-    adaptive_size = true,
+		adaptive_size = true,
 		side = "left",
 		mappings = {
 			list = {
@@ -78,6 +78,19 @@ nvim_tree.setup({
 		},
 	},
 })
+
+-- Automatically open file upon creation
+-- https://github.com/nvim-tree/nvim-tree.lua/issues/1120
+local events_status_ok, nvim_tree_events = pcall(require, "nvim-tree.events")
+if not events_status_ok then
+	return
+end
+
+-- TODO: fix deprecated
+-- https://github.com/nvim-tree/nvim-tree.lua/issues/1120
+nvim_tree_events.on_file_created(function(file)
+	vim.cmd("edit " .. file.fname)
+end)
 
 -- ---------------------------------
 -- ----------- REMAPS --------------
