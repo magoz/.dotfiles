@@ -79,23 +79,25 @@ nvim_tree.setup({
 	},
 })
 
--- Automatically open file upon creation
+-- Automatically open file on creation
 -- https://github.com/nvim-tree/nvim-tree.lua/issues/1120
-local events_status_ok, nvim_tree_events = pcall(require, "nvim-tree.events")
-if not events_status_ok then
+local api_status_ok, api = pcall(require, "nvim-tree.api")
+if not api_status_ok then
 	return
 end
 
--- TODO: fix deprecated
--- https://github.com/nvim-tree/nvim-tree.lua/issues/1120
-nvim_tree_events.on_file_created(function(file)
+api.events.subscribe(api.events.Event.FileCreated, function(file)
 	vim.cmd("edit " .. file.fname)
 end)
 
 -- ---------------------------------
 -- ----------- REMAPS --------------
 -- ---------------------------------
-local keymap = vim.keymap.set
-local opts = { silent = true }
+local wk_status_ok, wk = pcall(require, "which-key")
+if not wk_status_ok then
+	return
+end
 
-keymap("n", "<leader>e", ":NvimTreeToggle<CR>", opts)
+wk.register({
+	e = { ":NvimTreeToggle<CR>", "Toggle nvim tree" },
+}, { prefix = "<leader>" })
