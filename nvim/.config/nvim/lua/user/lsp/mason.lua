@@ -24,7 +24,12 @@ local settings = {
 	max_concurrent_installers = 4,
 }
 
-require("mason").setup(settings)
+local status_ok, mason = pcall(require, "mason")
+if not status_ok then
+	return
+end
+
+mason.setup(settings)
 require("mason-lspconfig").setup({
 	ensure_installed = servers,
 	automatic_installation = true,
@@ -51,9 +56,4 @@ for _, server in pairs(servers) do
 	end
 
 	lspconfig[server].setup(opts)
-end
-local status_ok, mason = pcall(require, "mason")
-
-if not status_ok then
-	return
 end
