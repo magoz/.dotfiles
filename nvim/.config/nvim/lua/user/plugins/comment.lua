@@ -1,31 +1,38 @@
+-- Based on:
+-- https://github.com/LunarVim/LunarVim/blob/c38957538ddae0c600224cdf1e8389683a63c6d3/lua/lvim/core/comment.lua
+
 local status_ok, comment = pcall(require, "Comment")
 if not status_ok then
   return
 end
 
 comment.setup {
-  pre_hook = function(ctx)
-    local U = require "Comment.utils"
+pre_hook = function(ctx)
+      local U = require "Comment.utils"
 
-    local location = nil
-    if ctx.ctype == U.ctype.block then
-      location = require("ts_context_commentstring.utils").get_cursor_location()
-    elseif ctx.cmotion == U.cmotion.v or ctx.cmotion == U.cmotion.V then
-      location = require("ts_context_commentstring.utils").get_visual_start_location()
+      -- Determine whether to use linewise or blockwise commentstring
+      local type = ctx.ctype == U.ctype.linewise and "__default" or "__multiline"
+
+      -- Determine the location where to calculate commentstring from
+      local location = nil
+      if ctx.ctype == U.ctype.blockwise then
+        location = require("ts_context_commentstring.utils").get_cursor_location()
+      elseif ctx.cmotion == U.cmotion.v or ctx.cmotion == U.cmotion.V then
+        location = require("ts_context_commentstring.utils").get_visual_start_location()
+      end
+
+      return require("ts_context_commentstring.internal").calculate_commentstring {
+        key = type,
+        location = location,
+      }
     end
-
-    return require("ts_context_commentstring.internal").calculate_commentstring {
-      key = ctx.ctype == U.ctype.line and "__default" or "__multiline",
-      location = location,
-    }
-  end,
 }
-
 -- ---------------------------------
 -- ----------- REMAPS --------------
 -- ---------------------------------
 local keymap = vim.keymap.set
 local opts = { silent = true }
 
-keymap("n", "<leader>/", "<cmd>lua require('Comment.api').toggle_current_linewise()<CR>", opts)
-keymap("x", "<leader>/", '<ESC><CMD>lua require("Comment.api").toggle_linewise_op(vim.fn.visualmode())<CR>')
+-- TODO: use whichkey
+keymap("n", "<leader>/", "<Plug>(comment_toggle_linewise_current)", opts)
+keymap("x", "<leader>/", "<Plug>(comment_toggle_linewise_visual)")

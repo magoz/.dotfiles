@@ -67,8 +67,7 @@ nvim_tree.setup({
 		},
 	},
 	view = {
-		width = 30,
-		height = 30,
+		adaptive_size = true,
 		side = "left",
 		mappings = {
 			list = {
@@ -80,10 +79,25 @@ nvim_tree.setup({
 	},
 })
 
+-- Automatically open file on creation
+-- https://github.com/nvim-tree/nvim-tree.lua/issues/1120
+local api_status_ok, api = pcall(require, "nvim-tree.api")
+if not api_status_ok then
+	return
+end
+
+api.events.subscribe(api.events.Event.FileCreated, function(file)
+	vim.cmd("edit " .. file.fname)
+end)
+
 -- ---------------------------------
 -- ----------- REMAPS --------------
 -- ---------------------------------
-local keymap = vim.keymap.set
-local opts = { silent = true }
+local wk_status_ok, wk = pcall(require, "which-key")
+if not wk_status_ok then
+	return
+end
 
-keymap("n", "<leader>e", ":NvimTreeToggle<CR>", opts)
+wk.register({
+	e = { ":NvimTreeToggle<CR>", "Toggle nvim tree" },
+}, { prefix = "<leader>" })

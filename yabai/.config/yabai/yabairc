@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+
+# Useful commands
+# Restart the config
+# brew services restart yabai
+
+# global settings
+yabai -m config                                 \
+    active_window_border_color   0xFFFF4009     \
+    normal_window_border_color   0x00FF4009     \
+    window_border_width          2              \
+    window_border_radius         12             \
+    window_border_blur           off            \
+    window_border_hidpi          off            \
+    window_border                on             \
+

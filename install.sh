@@ -20,6 +20,7 @@ brew install \
   neovim \
   stow \
   tmux \
+  koekeishiya/formulae/yabai \
   zsh
 
 # -------------------------------------- 
@@ -32,38 +33,42 @@ stow iterm2
 stow zsh
 stow tmux
 stow git
+stow yabai
 
 # -------------------------------------- 
 # -------------  NEOVIM ----------------
 # -------------------------------------- 
 # Plugins dependencies
-# hexokinase uses go
 # telescope uses fd and ripgrep
 # Copilot is not yet compatible with node 18, so we have to additionally install node 16
 brew install \
   fd \
-  go \
   lazygit \
   node@16 \
   ripgrep
 
 # LSP
-npm i -g bash-language-server # bash
-npm i -g yaml-language-server # yamlls
-npm i -g vscode-langservers-extracted # cssls
-npm i -g cssmodules-language-server # cssmodules_ls
-npm i -g typescript-language-server # typescript
-brew install lua-language-server  # sumneko_lua
+# npm i -g bash-language-server # bash
+# npm i -g yaml-language-server # yamlls
+# npm i -g vscode-langservers-extracted # cssls
+# npm i -g cssmodules-language-server # cssmodules_ls
+# npm i -g typescript-language-server # typescript
+# brew install lua-language-server  # sumneko_lua
 
 # Formatters & Linters (diagnostics)
-brew install \
-  eslint \
-  prettier \
-  stylua
+# brew install \
+#   eslint \
+#   prettier \
+#   stylua
 
 # Install plugins
 # https://github.com/wbthomason/packer.nvim#bootstrapping
 nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+
+# -------------------------------------- 
+# -------------- YABAI -----------------
+# -------------------------------------- 
+brew services restart yabai
 
 # -------------------------------------- 
 # -------------  ITERM2 ----------------
