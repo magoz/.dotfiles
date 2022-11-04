@@ -1,7 +1,10 @@
-local wk = require("which-key")
-
 local status_ok, true_zen = pcall(require, "true-zen")
 if not status_ok then
+	return
+end
+
+local wk_status_ok, wk = pcall(require, "which-key")
+if not wk_status_ok then
 	return
 end
 

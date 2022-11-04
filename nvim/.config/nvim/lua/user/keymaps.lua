@@ -75,5 +75,5 @@ keymap("v", "<C-l>", ":t '>.<CR>==", opts)
 keymap("v", "<", "<gv", opts)
 keymap("v", ">", ">gv", opts)
 
--- Better paste
--- keymap("v", "p", '"_dP', opts)
+-- Better paste (don't replace clipboard with deleted text)
+keymap("v", "p", '"_dP', opts)
