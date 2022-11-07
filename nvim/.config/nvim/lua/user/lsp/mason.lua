@@ -3,6 +3,7 @@ local servers = {
 	"cssls",
 	"cssmodules_ls",
 	"html",
+	"prismals",
 	-- "markdownlint",
 	"tsserver",
 	"bashls",
