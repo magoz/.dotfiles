@@ -11,6 +11,11 @@ end
 local tree_cb = nvim_tree_config.nvim_tree_callback
 
 nvim_tree.setup({
+	actions = {
+		open_file = {
+			quit_on_open = true,
+		},
+	},
 	filters = {
 		dotfiles = false, -- display dotfiles by default. Can be toggled with H
 		custom = { -- always hide these files
