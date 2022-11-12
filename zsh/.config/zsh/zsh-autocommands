@@ -1,5 +1,5 @@
 # starting directory on launch
-cd ~/dev/core-projects/
+# cd ~/dev/core-projects/
 
 # Start / attach a new tmux session on launch
 if [ -z "$TMUX" ]
