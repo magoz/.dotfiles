@@ -12,6 +12,9 @@ end
 
 local M = {}
 
+--Enable (broadcasting) snippet capability for completion
+-- Used by html, jsonls, cssls
+-- https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md
 M.capabilities = vim.lsp.protocol.make_client_capabilities()
 M.capabilities.textDocument.completion.completionItem.snippetSupport = true
 M.capabilities = cmp_nvim_lsp.default_capabilities(M.capabilities)
