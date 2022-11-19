@@ -63,7 +63,9 @@ brew install \
 
 # Install plugins
 # https://github.com/wbthomason/packer.nvim#bootstrapping
+echo "📦 Installing Neovim plugins with Packer"
 nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerClean'
 
 # -------------------------------------- 
 # -------------- YABAI -----------------

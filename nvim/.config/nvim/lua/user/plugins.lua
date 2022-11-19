@@ -1,20 +1,22 @@
--- Automatically install packerplugins.luaplugins.lua
---
+-- Based on:
+-- https://github.com/LunarVim/nvim-basic-ide/blob/master/lua/user/plugins.lua
 
-local ensure_packer = function()
-	local fn = vim.fn
-	local install_path = fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"
-	if fn.empty(fn.glob(install_path)) > 0 then
-		fn.system({ "git", "clone", "--depth", "1", "https://github.com/wbthomason/packer.nvim", install_path })
-		vim.cmd([[packadd packer.nvim]])
-		return true
-	end
-	return false
+-- Automatically install packer
+local install_path = vim.fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"
+if vim.fn.empty(vim.fn.glob(install_path)) > 0 then
+	PACKER_BOOTSTRAP = vim.fn.system({
+		"git",
+		"clone",
+		"--depth",
+		"1",
+		"https://github.com/wbthomason/packer.nvim",
+		install_path,
+	})
+	print("Installing packer close and reopen Neovim...")
+	vim.cmd([[packadd packer.nvim]])
 end
 
-local packer_bootstrap = ensure_packer()
-
--- Autocommand that syncs plugins whenever you save the plugins.lua file
+-- Autocommand that reloads neovim whenever you save the plugins.lua file
 vim.cmd([[
   augroup packer_user_config
     autocmd!
@@ -29,13 +31,16 @@ if not status_ok then
 end
 
 -- Have packer use a popup window
--- packer.init({
---   display = {
---     open_fn = function()
---       return require("packer.util").float({ border = "rounded" })
---     end,
---   },
--- })
+packer.init({
+	display = {
+		open_fn = function()
+			return require("packer.util").float({ border = "rounded" })
+		end,
+	},
+	git = {
+		clone_timeout = 300, -- Timeout, in seconds, for git clones
+	},
+})
 
 return packer.startup({
 	function(use)
@@ -97,10 +102,6 @@ return packer.startup({
 		-- Telescope
 		use({ "nvim-telescope/telescope.nvim" })
 		use({ "nvim-telescope/telescope-fzf-native.nvim", run = "make" })
-		-- use({
-		-- 	"nvim-telescope/telescope-fzf-native.nvim",
-		-- 	run = "cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build",
-		-- })
 
 		-- Treesitter
 		use({ "nvim-treesitter/nvim-treesitter" })
@@ -133,7 +134,7 @@ return packer.startup({
 		-- use({ "zbirenbaum/copilot-cmp", module = "copilot_cmp" })
 
 		-- Automatically set up your configuration after cloning packer.nvim
-		if packer_bootstrap then
+		if PACKER_BOOTSTRAP then
 			require("packer").sync()
 		end
 	end,
