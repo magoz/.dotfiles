@@ -12,6 +12,13 @@ if not snip_status_ok then
 	return
 end
 
+-- Include html snippets for jsx/tsx
+-- Must must be placed before lazy loading vscode loader
+-- https://github.com/L3MON4D3/LuaSnip/issues/132
+luasnip.filetype_extend("javascript", { "html" })
+luasnip.filetype_extend("javascriptreact", { "html" })
+luasnip.filetype_extend("typescriptreact", { "html" })
+
 require("luasnip/loaders/from_vscode").lazy_load()
 
 local check_backspace = function()
@@ -81,10 +88,8 @@ cmp.setup({
 			else
 				fallback()
 			end
-		end, {
-			"i",
-			"s",
-		}),
+		end, { "i", "s" }),
+
 		["<S-Tab>"] = cmp.mapping(function(fallback)
 			if cmp.visible() then
 				cmp.select_prev_item()
