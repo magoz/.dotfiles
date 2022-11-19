@@ -89,9 +89,10 @@ return packer.startup({
 		use({ "neovim/nvim-lspconfig" }) -- enable LSP
 		use({ "williamboman/mason.nvim" })
 		use({ "williamboman/mason-lspconfig.nvim" })
-		-- use({ "neovim/nvim-lspconfig", commit = "148c99bd09b44cf3605151a06869f6b4d4c24455" }) -- enable LSP
-		use({ "jose-elias-alvarez/null-ls.nvim" }) -- for formatters and linters
+		--- LSP servers
 		use({ "jose-elias-alvarez/typescript.nvim" }) -- Import all missing imports, refactor on move, etc.
+		use({ "jose-elias-alvarez/null-ls.nvim" }) -- for formatters and linters
+
 		use({ "b0o/schemastore.nvim" }) -- import json schemas from SchemaStore catalog
 		use({ "folke/trouble.nvim" }) -- show diagnostics
 		use({ "folke/neodev.nvim" }) -- previously named lua-dev
