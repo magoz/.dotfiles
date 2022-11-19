@@ -6,6 +6,9 @@ end
 local b = null_ls.builtins
 
 local sources = {
+	-- Typescript
+	require("typescript.extensions.null-ls.code-actions"),
+
 	-- Formatting
 	-- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/formatting
 	b.formatting.prettier,
