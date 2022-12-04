@@ -27,6 +27,14 @@ keymap("n", "<C-k>", "<ESC>:m .-2<CR>==", opts)
 keymap("n", "<C-h>", ":t-1<CR>==", opts)
 keymap("n", "<C-l>", ":t.<CR>==", opts)
 
+-- Center the cursor in view when navigating up and down
+keymap("n", "<C-d>", "<C-d>zz")
+keymap("n", "<C-u>", "<C-u>zz")
+
+-- Center the cursor in view when searching, and moving to next instance with n and N
+keymap("n", "n", "nzzzv")
+keymap("n", "N", "Nzzzv")
+
 -- Resize with arrows
 keymap("n", "<C-Up>", ":resize -2<CR>", opts)
 keymap("n", "<C-Down>", ":resize +2<CR>", opts)
