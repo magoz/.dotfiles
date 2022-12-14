@@ -20,6 +20,9 @@ Follow the instructions: <https://github.com/github/copilot.vim>
 
 ### Neovim
 
+- [ ] Fix cmp randomly stopping working and having to restart nvim.
+- [ ] Fix autoformat on save randomly stopping working and having to restart nvim.
+- [ ] Find a way of showing unsaved buffers.
 - [ ] See if we can find lsp for mdx
   - <https://github.com/mdx-js/eslint-mdx>
   - <https://github.com/mdx-js/vscode-mdx>
