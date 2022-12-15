@@ -20,6 +20,8 @@ Follow the instructions: <https://github.com/github/copilot.vim>
 
 ### Neovim
 
+- [ ] Fix leader-p to paste on visual mode.
+- [ ] Add [nvim-spectre](https://github.com/nvim-pack/nvim-spectre) for search and replace.
 - [ ] Fix cmp randomly stopping working and having to restart nvim.
 - [ ] Fix autoformat on save randomly stopping working and having to restart nvim.
 - [ ] Find a way of showing unsaved buffers.
