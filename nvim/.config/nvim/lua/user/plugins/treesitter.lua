@@ -34,14 +34,14 @@ configs.setup({
 		"query",
 	},
 	highlight = {
-		enable = true, -- false will disable the whole extension
+		enable = true,
 	},
 	incremental_selection = {
 		enable = true,
 		keymaps = {
-			init_selection = "<c-n>",
-			node_incremental = "<c-n>",
-			node_decremental = "<c-p>",
+			init_selection = "<leader><space>",
+			node_incremental = "<leader><space>",
+			node_decremental = "<leader><bs>",
 			-- scope_incremental = "<c-s>",
 		},
 	},
