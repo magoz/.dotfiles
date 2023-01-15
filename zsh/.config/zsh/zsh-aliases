@@ -5,6 +5,9 @@ alias v='nvim'
 alias vi='nvim'
 alias vim='nvim'
 
+# PNPM
+alias p=pnpm
+
 # Common directories 
 alias dot='cd ~/.dotfiles'
 
