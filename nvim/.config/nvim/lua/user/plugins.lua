@@ -79,7 +79,7 @@ require("lazy").setup({
 
 	-- Telescope
 	"nvim-telescope/telescope.nvim",
-	-- { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+	{ "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
 
 	-- Treesitter
 	"nvim-treesitter/nvim-treesitter",
