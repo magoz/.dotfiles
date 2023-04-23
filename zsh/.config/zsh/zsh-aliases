@@ -8,6 +8,9 @@ alias vim='nvim'
 # PNPM
 alias p=pnpm
 
+# Copilot
+eval "$(github-copilot-cli alias -- "$0")"
+
 # Common directories 
 alias dot='cd ~/.dotfiles'
 
