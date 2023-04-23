@@ -5,7 +5,7 @@ end
 
 configs.setup({
 	ensure_installed = {
-		"help",
+		"vimdoc",
 		"vim",
 		"lua",
 		"javascript",
