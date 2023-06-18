@@ -13,6 +13,7 @@ telescope.setup({
 		prompt_prefix = " ",
 		selection_caret = " ",
 		path_display = { "smart" },
+
 		file_ignore_patterns = {
 			".DS_Store",
 			".git/",
@@ -55,7 +56,6 @@ telescope.setup({
 				["q"] = actions.close,
 			},
 		},
-
 		-- vimgrep_arguments = {
 		-- 	"rg",
 		-- 	"--color=never",
@@ -67,6 +67,13 @@ telescope.setup({
 		-- 	"-uu", -- search hidden files
 		-- },
 	},
+	pickers = {
+		live_grep = {
+			additional_args = function()
+				return { "--hidden" }
+			end,
+		},
+	}, -- search inside of hidden files/folders
 })
 
 -- To get fzf loaded and working with telescope, you need to call
@@ -84,6 +91,7 @@ wk.register({
 		i = { ":Telescope find_files no_ignore=true<CR>", "Search git ignored files" },
 
 		c = { ":Telescope live_grep<CR>", "Search files contents" },
+
 		b = { ":Telescope buffers<CR>", "Search Buffers" },
 		p = { ":Telescope projects<CR>", "Search Projects" },
 	},
