@@ -88,7 +88,7 @@ local function lsp_keymaps(bufnr)
 			name = "Jump to..", -- group name
 			i = { ":LspImplementation<CR>", "Implementation" },
 			r = { ":Telescope lsp_references<CR>", "References" },
-			d = { ":LspDefinition<CR>", "Definition" },
+			d = { ":TypescriptGoToSourceDefinition<CR>", "Definition" }, -- fallbacks to LspDefinition if not found.
 			D = { ":LspDeclaration<CR>", "Declaration (not supported in ts/js/css)" },
 			t = { ":LspTypeDefinition<CR>", "Type Definition" },
 		},
