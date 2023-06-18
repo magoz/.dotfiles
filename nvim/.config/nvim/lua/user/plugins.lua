@@ -83,6 +83,7 @@ require("lazy").setup({
 
 	-- Treesitter
 	"nvim-treesitter/nvim-treesitter",
+	"nvim-treesitter/nvim-treesitter-context", -- show wrapping function as sticky on top
 
 	-- Git
 	"tpope/vim-fugitive",
