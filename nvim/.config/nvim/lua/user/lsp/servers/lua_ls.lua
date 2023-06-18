@@ -17,6 +17,7 @@ local settings = {
 			keywordSnippet = "Disable",
 		},
 		workspace = {
+			checkThirdParty = false, -- Get rid of `Do you need to configure your work environment as luv` message on launch
 			library = {
 				[vim.fn.expand("$VIMRUNTIME/lua")] = true,
 				[vim.fn.stdpath("config") .. "/lua"] = true,
