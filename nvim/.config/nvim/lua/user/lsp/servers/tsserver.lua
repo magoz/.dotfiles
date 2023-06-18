@@ -14,6 +14,10 @@ M.setup = function(on_attach, capabilities)
 			end,
 			capabilities = capabilities,
 		},
+		-- prevent showing d.ts files
+		go_to_source_definition = {
+			fallback = true,
+		},
 	})
 
 	require("which-key").register({
