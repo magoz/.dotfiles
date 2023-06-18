@@ -79,7 +79,8 @@ telescope.load_extension("fzf")
 wk.register({
 	f = {
 		name = "Telescope", -- group name
-		f = { ":Telescope find_files hidden=true no_ignore=true<CR>", "Search files" },
+		f = { ":Telescope find_files<CR>", "Search files" },
+		h = { ":Telescope find_files hidden=true no_ignore=true<CR>", "Search hidden files" },
 		c = { ":Telescope live_grep<CR>", "Search files contents" },
 		b = { ":Telescope buffers<CR>", "Search Buffers" },
 		p = { ":Telescope projects<CR>", "Search Projects" },
