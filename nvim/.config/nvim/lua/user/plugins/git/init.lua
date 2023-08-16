@@ -6,6 +6,7 @@ if not wk_status_ok then
 end
 
 wk.register({
+	gg = { "<cmd>LazyGit<CR>", "Lazy Git" },
 	gd = { "<cmd>DiffviewFileHistory %<CR>", "Git File History via Diff View" }, -- via DiffView
 	gD = { "<cmd>DiffviewClose<CR>", "Close Diff View" }, -- via DiffView
 	gh = { "<cmd>0Gclog<CR>", "Git file history via Fugitive" }, -- via Fugitive
