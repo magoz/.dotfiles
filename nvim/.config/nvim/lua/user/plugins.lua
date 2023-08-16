@@ -26,7 +26,6 @@ require("lazy").setup({
 	"kyazdani42/nvim-tree.lua",
 	"moll/vim-bbye", -- Delete buffers without closing nvim
 	"nvim-lualine/lualine.nvim",
-	"akinsho/toggleterm.nvim",
 	"ahmedkhalf/project.nvim",
 	"lewis6991/impatient.nvim",
 	"lukas-reineke/indent-blankline.nvim",
@@ -86,6 +85,7 @@ require("lazy").setup({
 	"nvim-treesitter/nvim-treesitter-context", -- show wrapping function as sticky on top
 
 	-- Git
+	"kdheepak/lazygit.nvim",
 	"tpope/vim-fugitive",
 	"lewis6991/gitsigns.nvim",
 	"sindrets/diffview.nvim",
