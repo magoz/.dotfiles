@@ -12,7 +12,7 @@ telescope.setup({
 
 		prompt_prefix = " ",
 		selection_caret = " ",
-		path_display = { "smart" },
+		path_display = { truncate = 4 },
 
 		file_ignore_patterns = {
 			".DS_Store",
