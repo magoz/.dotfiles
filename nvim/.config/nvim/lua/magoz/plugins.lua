@@ -34,7 +34,7 @@ require("lazy").setup({
 	-- "goolord/alpha-nvim", -- display a screen when nvim opens
 	-- "RRethy/vim-illuminate", -- highlight the word or group of words under the cursor
 	-- "NvChad/nvim-colorizer.lua", -- dislay the color next to hex value
-	"kylechui/nvim-surround", -- add, change, and delete surrounding tags
+	-- "kylechui/nvim-surround", -- add, change, and delete surrounding tags
 
 	-- Writing mode
 	-- "Pocco81/true-zen.nvim",
