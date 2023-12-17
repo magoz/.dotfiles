@@ -41,22 +41,22 @@ require("mason-lspconfig").setup({
 -- 	return
 -- end
 
-local on_attach = require("user.lsp.handlers").on_attach
-local capabilities = require("user.lsp.handlers").capabilities
+local on_attach = require("magoz.lsp.handlers").on_attach
+local capabilities = require("magoz.lsp.handlers").capabilities
 
 for _, server in pairs(servers) do
 	-- opts = {
-	-- 	on_attach = require("user.lsp.handlers").on_attach,
-	-- 	capabilities = require("user.lsp.handlers").capabilities,
+	-- 	on_attach = require("magoz.lsp.handlers").on_attach,
+	-- 	capabilities = require("magoz.lsp.handlers").capabilities,
 	-- }
 
 	-- -- server = vim.split(server, "@")[1]
 	--
-	-- -- local require_ok, conf_opts = pcall(require, "user.lsp.servers." .. server)
+	-- -- local require_ok, conf_opts = pcall(require, "magoz.lsp.servers." .. server)
 	-- -- if require_ok then
 	-- -- 	opts = vim.tbl_deep_extend("force", conf_opts, opts)
 	-- -- end
 	-- lspconfig[server].setup(opts)
 
-	require("user.lsp.servers." .. server).setup(on_attach, capabilities)
+	require("magoz.lsp.servers." .. server).setup(on_attach, capabilities)
 end

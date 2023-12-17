@@ -1,4 +1,4 @@
-local u = require("user.utils")
+local u = require("magoz.utils")
 
 local status_which_key_ok, wk = pcall(require, "which-key")
 if not status_which_key_ok then
