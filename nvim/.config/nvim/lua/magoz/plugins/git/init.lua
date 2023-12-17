@@ -1,4 +1,4 @@
-require("user.plugins.git.gitsigns")
+require("magoz.plugins.git.gitsigns")
 
 local wk_status_ok, wk = pcall(require, "which-key")
 if not wk_status_ok then
