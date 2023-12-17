@@ -26,8 +26,8 @@ require("lazy").setup({
 
 	-- "kyazdani42/nvim-tree.lua",
 	"moll/vim-bbye", -- Delete buffers without closing nvim
-	"nvim-lualine/lualine.nvim",
-	"ahmedkhalf/project.nvim",
+	-- "nvim-lualine/lualine.nvim",
+	-- "ahmedkhalf/project.nvim",
 	-- "lewis6991/impatient.nvim",
 	-- "lukas-reineke/indent-blankline.nvim",
 	-- "folke/which-key.nvim", -- show shortcuts
@@ -71,8 +71,9 @@ require("lazy").setup({
 	"jose-elias-alvarez/null-ls.nvim", -- for formatters and linters
 
 	"b0o/schemastore.nvim", -- import json schemas from SchemaStore catalog
-	"folke/trouble.nvim", -- show diagnostics
 	"folke/neodev.nvim", -- previously named lua-dev
+
+	--[[ "folke/trouble.nvim", -- show diagnostics ]]
 
 	-- Harpoon
 	-- "ThePrimeagen/harpoon",
