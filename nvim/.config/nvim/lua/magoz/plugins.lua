@@ -16,21 +16,21 @@ vim.opt.rtp:prepend(lazypath)
 vim.g.mapleader = " "
 
 require("lazy").setup({
-	"nvim-lua/plenary.nvim", -- Useful lua functions used by lots of plugins
-	"kyazdani42/nvim-web-devicons", -- ui dependency of many other plugins
+	-- "nvim-lua/plenary.nvim", -- Useful lua functions used by lots of plugins
+	-- "kyazdani42/nvim-web-devicons", -- ui dependency of many other plugins
 
-	"windwp/nvim-autopairs", -- Autopairs, integrates with both cmp and treesitter
-	"numToStr/Comment.nvim",
-	"JoosepAlviste/nvim-ts-context-commentstring",
+	-- "windwp/nvim-autopairs", -- Autopairs, integrates with both cmp and treesitter
+	-- "numToStr/Comment.nvim",
+	-- "JoosepAlviste/nvim-ts-context-commentstring",
 
 	"kyazdani42/nvim-tree.lua",
 	"moll/vim-bbye", -- Delete buffers without closing nvim
 	"nvim-lualine/lualine.nvim",
 	"ahmedkhalf/project.nvim",
 	"lewis6991/impatient.nvim",
-	"lukas-reineke/indent-blankline.nvim",
-	"folke/which-key.nvim", -- show shortcuts
-	"goolord/alpha-nvim", -- display a screen when nvim opens
+	-- "lukas-reineke/indent-blankline.nvim",
+	-- "folke/which-key.nvim", -- show shortcuts
+	-- "goolord/alpha-nvim", -- display a screen when nvim opens
 	"RRethy/vim-illuminate", -- highlight the word or group of words under the cursor
 	"NvChad/nvim-colorizer.lua", -- dislay the color next to hex value
 	"kylechui/nvim-surround", -- add, change, and delete surrounding tags
@@ -39,15 +39,16 @@ require("lazy").setup({
 	"Pocco81/true-zen.nvim",
 
 	-- Colorschemes
-	{
-		"folke/tokyonight.nvim",
-		lazy = false, -- make sure we load this during startup if it is your main colorscheme
-		priority = 1000, -- make sure to load this before all the other start plugins
-		config = function()
-			-- load the colorscheme here
-			vim.cmd([[colorscheme tokyonight]])
-		end,
-	},
+	{ import = "magoz.p" },
+	-- {
+	-- 	"folke/tokyonight.nvim",
+	-- 	lazy = false, -- make sure we load this during startup if it is your main colorscheme
+	-- 	priority = 1000, -- make sure to load this before all the other start plugins
+	-- 	config = function()
+	-- 		-- load the colorscheme here
+	-- 		vim.cmd([[colorscheme tokyonight]])
+	-- 	end,
+	-- },
 
 	-- cmp plugins
 	"hrsh7th/nvim-cmp", -- The completion plugin
@@ -74,11 +75,11 @@ require("lazy").setup({
 	"folke/neodev.nvim", -- previously named lua-dev
 
 	-- Harpoon
-	"ThePrimeagen/harpoon",
+	-- "ThePrimeagen/harpoon",
 
 	-- Telescope
-	"nvim-telescope/telescope.nvim",
-	{ "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+	-- "nvim-telescope/telescope.nvim",
+	-- { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
 
 	-- Treesitter
 	"nvim-treesitter/nvim-treesitter",
