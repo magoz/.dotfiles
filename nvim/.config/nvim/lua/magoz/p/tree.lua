@@ -95,6 +95,13 @@ return {
 			},
 		})
 
+		-- Automatically open file on creation
+		-- https://github.com/nvim-tree/nvim-tree.lua/issues/1120
+		local api = require("nvim-tree.api")
+		api.events.subscribe(api.events.Event.FileCreated, function(file)
+			vim.cmd("edit " .. file.fname)
+		end)
+
 		vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle nvim tree" })
 	end,
 }
