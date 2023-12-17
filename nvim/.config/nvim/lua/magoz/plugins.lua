@@ -27,12 +27,12 @@ require("lazy").setup({
 	"moll/vim-bbye", -- Delete buffers without closing nvim
 	"nvim-lualine/lualine.nvim",
 	"ahmedkhalf/project.nvim",
-	"lewis6991/impatient.nvim",
+	-- "lewis6991/impatient.nvim",
 	-- "lukas-reineke/indent-blankline.nvim",
 	-- "folke/which-key.nvim", -- show shortcuts
 	-- "goolord/alpha-nvim", -- display a screen when nvim opens
-	"RRethy/vim-illuminate", -- highlight the word or group of words under the cursor
-	"NvChad/nvim-colorizer.lua", -- dislay the color next to hex value
+	-- "RRethy/vim-illuminate", -- highlight the word or group of words under the cursor
+	-- "NvChad/nvim-colorizer.lua", -- dislay the color next to hex value
 	"kylechui/nvim-surround", -- add, change, and delete surrounding tags
 
 	-- Writing mode
