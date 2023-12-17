@@ -16,6 +16,7 @@ vim.opt.rtp:prepend(lazypath)
 vim.g.mapleader = " "
 
 require("lazy").setup({
+	{ import = "magoz.p" },
 	-- "nvim-lua/plenary.nvim", -- Useful lua functions used by lots of plugins
 	-- "kyazdani42/nvim-web-devicons", -- ui dependency of many other plugins
 
@@ -23,7 +24,7 @@ require("lazy").setup({
 	-- "numToStr/Comment.nvim",
 	-- "JoosepAlviste/nvim-ts-context-commentstring",
 
-	"kyazdani42/nvim-tree.lua",
+	-- "kyazdani42/nvim-tree.lua",
 	"moll/vim-bbye", -- Delete buffers without closing nvim
 	"nvim-lualine/lualine.nvim",
 	"ahmedkhalf/project.nvim",
@@ -36,10 +37,9 @@ require("lazy").setup({
 	"kylechui/nvim-surround", -- add, change, and delete surrounding tags
 
 	-- Writing mode
-	"Pocco81/true-zen.nvim",
+	-- "Pocco81/true-zen.nvim",
 
 	-- Colorschemes
-	{ import = "magoz.p" },
 	-- {
 	-- 	"folke/tokyonight.nvim",
 	-- 	lazy = false, -- make sure we load this during startup if it is your main colorscheme

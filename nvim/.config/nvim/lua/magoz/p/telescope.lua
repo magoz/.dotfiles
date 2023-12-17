@@ -87,7 +87,7 @@ return {
 		vim.keymap.set("n", "<leader>fh", "<cmd>Telescope find_files hidden=true<cr>", { desc = "Search Hidden Files" })
 		vim.keymap.set(
 			"n",
-			"<leader>fh",
+			"<leader>fi",
 			"<cmd>Telescope find_files no_ignore=true<cr>",
 			{ desc = "Search git ignored Files" }
 		)
