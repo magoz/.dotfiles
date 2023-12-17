@@ -17,6 +17,7 @@ vim.g.mapleader = " "
 
 require("lazy").setup({
 	{ import = "magoz.p" },
+	{ import = "magoz.p.lsp" },
 	-- "nvim-lua/plenary.nvim", -- Useful lua functions used by lots of plugins
 	-- "kyazdani42/nvim-web-devicons", -- ui dependency of many other plugins
 
@@ -63,17 +64,16 @@ require("lazy").setup({
 	"rafamadriz/friendly-snippets", -- a bunch of snippets to use
 
 	-- LSP
-	"neovim/nvim-lspconfig", -- enable LSP
-	"williamboman/mason.nvim",
-	"williamboman/mason-lspconfig.nvim",
+	-- "neovim/nvim-lspconfig", -- enable LSP
+	-- "williamboman/mason.nvim",
+	-- "williamboman/mason-lspconfig.nvim",
 	--- LSP servers
-	"jose-elias-alvarez/typescript.nvim", -- Import all missing imports, refactor on move, etc.
-	"jose-elias-alvarez/null-ls.nvim", -- for formatters and linters
+	-- "jose-elias-alvarez/typescript.nvim", -- Import all missing imports, refactor on move, etc.
+	-- "jose-elias-alvarez/null-ls.nvim", -- for formatters and linters
+	-- "b0o/schemastore.nvim", -- import json schemas from SchemaStore catalog
 
-	"b0o/schemastore.nvim", -- import json schemas from SchemaStore catalog
-	"folke/neodev.nvim", -- previously named lua-dev
-
-	--[[ "folke/trouble.nvim", -- show diagnostics ]]
+	-- "folke/neodev.nvim", -- previously named lua-dev
+	-- "folke/trouble.nvim", -- show diagnostics
 
 	-- Harpoon
 	-- "ThePrimeagen/harpoon",
@@ -83,22 +83,22 @@ require("lazy").setup({
 	-- { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
 
 	-- Treesitter
-	"nvim-treesitter/nvim-treesitter",
-	"nvim-treesitter/nvim-treesitter-context", -- show wrapping function as sticky on top
+	-- "nvim-treesitter/nvim-treesitter",
+	-- "nvim-treesitter/nvim-treesitter-context", -- show wrapping function as sticky on top
 
 	-- Git
-	"kdheepak/lazygit.nvim",
-	"tpope/vim-fugitive",
-	"lewis6991/gitsigns.nvim",
-	"sindrets/diffview.nvim",
+	-- "kdheepak/lazygit.nvim",
+	-- "tpope/vim-fugitive",
+	-- "lewis6991/gitsigns.nvim",
+	-- "sindrets/diffview.nvim",
 
 	-- DAP
-	"mfussenegger/nvim-dap",
-	"rcarriga/nvim-dap-ui",
-	"ravenxrz/DAPInstall.nvim",
+	-- "mfussenegger/nvim-dap",
+	-- "rcarriga/nvim-dap-ui",
+	-- "ravenxrz/DAPInstall.nvim",
 
 	-- GITHUB COPILOT
-	"github/copilot.vim", -- Node.js v18 not supported yet
+	-- "github/copilot.vim", -- Node.js v18 not supported yet
 
 	-- copilot via cmp
 	-- Right now is very early in development but there is way of integrating copilot with cmp
