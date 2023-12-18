@@ -56,13 +56,43 @@ return {
 		-- used to enable autocompletion (assign to every lsp server config)
 		local capabilities = cmp_nvim_lsp.default_capabilities()
 
-		-- Change the Diagnostic symbols in the sign column (gutter)
-		-- (not in youtube nvim video)
-		local signs = { Error = " ", Warn = " ", Hint = "󰠠 ", Info = " " }
+		-- DIAGNOSTICS
+		local config = {
+			virtual_text = false, -- disable virtual text
+			update_in_insert = true,
+			underline = true,
+			severity_sort = true,
+			float = {
+				focusable = true,
+				style = "minimal",
+				border = "rounded",
+				source = "always",
+				header = "",
+				prefix = "",
+			},
+		}
+
+		vim.diagnostic.config(config)
+
+		local signs = {
+			Error = " ",
+			Warn = " ",
+			Hint = "",
+			Info = " ",
+		}
 		for type, icon in pairs(signs) do
 			local hl = "DiagnosticSign" .. type
 			vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
 		end
+
+		-- FLOATING WINDOW
+		vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
+			border = "rounded",
+		})
+
+		vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+			border = "rounded",
+		})
 
 		--
 		--  Configure and enable LSPs
