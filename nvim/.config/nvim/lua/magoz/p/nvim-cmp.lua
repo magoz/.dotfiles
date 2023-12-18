@@ -1,8 +1,3 @@
-local check_backspace = function()
-	local col = vim.fn.col(".") - 1
-	return col == 0 or vim.fn.getline("."):sub(col, col):match("%s")
-end
-
 return {
 	"hrsh7th/nvim-cmp",
 	event = "InsertEnter",
@@ -27,6 +22,23 @@ return {
 
 		local cmp = require("cmp")
 		local lspkind = require("lspkind")
+
+		-- Used to deprioritize snippets, so emmet never comes before typescript/html.
+		-- Source: https://www.reddit.com/r/neovim/comments/woih9n/comment/ikbd6iy/?utm_source=reddit&utm_medium=web2x&context=3
+		local types = require("cmp.types")
+		local function deprioritize_snippet(entry1, entry2)
+			if entry1:get_kind() == types.lsp.CompletionItemKind.Snippet then
+				return false
+			end
+			if entry2:get_kind() == types.lsp.CompletionItemKind.Snippet then
+				return true
+			end
+		end
+
+		local check_backspace = function()
+			local col = vim.fn.col(".") - 1
+			return col == 0 or vim.fn.getline("."):sub(col, col):match("%s")
+		end
 
 		cmp.setup({
 			-- completion = {
@@ -87,6 +99,27 @@ return {
 				-- { name = "buffer" },
 				{ name = "path" },
 			}),
+
+			-- Used to deprioritize snippets, so emmet never comes before typescript/html.
+			-- Source: https://www.reddit.com/r/neovim/comments/woih9n/comment/ikbd6iy/?utm_source=reddit&utm_medium=web2x&context=3
+			sorting = {
+				priority_weight = 2,
+				comparators = {
+					deprioritize_snippet,
+					-- the rest of the comparators are pretty much the defaults
+					cmp.config.compare.offset,
+					cmp.config.compare.exact,
+					cmp.config.compare.scopes,
+					cmp.config.compare.score,
+					cmp.config.compare.recently_used,
+					cmp.config.compare.locality,
+					cmp.config.compare.kind,
+					cmp.config.compare.sort_text,
+					cmp.config.compare.length,
+					cmp.config.compare.order,
+				},
+			},
+
 			-- configure lspkind for vs-code like pictograms in completion menu
 			formatting = {
 				format = lspkind.cmp_format({
