@@ -4,7 +4,7 @@
 # Start / attach a new tmux session on launch
 if [ -z "$TMUX" ]
 then
-    tmux attach -t TMUX || tmux new -s TMUX
+    tmux a || tmux new 
 fi
 
 # ls after cd
