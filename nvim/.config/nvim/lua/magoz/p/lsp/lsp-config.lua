@@ -44,13 +44,6 @@ return {
 				vim.lsp.buf.code_action,
 				{ desc = "Show Actions (extract code, move to file, etc)" }
 			)
-
-			-- Issues
-			require("which-key").register({ ["<leader>i"] = { name = "Issues" } })
-			vim.keymap.set("n", "<leader>id", vim.lsp.diagnostic.open_float, { desc = "Show Diagnostics" })
-			vim.keymap.set("n", "<leader>in", vim.lsp.diagnostic.goto_next, { desc = "Show Next Diagnostic" })
-			vim.keymap.set("n", "<leader>ip", vim.lsp.diagnostic.goto_prev, { desc = "Show Prev Diagnostic" })
-			vim.keymap.set("n", "<leader>iq", vim.lsp.diagnostic.goto_prev, { desc = "Set Quick Fix List" })
 		end
 
 		-- used to enable autocompletion (assign to every lsp server config)
