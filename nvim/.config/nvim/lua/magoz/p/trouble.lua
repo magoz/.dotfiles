@@ -7,8 +7,16 @@ return {
 	config = function()
 		require("which-key").register({ ["<leader>i"] = { name = "Issues" } })
 
-		vim.keymap.set("n", "<leader>ii", "<cmd>Trouble<CR>", { desc = "Show issues via Trouble" })
-		vim.keymap.set("n", "<leader>ia", "<cmd>Trouble workspace_diagnostics<CR>", { desc = "Trouble all files" })
-		vim.keymap.set("n", "<leader>if", "<cmd>Trouble quickfix<CR>", { desc = "Trouble quickfix" })
+		-- Issues
+		require("which-key").register({ ["<leader>i"] = { name = "Issues" } })
+		vim.keymap.set("n", "<leader>id", vim.diagnostic.open_float, { desc = "Show Diagnostics" })
+		vim.keymap.set("n", "<leader>in", vim.diagnostic.goto_next, { desc = "Show Next Diagnostic" })
+		vim.keymap.set("n", "<leader>ip", vim.diagnostic.goto_prev, { desc = "Show Prev Diagnostic" })
+		vim.keymap.set("n", "<leader>ii", function()
+			require("trouble").toggle()
+		end, { desc = "Show issues via Trouble" })
+		vim.keymap.set("n", "<leader>ia", function()
+			require("trouble").toggle("workspace_diagnostics")
+		end, { desc = "Trouble all files" })
 	end,
 }
