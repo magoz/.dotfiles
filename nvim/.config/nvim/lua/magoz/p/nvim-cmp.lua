@@ -7,6 +7,7 @@ return {
 		"L3MON4D3/LuaSnip", -- snippet engine
 		"saadparwaiz1/cmp_luasnip", -- for autocompletion
 		"rafamadriz/friendly-snippets", -- useful snippets
+		"zbirenbaum/copilot-cmp", -- copilot
 		"onsails/lspkind.nvim", -- vs-code like pictograms
 	},
 	config = function()
@@ -52,6 +53,7 @@ return {
 			mapping = cmp.mapping.preset.insert({
 				["<C-k>"] = cmp.mapping.select_prev_item(),
 				["<C-j>"] = cmp.mapping.select_next_item(),
+				["<Esc>"] = cmp.mapping.close(),
 				["<C-b>"] = cmp.mapping(cmp.mapping.scroll_docs(-1), { "i", "c" }),
 				["<C-f>"] = cmp.mapping(cmp.mapping.scroll_docs(1), { "i", "c" }),
 				["<C-Space>"] = cmp.mapping(cmp.mapping.complete(), { "i", "c" }),
@@ -94,6 +96,7 @@ return {
 			-- sources for autocompletion
 			sources = cmp.config.sources({
 				{ name = "nvim_lsp" },
+				{ name = "copilot" },
 				{ name = "nvim_lua" },
 				{ name = "luasnip" },
 				-- { name = "buffer" },

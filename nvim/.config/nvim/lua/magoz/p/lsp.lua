@@ -137,15 +137,6 @@ return {
 				on_attach = on_attach,
 			})
 
-			-- lspconfig["tsserver"].setup({
-			-- 	capabilities = capabilities,
-			-- 	on_attach = on_attach,
-			-- 	-- prevent showing d.ts files
-			-- 	go_to_source_definition = {
-			-- 		fallback = true,
-			-- 	},
-			-- })
-
 			lspconfig["jsonls"].setup({
 				capabilities = capabilities,
 				on_attach = on_attach,
