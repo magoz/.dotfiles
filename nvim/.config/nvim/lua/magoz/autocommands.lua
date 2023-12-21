@@ -1,10 +1,10 @@
 -- Open telescope on launch
 vim.api.nvim_create_autocmd("VimEnter", {
-  callback = function()
-    if vim.fn.argv(0) == "" then
-      require("telescope.builtin").find_files()
-    end
-  end,
+	callback = function()
+		if vim.fn.argv(0) == "" then
+			require("telescope.builtin").find_files()
+		end
+	end,
 })
 
 -- Use 'q' to quit from common plugins
@@ -14,17 +14,6 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 		vim.cmd([[
       nnoremap <silent> <buffer> q :close<CR> 
       set nobuflisted 
-    ]])
-	end,
-})
-
--- Remove statusline and tabline when in Alpha
-vim.api.nvim_create_autocmd({ "User" }, {
-	pattern = { "AlphaReady" },
-	callback = function()
-		vim.cmd([[
-      set showtabline=0 | autocmd BufUnload <buffer> set showtabline=2
-      set laststatus=0 | autocmd BufUnload <buffer> set laststatus=3
     ]])
 	end,
 })
