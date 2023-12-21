@@ -41,34 +41,13 @@ stow yabai
 # -------------------------------------- 
 # Plugins dependencies
 # telescope uses fd and ripgrep
-# Copilot is not yet compatible with node 18, so we have to additionally install node 16
 brew install \
   fd \
   lazygit \
-  node@16 \
   ripgrep
-
-# LSP
-# npm i -g bash-language-server # bash
-# npm i -g yaml-language-server # yamlls
-# npm i -g vscode-langservers-extracted # cssls
-# npm i -g cssmodules-language-server # cssmodules_ls
-# npm i -g typescript-language-server # typescript
-# brew install lua-language-server  # sumneko_lua
-
-# Formatters & Linters (diagnostics)
-# brew install \
-#   eslint \
-#   prettier \
-#   stylua
 
 # Install plugins
 nvim --headless "+Lazy! sync" +qa
-
-# https://github.com/wbthomason/packer.nvim#bootstrapping
-# echo "📦 Installing Neovim plugins with Packer"
-# nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
-# nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerClean'
 
 # -------------------------------------- 
 # -------------- YABAI -----------------
