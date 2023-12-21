@@ -21,7 +21,8 @@ brew install \
   stow \
   tmux \
   koekeishiya/formulae/yabai \
-  zsh
+  zsh \
+  fzf
 
 # -------------------------------------- 
 # --------------  STOW -----------------
@@ -62,10 +63,12 @@ brew install \
 #   stylua
 
 # Install plugins
+nvim --headless "+Lazy! sync" +qa
+
 # https://github.com/wbthomason/packer.nvim#bootstrapping
-echo "📦 Installing Neovim plugins with Packer"
-nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
-nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerClean'
+# echo "📦 Installing Neovim plugins with Packer"
+# nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+# nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerClean'
 
 # -------------------------------------- 
 # -------------- YABAI -----------------
