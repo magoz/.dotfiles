@@ -3,6 +3,7 @@ return {
 	dependencies = {
 		"nvim-lua/plenary.nvim",
 		{ "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+		"nvim-telescope/telescope-ui-select.nvim",
 	},
 	config = function()
 		local telescope = require("telescope")
@@ -15,33 +16,21 @@ return {
 				path_display = { truncate = 4 },
 
 				file_ignore_patterns = {
-					".DS_Store",
-					".git/",
+					-- -- Media
+					-- "%.jpg",
+					-- "%.jpgeg",
+					-- "%.png",
+					-- "%.gif",
+					-- "%.webp",
+					-- "%.mp4",
+					-- "%.svg",
+					-- "%.pdf",
 
-					-- TS
-					".next/",
-					"%.lock",
-					"node_modules/",
-					"%.tsbuildinfo",
-					"npm-debug.log",
-					"yarn-debug.log",
-					"yarn-error.log",
-
-					-- Media
-					"%.jpg",
-					"%.jpgeg",
-					"%.png",
-					"%.gif",
-					"%.webp",
-					"%.mp4",
-					"%.svg",
-					"%.pdf",
-
-					-- Fonts
-					"%.woff",
-					"%.woff2",
-					"%.otf",
-					"%.ttf",
+					-- -- Fonts
+					-- "%.woff",
+					-- "%.woff2",
+					-- "%.otf",
+					-- "%.ttf",
 				},
 
 				mappings = {
@@ -57,29 +46,17 @@ return {
 						["q"] = actions.close,
 					},
 				},
-				-- vimgrep_arguments = {
-				-- 	"rg",
-				-- 	"--color=never",
-				-- 	"--no-heading",
-				-- 	"--with-filename",
-				-- 	"--line-number",
-				-- 	"--column",
-				-- 	"--smart-case",
-				-- 	"-uu", -- search hidden files
-				-- },
 			},
-			pickers = {
-				live_grep = {
-					additional_args = function()
-						return { "--hidden" }
-					end,
+			extensions = {
+				["ui-select"] = {
+					require("telescope.themes").get_dropdown({}),
 				},
-			}, -- search inside of hidden files/folders
+			},
 		})
 
-		-- To get fzf loaded and working with telescope, you need to call
-		-- load_extension, somewhere after setup function:
+		-- Extensions
 		telescope.load_extension("fzf")
+		telescope.load_extension("ui-select")
 
 		require("which-key").register({ ["<leader>f"] = { name = "Telescope" } })
 
@@ -88,8 +65,8 @@ return {
 		vim.keymap.set(
 			"n",
 			"<leader>fi",
-			"<cmd>Telescope find_files no_ignore=true<cr>",
-			{ desc = "Search git ignored Files" }
+			"<cmd>Telescope find_files no_ignore=true hidden=true<cr>",
+			{ desc = "Search git including hidden or ignored Files" }
 		)
 		vim.keymap.set("n", "<leader>fc", "<cmd>Telescope live_grep<cr>", { desc = "Searh file contents" })
 		vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>", { desc = "Searh Buffers" })
