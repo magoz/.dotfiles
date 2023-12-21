@@ -1,42 +1,12 @@
 return {
 	{
 		"lewis6991/gitsigns.nvim",
-		event = { "BufReadPre", "BufNewFile" },
-		opts = {
-			signs = {
-				add = { hl = "GitSignsAdd", text = "▎", numhl = "GitSignsAddNr", linehl = "GitSignsAddLn" },
-				change = {
-					hl = "GitSignsChange",
-					text = "▎",
-					numhl = "GitSignsChangeNr",
-					linehl = "GitSignsChangeLn",
-				},
-				delete = {
-					hl = "GitSignsDelete",
-					text = "契",
-					numhl = "GitSignsDeleteNr",
-					linehl = "GitSignsDeleteLn",
-				},
-				topdelete = {
-					hl = "GitSignsDelete",
-					text = "契",
-					numhl = "GitSignsDeleteNr",
-					linehl = "GitSignsDeleteLn",
-				},
-				changedelete = {
-					hl = "GitSignsChange",
-					text = "▎",
-					numhl = "GitSignsChangeNr",
-					linehl = "GitSignsChangeLn",
-				},
-			},
-		},
-
-		-- TODO: not sure where to put these remaps
 		config = function()
+			require("gitsigns").setup({})
+
+			-- TODO: not sure where to put these remaps
 			require("which-key").register({ ["<leader>g"] = { name = "Git" } })
 
-			vim.keymap.set("n", "<leader>gg", "<cmd>LazyGit<CR>", { desc = "Lazy Git" })
 			vim.keymap.set(
 				"n",
 				"<leader>gd",
