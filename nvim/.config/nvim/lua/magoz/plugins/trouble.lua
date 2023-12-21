@@ -1,21 +1,22 @@
-local wk = require("which-key")
-
-local status_ok, project = pcall(require, "trouble")
-if not status_ok then
-	return
-end
-
-project.setup({
-	position = "bottom",
-})
-
--- ---------------------------------
--- ----------- REMAPS --------------
--- ---------------------------------
-wk.register({
-	i = {
-		i = { "<cmd>Trouble<CR>", "Show issues via Trouble" },
-		a = { "<cmd>Trouble workspace_diagnostics<CR>", "Trouble all files" },
-		f = { "<cmd>Trouble quickfix<CR>", "Trouble quickfix" },
+return {
+	"folke/trouble.nvim",
+	-- dependencies = { "nvim-tree/nvim-web-devicons" },
+	opts = {
+		position = "bottom",
 	},
-}, { prefix = "<leader>" })
+	config = function()
+		require("which-key").register({ ["<leader>i"] = { name = "Issues" } })
+
+		-- Issues
+		require("which-key").register({ ["<leader>i"] = { name = "Issues" } })
+		vim.keymap.set("n", "<leader>id", vim.diagnostic.open_float, { desc = "Show Diagnostics" })
+		vim.keymap.set("n", "<leader>in", vim.diagnostic.goto_next, { desc = "Show Next Diagnostic" })
+		vim.keymap.set("n", "<leader>ip", vim.diagnostic.goto_prev, { desc = "Show Prev Diagnostic" })
+		vim.keymap.set("n", "<leader>ii", function()
+			require("trouble").toggle()
+		end, { desc = "Show issues via Trouble" })
+		vim.keymap.set("n", "<leader>ia", function()
+			require("trouble").toggle("workspace_diagnostics")
+		end, { desc = "Trouble all files" })
+	end,
+}

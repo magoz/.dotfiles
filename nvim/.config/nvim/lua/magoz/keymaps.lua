@@ -3,10 +3,6 @@ local keymap = vim.keymap.set
 -- Silent keymap option
 local opts = { silent = true }
 
---Remap space as leader key
-keymap("", "<Space>", "<Nop>", opts)
-vim.g.mapleader = " "
-
 -- Modes
 --   normal_mode = "n",
 --   insert_mode = "i",
@@ -85,3 +81,25 @@ keymap("v", ">", ">gv", opts)
 
 -- Better paste (don't replace clipboard with deleted text)
 keymap("v", "p", '"_dP', opts)
+
+-- --------------------------------------------------
+-- --------------------------------------------------
+-- --------------------------------------------------
+-- ------------------ Plugins -----------------------
+-- --------------------------------------------------
+-- --------------------------------------------------
+-- --------------------------------------------------
+
+-- Git
+require("which-key").register({ ["<leader>g"] = { name = "Git" } })
+
+vim.keymap.set("n", "<leader>gg", "<cmd>LazyGit<CR>", { desc = "Lazy Git" })
+vim.keymap.set("n", "<leader>gd", "<cmd>DiffviewFileHistory %<CR>", { desc = "Git File History via Diff View" }) -- via DiffView
+vim.keymap.set("n", "<leader>gD", "<cmd>DiffviewClose<CR>", { desc = "Close Diff View" }) -- via DiffView
+vim.keymap.set("n", "<leader>gh", "<cmd>0Gclog<CR>", { desc = "Git file history via Fugitive" }) -- via Fugitive
+vim.keymap.set(
+	"n",
+	"<leader>gt",
+	"<cmd>Telescope git_bcommits<CR>",
+	{ desc = "Git preview file history via Telescope" }
+) -- via Telescope
