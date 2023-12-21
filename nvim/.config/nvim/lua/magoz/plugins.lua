@@ -26,7 +26,7 @@ require("lazy").setup({
 	-- "JoosepAlviste/nvim-ts-context-commentstring",
 
 	-- "kyazdani42/nvim-tree.lua",
-	"moll/vim-bbye", -- Delete buffers without closing nvim
+	-- "moll/vim-bbye", -- Delete buffers without closing nvim
 	-- "nvim-lualine/lualine.nvim",
 	-- "ahmedkhalf/project.nvim",
 	-- "lewis6991/impatient.nvim",
@@ -52,16 +52,16 @@ require("lazy").setup({
 	-- },
 
 	-- cmp plugins
-	"hrsh7th/nvim-cmp", -- The completion plugin
-	"hrsh7th/cmp-buffer", -- buffer completions
-	"hrsh7th/cmp-path", -- path completions
-	"saadparwaiz1/cmp_luasnip", -- snippet completions
-	"hrsh7th/cmp-nvim-lsp",
-	"hrsh7th/cmp-nvim-lua",
+	-- "hrsh7th/nvim-cmp", -- The completion plugin
+	-- "hrsh7th/cmp-buffer", -- buffer completions
+	-- "hrsh7th/cmp-path", -- path completions
+	-- "saadparwaiz1/cmp_luasnip", -- snippet completions
+	-- "hrsh7th/cmp-nvim-lsp",
+	-- "hrsh7th/cmp-nvim-lua",
 
 	-- snippets
-	"L3MON4D3/LuaSnip", --snippet engine
-	"rafamadriz/friendly-snippets", -- a bunch of snippets to use
+	-- "L3MON4D3/LuaSnip", --snippet engine
+	-- "rafamadriz/friendly-snippets", -- a bunch of snippets to use
 
 	-- LSP
 	-- "neovim/nvim-lspconfig", -- enable LSP
