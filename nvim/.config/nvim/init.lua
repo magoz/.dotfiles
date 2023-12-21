@@ -6,7 +6,7 @@ require("magoz.autocommands")
 require("magoz.plugins")
 
 -- require("magoz.lsp")
-require("magoz.plugins.cmp")
+-- require("magoz.plugins.cmp")
 -- require("magoz.plugins.harpoon")
 -- require("magoz.plugins.telescope")
 -- require("magoz.plugins.treesitter")
