@@ -17,13 +17,19 @@ return {
 			})
 
 			require("mason-lspconfig").setup({
-				-- Whether servers that are set up (via lspconfig) should be automatically installed if they're not already installed.
-				automatic_installation = true,
-
-				-- For typescript-tools.nvim
-				-- The rest are automatically installed thanks to automatic_installation property.
 				ensure_installed = {
+					"lua_ls",
+					"cssls",
+					"cssmodules_ls",
+					"html",
+					"prismals",
+					"tailwindcss",
+					-- "markdownlint",
 					"tsserver",
+					"bashls",
+					"jsonls",
+					"yamlls",
+					-- "graphql",
 				},
 			})
 
@@ -36,6 +42,12 @@ return {
 			})
 		end,
 	},
+	{
+
+		"williamboman/mason-lspconfig.nvim",
+		config = function() end,
+	},
+
 	{
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufNewFile" },
@@ -199,12 +211,6 @@ return {
 			-- 	on_attach = on_attach,
 			-- 	filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" },
 			-- })
-
-			lspconfig["emmet_ls"].setup({
-				capabilities = capabilities,
-				on_attach = on_attach,
-				filetypes = { "html", "typescriptreact", "javascriptreact", "css", "sass", "scss", "less" },
-			})
 
 			lspconfig["bashls"].setup({
 				capabilities = capabilities,
