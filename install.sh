@@ -20,9 +20,9 @@ brew install \
   neovim \
   stow \
   tmux \
-  koekeishiya/formulae/yabai \
   zsh \
-  fzf
+  fzf 
+  # koekeishiya/formulae/yabai \
 
 # -------------------------------------- 
 # --------------  STOW -----------------
@@ -34,7 +34,7 @@ stow iterm2
 stow zsh
 stow tmux
 stow git
-stow yabai
+# stow yabai
 
 # -------------------------------------- 
 # -------------  NEOVIM ----------------
@@ -52,7 +52,7 @@ nvim --headless "+Lazy! sync" +qa
 # -------------------------------------- 
 # -------------- YABAI -----------------
 # -------------------------------------- 
-brew services restart yabai
+# brew services restart yabai
 
 # -------------------------------------- 
 # -------------  ITERM2 ----------------
