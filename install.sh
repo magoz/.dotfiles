@@ -22,7 +22,10 @@ brew install \
   tmux \
   zsh \
   fzf 
-  # koekeishiya/formulae/yabai \
+
+# Borders
+brew tap FelixKratz/formulae
+brew install borders
 
 # -------------------------------------- 
 # --------------  STOW -----------------
@@ -34,7 +37,7 @@ stow iterm2
 stow zsh
 stow tmux
 stow git
-# stow yabai
+stow borders
 
 # -------------------------------------- 
 # -------------  NEOVIM ----------------
@@ -50,9 +53,9 @@ brew install \
 nvim --headless "+Lazy! sync" +qa
 
 # -------------------------------------- 
-# -------------- YABAI -----------------
+# ------------- BORDERS ----------------
 # -------------------------------------- 
-# brew services restart yabai
+brew services restart borders
 
 # -------------------------------------- 
 # -------------  ITERM2 ----------------
