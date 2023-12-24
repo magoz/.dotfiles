@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# To restart the config:
+# brew services restart borders
+
+options=(
+	style=round
+	width=6.0
+	hidpi=on
+  active_color=0xFFFF4009
+  inactive_color=0x00FF4009
+)
+
+borders "${options[@]}"
