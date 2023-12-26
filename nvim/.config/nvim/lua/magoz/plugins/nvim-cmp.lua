@@ -41,7 +41,6 @@ return {
 			mapping = cmp.mapping.preset.insert({
 				["<C-k>"] = cmp.mapping.select_prev_item(),
 				["<C-j>"] = cmp.mapping.select_next_item(),
-				["<Esc>"] = cmp.mapping.close(),
 				["<C-b>"] = cmp.mapping(cmp.mapping.scroll_docs(-1), { "i", "c" }),
 				["<C-f>"] = cmp.mapping(cmp.mapping.scroll_docs(1), { "i", "c" }),
 				["<C-Space>"] = cmp.mapping(cmp.mapping.complete(), { "i", "c" }),
@@ -53,20 +52,20 @@ return {
 				-- Set `select` to `false` to only confirm explicitly selected items.
 				["<CR>"] = cmp.mapping.confirm({ select = true }),
 
-				-- Supertab. the ability to jump into next step into the snippet
-				["<Tab>"] = cmp.mapping(function(fallback)
-					if cmp.visible() then
-						cmp.select_next_item()
-					elseif luasnip.expandable() then
-						luasnip.expand()
-					elseif luasnip.expand_or_jumpable() then
-						luasnip.expand_or_jump()
-					elseif check_backspace() then
-						fallback()
-					else
-						fallback()
-					end
-				end, { "i", "s" }),
+				-- -- Supertab. the ability to jump into next step into the snippet
+				-- ["<Tab>"] = cmp.mapping(function(fallback)
+				-- 	if cmp.visible() then
+				-- 		cmp.select_next_item()
+				-- 	elseif luasnip.expandable() then
+				-- 		luasnip.expand()
+				-- 	elseif luasnip.expand_or_jumpable() then
+				-- 		luasnip.expand_or_jump()
+				-- 	elseif check_backspace() then
+				-- 		fallback()
+				-- 	else
+				-- 		fallback()
+				-- 	end
+				-- end, { "i", "s" }),
 
 				["<S-Tab>"] = cmp.mapping(function(fallback)
 					if cmp.visible() then
