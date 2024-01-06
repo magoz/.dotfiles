@@ -15,7 +15,12 @@ vim.opt.rtp:prepend(lazypath)
 -- Make sure to set `mapleader` before lazy so your mappings are correct
 vim.g.mapleader = " "
 
-require("lazy").setup("magoz.plugins")
+require("lazy").setup({
+	spec = "magoz.plugins",
+	change_detection = {
+		notify = false,
+	},
+})
 require("magoz.options")
 require("magoz.keymaps")
 require("magoz.autocommands")

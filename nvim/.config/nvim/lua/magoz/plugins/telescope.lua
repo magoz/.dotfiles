@@ -61,6 +61,7 @@ return {
 		require("which-key").register({ ["<leader>f"] = { name = "Telescope" } })
 
 		vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>", { desc = "Search Files" })
+		vim.keymap.set("n", "<leader>fg", "<cmd>Telescope git_files<cr>", { desc = "Search Git Files" })
 		vim.keymap.set("n", "<leader>fh", "<cmd>Telescope find_files hidden=true<cr>", { desc = "Search Hidden Files" })
 		vim.keymap.set(
 			"n",
@@ -70,6 +71,7 @@ return {
 		)
 		vim.keymap.set("n", "<leader>fc", "<cmd>Telescope live_grep<cr>", { desc = "Searh file contents" })
 		vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>", { desc = "Searh Buffers" })
+		vim.keymap.set("n", "<leader>fq", "<cmd>Telescope quickfix<cr>", { desc = "Searh Quick Fix List" })
 		vim.keymap.set("n", "<leader>fp", "<cmd>Telescope projects<cr>", { desc = "Searh Projects" })
 		vim.keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Searh Recent Files" })
 		vim.keymap.set("n", "<leader>fs", "<cmd>Telescope grep_string<cr>", { desc = "Search string under cursor" })
