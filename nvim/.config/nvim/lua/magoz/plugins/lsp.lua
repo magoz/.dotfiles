@@ -117,10 +117,10 @@ return {
 			vim.diagnostic.config(config)
 
 			local signs = {
-				Error = " ",
-				Warn = " ",
-				Hint = "",
-				Info = " ",
+				Error = "",
+				Warn = "",
+				Hint = "󰌶",
+				Info = "",
 			}
 			for type, icon in pairs(signs) do
 				local hl = "DiagnosticSign" .. type
