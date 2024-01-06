@@ -5,6 +5,13 @@ return {
 		name = "tokyonight",
 		priority = 1000,
 		config = function()
+			require("tokyonight").setup({
+				-- style = "night",
+				-- on_colors = function(colors)
+				-- 	colors.bg = "#0D1116"
+				-- end,
+			})
+
 			vim.cmd.colorscheme("tokyonight")
 		end,
 	},
