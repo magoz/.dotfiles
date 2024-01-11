@@ -71,6 +71,9 @@ defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "$HOME/.con
 # Tell iTerm2 to use the custom preferences in the directory
 defaults write com.googlecode.iterm2.plist LoadPrefsFromCustomFolder -bool true
 
+# Enable support for italic text
+tic iterm2/.config/iterm2/xterm-256color-italic.terminfo
+
 # -------------------------------------- 
 # ------------- TMUX ----------------
 # -------------------------------------- 
