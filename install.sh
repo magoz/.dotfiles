@@ -8,6 +8,7 @@ cd "$(dirname "$0")" || exit
 # -------------------------------------- 
 rm -rf tmux/.config/tmux/plugins
 rm ~/.gitconfig
+rm ~/.zprofile
 
 # -------------------------------------- 
 # ---------  INSTALL PACKAGES ----------
