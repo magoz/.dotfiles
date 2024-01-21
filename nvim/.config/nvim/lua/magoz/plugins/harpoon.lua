@@ -26,19 +26,19 @@ return {
 			harpoon:list():next({ ui_nav_wrap = true })
 		end, { desc = "Go to next harpoon" })
 
-		vim.keymap.set("n", "<leader>1", function()
+		vim.keymap.set("n", "<F1>", function()
 			harpoon:list():select(1)
 		end, { desc = "Go to harpoon 1" })
 
-		vim.keymap.set("n", "<leader>2", function()
+		vim.keymap.set("n", "<F2>", function()
 			harpoon:list():select(2)
 		end, { desc = "Go to harpoon 1" })
 
-		vim.keymap.set("n", "<leader>3", function()
+		vim.keymap.set("n", "F3", function()
 			harpoon:list():select(3)
 		end, { desc = "Go to harpoon 3" })
 
-		vim.keymap.set("n", "<leader-4>", function()
+		vim.keymap.set("n", "F4", function()
 			harpoon:list():select(4)
 		end, { desc = "Go to harpoon 4" })
 	end,
