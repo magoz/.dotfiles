@@ -15,6 +15,11 @@ vim.opt.cursorline = true -- highlight the current line
 vim.opt.wrap = false -- display lines as one long line
 vim.opt.conceallevel = 0 -- so that `` is visible in markdown files
 
+-- Spelling
+vim.opt.spell = true
+vim.opt.spelllang = { "en_gb" }
+vim.opt.spelloptions = "camel"
+
 -- Search
 vim.opt.hlsearch = true -- highlight all matches on previous search pattern
 vim.opt.incsearch = true
