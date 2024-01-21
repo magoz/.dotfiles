@@ -12,6 +12,15 @@ local opts = { silent = true }
 --   command_mode = "c",
 
 -- --------------------------------------------------
+-- ---------------- Navigation ---------------------
+-- --------------------------------------------------
+vim.api.nvim_set_keymap(
+	"n",
+	"<leader>c",
+	':let dir_path = expand("%:p:h") | execute "lcd" dir_path | echo "Current directory changed to " . dir_path<CR>',
+	{ noremap = true, silent = false, expr = false, desc = "Change current directory to current file" }
+)
+-- --------------------------------------------------
 -- ---------------- Normal Mode ---------------------
 -- --------------------------------------------------
 -- Move lines up and down
