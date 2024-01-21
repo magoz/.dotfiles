@@ -23,13 +23,13 @@ return {
 					"cssmodules_ls",
 					"html",
 					"prismals",
+					-- "graphql",
 					"tailwindcss",
 					-- "markdownlint",
 					"tsserver",
 					"bashls",
 					"jsonls",
 					"yamlls",
-					-- "graphql",
 				},
 			})
 
@@ -38,6 +38,9 @@ return {
 					"prettier",
 					"stylua",
 					"eslint_d",
+					-- Shell
+					"shfmt",
+					"shellcheck",
 				},
 			})
 		end,
