@@ -50,7 +50,7 @@ keymap("n", "<C-Right>", ":vertical resize +2<CR>", opts)
 -- https://stackoverflow.com/a/19877212
 keymap("n", "<ESC><ESC>", "<ESC>:nohlsearch<CR><ESC>", opts)
 
--- Remove Seach highlights after hitting enter
+-- Remove Search highlights after hitting enter
 keymap("n", "<cr>", ":noh<CR><CR>", opts)
 
 -- Close buffers
