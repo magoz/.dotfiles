@@ -15,6 +15,7 @@ else
 				-mindepth 1 -maxdepth 1 -type d
 			find ~/.dotfiles \
 				~/dev/core-projects/intellect/intellect-monorepo \
+				~/dev/core-projects/intellect/2022/intellect-notes \
 				-mindepth 0 -maxdepth 0 -type d
 		) | fzf
 	)
