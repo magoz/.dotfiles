@@ -9,7 +9,7 @@ return {
 					enabled = true,
 					auto_trigger = true,
 					keymap = {
-						accept = "<tab>",
+						accept = false, -- We are setting this in cmp. Otherwise we can't use tab in insert mode.
 					},
 				},
 			})

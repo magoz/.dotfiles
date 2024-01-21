@@ -52,20 +52,24 @@ return {
 				-- Set `select` to `false` to only confirm explicitly selected items.
 				["<CR>"] = cmp.mapping.confirm({ select = true }),
 
-				-- -- Supertab. the ability to jump into next step into the snippet
-				-- ["<Tab>"] = cmp.mapping(function(fallback)
-				-- 	if cmp.visible() then
-				-- 		cmp.select_next_item()
-				-- 	elseif luasnip.expandable() then
-				-- 		luasnip.expand()
-				-- 	elseif luasnip.expand_or_jumpable() then
-				-- 		luasnip.expand_or_jump()
-				-- 	elseif check_backspace() then
-				-- 		fallback()
-				-- 	else
-				-- 		fallback()
-				-- 	end
-				-- end, { "i", "s" }),
+				-- Supertab. Different behaviors of tab depending on context.
+				["<Tab>"] = cmp.mapping(function(fallback)
+					-- Otherwise copilot prevents us from using tab in insert mode
+					if require("copilot.suggestion").is_visible() then
+						require("copilot.suggestion").accept()
+					--
+					elseif cmp.visible() then
+						cmp.select_next_item()
+					elseif luasnip.expandable() then
+						luasnip.expand()
+					elseif luasnip.expand_or_jumpable() then
+						luasnip.expand_or_jump()
+					elseif check_backspace() then
+						fallback()
+					else
+						fallback()
+					end
+				end, { "i", "s" }),
 
 				["<S-Tab>"] = cmp.mapping(function(fallback)
 					if cmp.visible() then
