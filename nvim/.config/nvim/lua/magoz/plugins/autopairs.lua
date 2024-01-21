@@ -4,6 +4,7 @@ return {
 		config = function()
 			require("nvim-autopairs").setup({
 				check_ts = true, -- treesitter integration
+				map_cr = false, -- apparently without this nvim-cmp crashes often
 				disable_filetype = { "TelescopePrompt" },
 			})
 
