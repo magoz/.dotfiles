@@ -17,7 +17,7 @@ vim.opt.conceallevel = 0 -- so that `` is visible in markdown files
 
 -- Spelling
 vim.opt.spell = true
-vim.opt.spelllang = { "en_gb" }
+vim.opt.spelllang = { "en_us" }
 vim.opt.spelloptions = "camel"
 
 -- Search
