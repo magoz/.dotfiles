@@ -15,8 +15,10 @@ brew install \
   raycast \
   amethyst \
   istat-menus \
+  bartender \
   appcleaner \
   postico \
   medis \
   telegram \
-  spotify
+  spotify \
+  fantastical
