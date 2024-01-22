@@ -13,10 +13,11 @@ rm ~/.zprofile
 # --------------------------------------
 # ---------  INSTALL PACKAGES ----------
 # --------------------------------------
-echo "🍺 Installing packages with Homebrew"
+echo "🍺 Installing basic config packages with Homebrew"
 brew install \
 	bat \
 	git \
+	node \
 	iterm2 \
 	neovim \
 	stow \
@@ -45,6 +46,8 @@ stow borders
 # --------------------------------------
 # Plugins dependencies
 # telescope uses fd and ripgrep
+
+echo "⚡ Setting up Neovim"
 brew install \
 	fd \
 	lazygit \
@@ -80,3 +83,12 @@ tic iterm2/.config/iterm2/xterm-256color-italic.terminfo
 # --------------------------------------
 tmux source "$HOME/.config/tmux/tmux.conf"
 echo "✅ Sourced Tmux"
+
+# --------------------------------------
+# ------  INSTALL DEV PACKAGES ---------
+# --------------------------------------
+# tlrc is tldr
+echo "🚀 Installing DEV packages with Homebrew"
+brew install \
+	pnpm \
+	tlrc
