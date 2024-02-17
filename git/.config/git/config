@@ -9,5 +9,10 @@
 	defaultBranch = main
 
 # `git push` new branches without `--set-upstream origin`
+[credential]
+        helper = osxkeychain
+
+# `git push` new branches without `--set-upstream origin`
 [push]
 	autoSetupRemote = true
+
