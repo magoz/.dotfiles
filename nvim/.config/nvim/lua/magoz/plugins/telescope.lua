@@ -75,6 +75,9 @@ return {
 		vim.keymap.set("n", "<leader>fp", "<cmd>Telescope projects<cr>", { desc = "Searh Projects" })
 		vim.keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Searh Recent Files" })
 		vim.keymap.set("n", "<leader>fs", "<cmd>Telescope grep_string<cr>", { desc = "Search string under cursor" })
+		vim.keymap.set("n", "<leader>as", function()
+			require("telescope.builtin").spell_suggest(require("telescope.themes").get_cursor({}))
+		end, { desc = "Spelling Suggestions" })
 
 		-- vim.keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Fuzzy find recent files" })
 		-- vim.keymap.set(
