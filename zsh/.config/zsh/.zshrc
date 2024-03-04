@@ -7,6 +7,9 @@
 # Set zsh direcory
 export ZDOTDIR=$HOME/.config/zsh
 
+# Brew path
+export PATH="/opt/homebrew/bin:$PATH"
+
 # ---------------------------------
 # ---------- OPTIONS --------------
 # ---------------------------------
