@@ -11,7 +11,8 @@ else
 				~/dev/core-projects/clients \
 				~/dev/core-projects/afloat/local-dev-setup \
 				~/dev/core-projects/open-source \
-				~/dev/ecosystem \
+				~/dev/core-projects/rust \
+        ~/dev/ecosystem \
 				-mindepth 1 -maxdepth 1 -type d
 			find ~/.dotfiles \
 				~/dev/core-projects/intellect/intellect-monorepo \
