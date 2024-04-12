@@ -14,11 +14,12 @@ return {
 				css = { "prettier" },
 				html = { "prettier" },
 				json = { "prettier" },
+				rust = { "rustfmt" },
 				yaml = { "prettier" },
 				markdown = { "prettier" },
 				graphql = { "prettier" },
 				lua = { "stylua" },
-				sh = { "shfmt" },
+				-- sh = { "shfmt" },
 			},
 			format_on_save = {
 				lsp_fallback = true,
