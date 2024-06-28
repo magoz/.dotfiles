@@ -18,6 +18,7 @@ brew install \
 	bartender \
 	appcleaner \
 	postico \
+  postman \
 	medis \
 	telegram \
 	spotify \
