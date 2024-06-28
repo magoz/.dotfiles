@@ -14,7 +14,7 @@ return {
 
 		require("which-key").register({ ["<leader>h"] = { name = "Harpoon" } })
 
-		vim.keymap.set("n", "<leader>ha", function()
+		vim.keymap.set("n", "<F12>", function()
 			harpoon:list():append()
 		end, { desc = "Add file to harpoon" })
 
