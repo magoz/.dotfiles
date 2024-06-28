@@ -9,12 +9,14 @@ else
 		(
 			find ~/dev/core-projects/magoz \
 				~/dev/core-projects/clients \
+				~/dev/core-projects/clients/duck \
 				~/dev/core-projects/afloat/local-dev-setup \
 				~/dev/core-projects/open-source \
 				~/dev/ecosystem \
 				-mindepth 1 -maxdepth 1 -type d
 			find ~/.dotfiles \
 				~/dev/core-projects/intellect/intellect-monorepo \
+        ~/dev/core-projects/intellect/intellect-notes \
 				~/dev/core-projects/intellect/2022/intellect-notes \
 				-mindepth 0 -maxdepth 0 -type d
 		) | fzf
