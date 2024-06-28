@@ -27,6 +27,7 @@ return {
 					"tailwindcss",
 					-- "markdownlint",
 					"tsserver",
+					"rust_analyzer",
 					"bashls",
 					"jsonls",
 					"yamlls",
@@ -214,6 +215,11 @@ return {
 			-- 	on_attach = on_attach,
 			-- 	filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" },
 			-- })
+
+			lspconfig["rust_analyzer"].setup({
+				capabilities = capabilities,
+				on_attach = on_attach,
+			})
 
 			lspconfig["bashls"].setup({
 				capabilities = capabilities,
