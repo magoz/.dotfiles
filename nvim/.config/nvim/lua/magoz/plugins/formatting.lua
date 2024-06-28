@@ -18,7 +18,7 @@ return {
 				markdown = { "prettier" },
 				graphql = { "prettier" },
 				lua = { "stylua" },
-				sh = { "shfmt" },
+				-- sh = { "shfmt" },
 			},
 			format_on_save = {
 				lsp_fallback = true,
