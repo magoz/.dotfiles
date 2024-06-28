@@ -103,3 +103,11 @@ zsh_add_plugin "sindresorhus/pure"
 #zsh-autosuggestions color
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=244'
 
+
+# pnpm
+export PNPM_HOME="/Users/magoz/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
