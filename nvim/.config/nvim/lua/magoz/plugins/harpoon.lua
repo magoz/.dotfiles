@@ -18,7 +18,8 @@ return {
 			harpoon:list():append()
 		end, { desc = "Add file to harpoon" })
 
-		vim.keymap.set("n", "<leader>hl", function()
+		-- For some reason <S-F3> is the equivalent of F13
+		vim.keymap.set("n", "<S-F3>", function()
 			harpoon.ui:toggle_quick_menu(harpoon:list())
 		end, { desc = "Toggle Harpoon menu" })
 
