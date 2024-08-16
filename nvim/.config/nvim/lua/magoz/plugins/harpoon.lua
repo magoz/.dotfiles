@@ -15,7 +15,7 @@ return {
 		require("which-key").register({ ["<leader>h"] = { name = "Harpoon" } })
 
 		vim.keymap.set("n", "<F12>", function()
-			harpoon:list():append()
+			harpoon:list():add()
 		end, { desc = "Add file to harpoon" })
 
 		-- For some reason <S-F3> is the equivalent of F13
