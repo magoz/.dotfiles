@@ -20,6 +20,16 @@ vim.api.nvim_set_keymap(
 	':let dir_path = expand("%:p:h") | execute "lcd" dir_path | echo "Current directory changed to " . dir_path<CR>',
 	{ noremap = true, silent = false, expr = false, desc = "Change current directory to current file" }
 )
+
+-- --------------------------------------------------
+-- ------------------ Globals -----------------------
+-- --------------------------------------------------
+-- Ctrl+Z in Neovim is the default Unix behavior for job control, where Ctrl+Z suspends the current foreground process.
+-- While this can be useful in some scenarios, it can indeed be annoying when working with Neovim. Let's disable it.
+keymap("n", "<C-Z>", "<nop>", { noremap = true, silent = true })
+keymap("i", "<C-Z>", "<nop>", { noremap = true, silent = true })
+keymap("v", "<C-Z>", "<nop>", { noremap = true, silent = true })
+
 -- --------------------------------------------------
 -- ---------------- Normal Mode ---------------------
 -- --------------------------------------------------
