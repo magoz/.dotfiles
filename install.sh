@@ -20,6 +20,7 @@ brew install \
 	node \
 	iterm2 \
 	neovim \
+  nikitabobko/tap/aerospace \
 	stow \
 	tmux \
 	zsh \
@@ -39,6 +40,7 @@ stow iterm2
 stow zsh
 stow tmux
 stow git
+stow aerospace
 stow borders
 
 # --------------------------------------
