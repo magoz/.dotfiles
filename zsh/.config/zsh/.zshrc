@@ -44,6 +44,15 @@ zle_highlight=('paste:none')               # Stop pasted text being highlighted.
 # ---------------------------------
 # --------- COMPLETIONS -----------
 # ---------------------------------
+# Homebrew completions
+# See: https://docs.brew.sh/Shell-Completion#configuring-completions-in-zsh
+if type brew &>/dev/null
+then
+  FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+
+  autoload -Uz compinit
+  # compinit # We call it later
+fi
 
 # Remove inferior completions that the git package provide.
 # That will force zsh to use it's own completion for git that is much better. More info:
