@@ -84,7 +84,6 @@ outer.right =      20
 # alt-enter = 'exec-and-forget open -n /System/Applications/Utilities/Terminal.app'
 
 
-
 ############################################################
 # FOCUS & REARRANGE WINDOWS
 ############################################################
@@ -140,6 +139,7 @@ alt-shift-space = 'layout floating tiling'
 # Toggle between Horizontal and Vertical layout
 alt-slash = 'layout tiles horizontal vertical'
 
+
 ############################################################
 # WORKSPACES
 ############################################################
@@ -157,7 +157,6 @@ alt-9  = 'workspace 9'
 alt-0  = 'workspace 10'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
-# shift-alt-ctrl-1 = ['move-node-to-workspace 1', 'workspace 1']
 shift-alt-1 = ['move-node-to-workspace 1', 'workspace 1']
 shift-alt-2 = ['move-node-to-workspace 2', 'workspace 2']
 shift-alt-3 = ['move-node-to-workspace 3', 'workspace 3']
@@ -168,6 +167,9 @@ shift-alt-7 = ['move-node-to-workspace 7', 'workspace 7']
 shift-alt-8 = ['move-node-to-workspace 8', 'workspace 8']
 shift-alt-9 = ['move-node-to-workspace 9', 'workspace 9']
 shift-alt-0 = ['move-node-to-workspace 10', 'workspace 10']
+
+# See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
+shift-alt-ctrl-m = 'move-workspace-to-monitor --wrap-around next'
 
 
 ############################################################
@@ -189,6 +191,47 @@ backspace = ['close-all-windows-but-current', 'mode main']
 ############################################################
 # AUTOMATION
 ############################################################
+
+###############
+# Monitors
+###############
+
+# Assign workspaces to monitors
+# See: https://nikitabobko.github.io/AeroSpace/guide#assign-workspaces-to-monitors
+# [workspace-to-monitor-force-assignment]
+# 1 = 1                            # Monitor sequence number from left to right. 1-based indexing
+# 2 = 'main'                       # Main monitor
+# 3 = 'secondary'                  # Non-main monitor in case when there are only two monitors
+# 4 = 'built-in'                   # Case insensitive regex substring
+# 5 = '^built-in retina display$'  # Case insensitive regex match
+# 6 = ['secondary', 'dell']        # You can specify multiple patterns. The first matching pattern will be used
+
+[workspace-to-monitor-force-assignment]
+10 = 2 # Assign workspace 10 to the secondary monitor
+
+###############
+# Default Application Workspace
+###############
+
+[[on-window-detected]]
+if.app-id = 'com.google.Chrome'
+run = 'move-node-to-workspace 1'
+
+[[on-window-detected]]
+if.app-id = 'com.googlecode.iterm2'
+run = 'move-node-to-workspace 2'
+
+[[on-window-detected]]
+if.app-id = 'ru.keepcoder.Telegram'
+run = 'move-node-to-workspace 8'
+
+[[on-window-detected]]
+if.app-id = 'com.spotify.client'
+run = 'move-node-to-workspace 9'
+
+###############
+# Experimental
+###############
 
 # Automerge new windows to the most right one
 # TODO: Implement when it works:
