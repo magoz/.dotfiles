@@ -5,10 +5,8 @@ return {
 		position = "bottom",
 	},
 	config = function()
-		require("which-key").register({ ["<leader>i"] = { name = "Issues" } })
-
 		-- Issues
-		require("which-key").register({ ["<leader>i"] = { name = "Issues" } })
+		require("which-key").add({ "<leader>i", group = "Issues" })
 		vim.keymap.set("n", "<leader>id", vim.diagnostic.open_float, { desc = "Show Diagnostics" })
 		vim.keymap.set("n", "<leader>in", vim.diagnostic.goto_next, { desc = "Show Next Diagnostic" })
 		vim.keymap.set("n", "<leader>ip", vim.diagnostic.goto_prev, { desc = "Show Prev Diagnostic" })

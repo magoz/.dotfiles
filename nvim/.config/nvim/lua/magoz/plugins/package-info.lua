@@ -7,7 +7,7 @@ return {
 	config = function()
 		require("package-info").setup()
 
-		require("which-key").register({ ["<leader>p"] = { name = "package.json actions" } })
+		require("which-key").add({ "<leader>p", group = "package.json actions" })
 		vim.keymap.set(
 			"n",
 			"<leader>pp",

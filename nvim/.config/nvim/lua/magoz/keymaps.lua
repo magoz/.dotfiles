@@ -116,7 +116,7 @@ vim.api.nvim_create_user_command("W", "w", {})
 -- --------------------------------------------------
 
 -- Git
-require("which-key").register({ ["<leader>g"] = { name = "Git" } })
+require("which-key").add({ "<leader>g", group = "Git" })
 
 vim.keymap.set("n", "<leader>gg", "<cmd>LazyGit<CR>", { desc = "Lazy Git" })
 vim.keymap.set("n", "<leader>gd", "<cmd>DiffviewFileHistory %<CR>", { desc = "Git File History via Diff View" }) -- via DiffView
