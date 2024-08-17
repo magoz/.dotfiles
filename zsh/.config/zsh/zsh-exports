@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# pnpm
+export PNPM_HOME="/Users/magoz/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
+
 # Brew
 export PATH="/opt/homebrew/bin:$PATH"
 
@@ -28,12 +36,6 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools
 # https://github.com/Mach-OS/Machfiles/blob/6373a1fd1e42ca2fd8babd95ef4acce9164c86c3/zsh/.config/zsh/zsh-exports
 #
 # ---------------------------------------------
-
-# HISTFILE="$XDG_DATA_HOME"/zsh/history
-export HISTFILE=ZDOTDIR/.zsh_history       # History file
-export HISTFILESIZE=1000000000             # History file size
-export SAVEHIST=500000                     # Number of commands that are stored in the zsh history file
-export HISTSIZE=500000                     # Number of commands that are loaded into memory from the history file
 
 export PATH="$HOME/.local/bin":$PATH
 export MANPAGER='nvim +Man!'

@@ -10,6 +10,7 @@ rm -rf tmux/.config/tmux/plugins
 rm ~/.gitconfig
 rm ~/.zprofile
 
+
 # --------------------------------------
 # ---------  INSTALL PACKAGES ----------
 # --------------------------------------
@@ -28,7 +29,11 @@ brew install \
 	zsh \
   eza \
   zoxide \
-	fzf
+	fzf \
+  powerlevel10k \
+  zsh-autosuggestions \
+  zsh-syntax-highlighting \
+  zsh-completions
 
 # Borders
 brew tap FelixKratz/formulae
@@ -47,6 +52,11 @@ stow tmux
 stow git
 stow aerospace
 stow borders
+
+# --------------------------------------
+# --------------  ZSH ------------------
+# --------------------------------------
+rm -f ~/.zcompdump; compinit # zsh-completions
 
 # --------------------------------------
 # -------------  NEOVIM ----------------
