@@ -1,14 +1,40 @@
 #!/bin/sh
 
-# based on
-# https://github.com/Mach-OS/Machfiles/blob/6373a1fd1e42ca2fd8babd95ef4acce9164c86c3/zsh/.config/zsh/.zshrc
-# https://www.youtube.com/watch?v=bTLYiNvRIVI
-
 # Set zsh direcory
 export ZDOTDIR=$HOME/.config/zsh
 
-# Brew path
-export PATH="/opt/homebrew/bin:$PATH"
+# ---------------------------------
+# -------- POWERLEVEL10K  ---------
+# ---------------------------------
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.config/zsh/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# To customize prompt, run `p10k configure` or edit ~/.config/zsh/.p10k.zsh.
+[[ ! -f ~/.config/zsh/.p10k.zsh ]] || source ~/.config/zsh/.p10k.zsh
+source /usr/local/share/powerlevel10k/powerlevel10k.zsh-theme
+
+# ---------------------------------
+# ---------- ZAP  -----------------
+# ---------------------------------
+# For more plugins: https://github.com/unixorn/awesome-zsh-plugins
+
+[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
+plug "zsh-users/zsh-autosuggestions"
+plug "zsh-users/zsh-syntax-highlighting"
+plug "zsh-users/zsh-completions"
+
+# plug "zap-zsh/supercharge"
+# plug "zap-zsh/zap-prompt"
+
+
+# zsh_add_plugin "zsh-users/zsh-autosuggestions"
+# zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
+# zsh_add_file "zsh-users/zsh-completions"
+# zsh_add_plugin "hlissner/zsh-autopair"
 
 # ---------------------------------
 # ---------- OPTIONS --------------
@@ -24,10 +50,6 @@ setopt menu_complete                       # On an ambiguous completion, instead
 setopt interactive_comments                # Allow comments even in interactive shells.
 
 # History
-export HISTFILE=ZDOTDIR/.zsh_history       # History file
-export HISTFILESIZE=1000000000             # History file size
-export SAVEHIST=500000                     # Number of commands that are stored in the zsh history file
-export HISTSIZE=500000                     # Number of commands that are loaded into memory from the history file
 setopt append_history                      # zsh sessions will append their history list to the history file, rather than replace it.
 setopt inc_append_history                  # Ensure that commands are added to the history immediately
 setopt extended_history                    # Records the timestamp of each command in HISTFILE
@@ -38,7 +60,6 @@ setopt share_history                       # share command history data
 
 # Colors 
 autoload -Uz colors && colors              # color support
-stty stop undef		                         # Disable ctrl-s to freeze terminal.
 zle_highlight=('paste:none')               # Stop pasted text being highlighted.
 
 # ---------------------------------
@@ -51,8 +72,12 @@ then
   FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
 
   autoload -Uz compinit
-  # compinit # We call it later
+  # compinit 
 fi
+
+# Load and initialise completion system
+autoload -Uz compinit
+compinit
 
 # Remove inferior completions that the git package provide.
 # That will force zsh to use it's own completion for git that is much better. More info:
@@ -97,21 +122,9 @@ zsh_add_file "zsh-autocommands"
 zsh_add_file "zsh-exports"
 zsh_add_file "zsh-vim-mode"
 zsh_add_file "zsh-aliases"
-zsh_add_file "zsh-prompt"
-
-# ---------------------------------
-# ----------- PLUGINS -------------
-# ---------------------------------
-# For more plugins: https://github.com/unixorn/awesome-zsh-plugins
-zsh_add_plugin "zsh-users/zsh-autosuggestions"
-zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
-zsh_add_file "zsh-users/zsh-completions"
-zsh_add_plugin "hlissner/zsh-autopair"
-zsh_add_plugin "sindresorhus/pure"
 
 #zsh-autosuggestions color
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=244'
-
 
 # pnpm
 export PNPM_HOME="/Users/magoz/.local/share/pnpm"

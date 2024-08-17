@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Brew
+export PATH="/opt/homebrew/bin:$PATH"
+
 # User shell colors
 export CLICOLOR=1
 
@@ -27,8 +30,11 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools
 # ---------------------------------------------
 
 # HISTFILE="$XDG_DATA_HOME"/zsh/history
-export HISTSIZE=1000000
-export SAVEHIST=1000000
+export HISTFILE=ZDOTDIR/.zsh_history       # History file
+export HISTFILESIZE=1000000000             # History file size
+export SAVEHIST=500000                     # Number of commands that are stored in the zsh history file
+export HISTSIZE=500000                     # Number of commands that are loaded into memory from the history file
+
 export PATH="$HOME/.local/bin":$PATH
 export MANPAGER='nvim +Man!'
 export MANWIDTH=999
