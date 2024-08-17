@@ -10,26 +10,25 @@ rm -rf tmux/.config/tmux/plugins
 rm ~/.gitconfig
 rm ~/.zprofile
 
-
 # --------------------------------------
 # ---------  INSTALL PACKAGES ----------
 # --------------------------------------
 echo "🍺 Installing basic config packages with Homebrew"
 brew install \
-	bat \
-	git \
-	node \
+  bat \
+  git \
+  node \
   wezterm \
   font-meslo-lg-nerd-font \
-	iterm2 \
-	neovim \
+  iterm2 \
+  neovim \
   nikitabobko/tap/aerospace \
-	stow \
-	tmux \
-	zsh \
+  stow \
+  tmux \
+  zsh \
   eza \
   zoxide \
-	fzf \
+  fzf \
   powerlevel10k \
   zsh-autosuggestions \
   zsh-syntax-highlighting \
@@ -56,7 +55,8 @@ stow borders
 # --------------------------------------
 # --------------  ZSH ------------------
 # --------------------------------------
-rm -f ~/.zcompdump; compinit # zsh-completions
+rm -f ~/.zcompdump
+compinit # zsh-completions
 
 # --------------------------------------
 # -------------  NEOVIM ----------------
@@ -66,9 +66,9 @@ rm -f ~/.zcompdump; compinit # zsh-completions
 
 echo "⚡ Setting up Neovim"
 brew install \
-	fd \
-	lazygit \
-	ripgrep
+  fd \
+  lazygit \
+  ripgrep
 
 # Install plugins
 nvim --headless "+Lazy! sync" +qa
@@ -107,5 +107,5 @@ echo "✅ Sourced Tmux"
 # tlrc is tldr
 echo "🚀 Installing DEV packages with Homebrew"
 brew install \
-	pnpm \
-	tlrc
+  pnpm \
+  tlrc
