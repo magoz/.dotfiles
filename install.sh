@@ -18,6 +18,8 @@ brew install \
 	bat \
 	git \
 	node \
+  wezterm \
+  font-meslo-lg-nerd-font \
 	iterm2 \
 	neovim \
   nikitabobko/tap/aerospace \
@@ -37,6 +39,7 @@ echo "🔗 Running Stow"
 stow stow
 stow nvim
 stow iterm2
+stow wezterm
 stow zsh
 stow tmux
 stow git
