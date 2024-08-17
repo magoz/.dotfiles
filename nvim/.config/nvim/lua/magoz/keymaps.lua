@@ -131,3 +131,6 @@ vim.keymap.set(
 	"<cmd>Telescope git_bcommits<CR>",
 	{ desc = "Git preview file history via Telescope" }
 ) -- via Telescope
+
+-- Undo
+vim.keymap.set("n", "<leader>u", vim.cmd.UndotreeToggle)

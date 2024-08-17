@@ -4,6 +4,7 @@ return {
 		"nvim-lua/plenary.nvim",
 		{ "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
 		"nvim-telescope/telescope-ui-select.nvim",
+		"debugloop/telescope-undo.nvim",
 	},
 	config = function()
 		local telescope = require("telescope")
@@ -66,12 +67,17 @@ return {
 				["ui-select"] = {
 					require("telescope.themes").get_dropdown({}),
 				},
+				undo = {
+					use_delta = true,
+					saved_only = false,
+				},
 			},
 		})
 
 		-- Extensions
 		telescope.load_extension("fzf")
 		telescope.load_extension("ui-select")
+		telescope.load_extension("undo")
 
 		require("which-key").add({ "<leader>f", group = "Telescope" })
 
@@ -99,6 +105,7 @@ return {
 			})
 		end, { desc = "Find file Contents (including hidden)" })
 
+		vim.keymap.set("n", "<leader>fu", "<cmd>Telescope undo<cr>", { desc = "Find Undo" })
 		vim.keymap.set("n", "<leader>fs", "<cmd>Telescope grep_string<cr>", { desc = "Find String under cursor" })
 		vim.keymap.set("n", "<leader>fg", "<cmd>Telescope git_files<cr>", { desc = "Find Git files" })
 		vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>", { desc = "Find Buffers" })
