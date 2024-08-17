@@ -11,6 +11,7 @@ local opts = { silent = true }
 --   term_mode = "t",
 --   command_mode = "c",
 
+local wk = require("which-key")
 -- --------------------------------------------------
 -- ---------------- Navigation ---------------------
 -- --------------------------------------------------
@@ -58,7 +59,9 @@ keymap("n", "<C-Right>", ":vertical resize +2<CR>", opts)
 
 -- Clear search highlights on double <ESC>
 -- https://stackoverflow.com/a/19877212
-keymap("n", "<ESC><ESC>", "<ESC>:nohlsearch<CR><ESC>", opts)
+-- We use which-key to hide the keymap from the help menu
+-- keymap("n", "<ESC><ESC>", "<ESC>:nohlsearch<CR><ESC>", opts)
+wk.add({ "<ESC><ESC>", "<ESC>:nohlsearch<CR><ESC>", hidden = true })
 
 -- Remove Search highlights after hitting enter
 keymap("n", "<cr>", ":noh<CR><CR>", opts)
@@ -116,7 +119,7 @@ vim.api.nvim_create_user_command("W", "w", {})
 -- --------------------------------------------------
 
 -- Git
-require("which-key").add({ "<leader>g", group = "Git" })
+wk.add({ "<leader>g", group = "Git" })
 
 vim.keymap.set("n", "<leader>gg", "<cmd>LazyGit<CR>", { desc = "Lazy Git" })
 vim.keymap.set("n", "<leader>gd", "<cmd>DiffviewFileHistory %<CR>", { desc = "Git File History via Diff View" }) -- via DiffView

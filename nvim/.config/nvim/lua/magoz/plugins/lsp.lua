@@ -61,12 +61,13 @@ return {
 			"b0o/schemastore.nvim",
 		},
 		config = function()
+			local wk = require("which-key")
 			local lspconfig = require("lspconfig")
 			local cmp_nvim_lsp = require("cmp_nvim_lsp")
 
 			local on_attach = function()
 				-- Jump to
-				require("which-key").register({ ["<leader>j"] = { name = "Jump to..." } })
+				wk.add({ "<leader>j", group = "Jump to..." })
 				vim.keymap.set("n", "<leader>ji", function()
 					require("telescope.builtin").lsp_implementations({ reuse_win = true })
 				end, { desc = "Implementation" })
@@ -87,7 +88,7 @@ return {
 				)
 
 				-- Actions
-				require("which-key").register({ ["<leader>a"] = { name = "Actions" } })
+				wk.add({ "<leader>a", group = "Actions" })
 				vim.keymap.set("n", "<leader>ah", vim.lsp.buf.hover, { desc = "Hover" })
 				vim.keymap.set("n", "<leader>aH", vim.lsp.buf.signature_help, { desc = "Show Signature Help" })
 				vim.keymap.set("n", "<leader>ar", vim.lsp.buf.rename, { desc = "Rename Variable" })

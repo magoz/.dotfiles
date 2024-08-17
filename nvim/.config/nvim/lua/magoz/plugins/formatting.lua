@@ -67,7 +67,7 @@ return {
 			desc = "Re-enable autoformat-on-save",
 		})
 
-		require("which-key").register({ ["<leader>af"] = { name = "Format File Actions" } })
+		require("which-key").add({ "<leader>af", group = "Format File Actions" })
 		vim.keymap.set({ "n", "v" }, "<leader>aft", function()
 			vim.cmd(vim.g.disable_autoformat and "FormatEnable" or "FormatDisable")
 			vim.notify("Autoformat-on-save " .. (vim.g.disable_autoformat and "disabled" or "enabled"))
