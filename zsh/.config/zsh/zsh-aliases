@@ -8,6 +8,13 @@ alias vim='nvim'
 # PNPM
 alias p=pnpm
 
+# EZA/LS
+alias ls='eza'
+
+# ZOXIDE/CD
+eval "$(zoxide init zsh)"
+alias cd='z'
+
 # Common directories 
 alias dot='cd ~/.dotfiles'
 

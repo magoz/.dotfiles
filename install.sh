@@ -26,6 +26,8 @@ brew install \
 	stow \
 	tmux \
 	zsh \
+  eza \
+  zoxide \
 	fzf
 
 # Borders
