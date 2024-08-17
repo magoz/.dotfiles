@@ -12,7 +12,7 @@ return {
 			},
 		})
 
-		require("which-key").register({ ["<leader>h"] = { name = "Harpoon" } })
+		require("which-key").add({ "<leader>h", group = "Harpoon" })
 
 		vim.keymap.set("n", "<F12>", function()
 			harpoon:list():add()

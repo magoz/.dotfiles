@@ -73,7 +73,7 @@ return {
 		telescope.load_extension("fzf")
 		telescope.load_extension("ui-select")
 
-		require("which-key").register({ ["<leader>f"] = { name = "Telescope" } })
+		require("which-key").add({ "<leader>f", group = "Telescope" })
 
 		vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>", { desc = "Search Files" })
 		vim.keymap.set("n", "<leader>fg", "<cmd>Telescope git_files<cr>", { desc = "Search Git Files" })
