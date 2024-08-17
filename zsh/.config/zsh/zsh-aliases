@@ -1,5 +1,7 @@
 #!/bin/bash
 
+alias zsh-source='source ~/.config/zsh/.zshrc'
+
 # VIM
 alias v='nvim'
 alias vi='nvim'
