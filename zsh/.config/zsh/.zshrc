@@ -4,6 +4,12 @@
 export ZDOTDIR=$HOME/.config/zsh
 
 # ---------------------------------
+# ------- EXPORTS & PATH ----------
+# ---------------------------------
+source "$ZDOTDIR/zsh-functions"
+zsh_add_file "zsh-exports"
+
+# ---------------------------------
 # -------- POWERLEVEL10K  ---------
 # ---------------------------------
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.config/zsh/.zshrc.
@@ -15,7 +21,7 @@ fi
 
 # To customize prompt, run `p10k configure` or edit ~/.config/zsh/.p10k.zsh.
 [[ ! -f ~/.config/zsh/.p10k.zsh ]] || source ~/.config/zsh/.p10k.zsh
-source /usr/local/share/powerlevel10k/powerlevel10k.zsh-theme
+source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
 
 # ---------------------------------
 # ---------- HISTORY --------------
@@ -107,11 +113,9 @@ autoload edit-command-line; zle -N edit-command-line
 bindkey '^e' edit-command-line # use `ctrl + e` to edit current line in vim
 
 # ---------------------------------
-# ----- LOCAL FILES & UTILS -------
+# ----- UTILS -------
 # ---------------------------------
-source "$ZDOTDIR/zsh-functions"
 zsh_add_file "zsh-autocommands"
-zsh_add_file "zsh-exports"
 zsh_add_file "zsh-vim-mode"
 zsh_add_file "zsh-aliases"
 

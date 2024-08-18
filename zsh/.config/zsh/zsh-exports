@@ -9,6 +9,7 @@ esac
 # pnpm end
 
 # Brew
+eval "$(/opt/homebrew/bin/brew shellenv)"
 export PATH="/opt/homebrew/bin:$PATH"
 
 # User shell colors
