@@ -8,6 +8,45 @@ config.font_size = 12
 config.enable_tab_bar = false
 config.window_decorations = "RESIZE"
 
+-- Keybindings
+-- See: https://wezfurlong.org/wezterm/config/default-keys.html
+config.keys = {
+	-- Remove fullscreen keybinding
+	{
+		key = "Enter",
+		mods = "ALT",
+		action = wezterm.action.DisableDefaultAssignment,
+	},
+	-- Disable Hide
+	{
+		key = "m",
+		mods = "CMD",
+		action = wezterm.action.DisableDefaultAssignment,
+	},
+	-- Disable creating tabs
+	{
+		key = "t",
+		mods = "CMD",
+		action = wezterm.action.DisableDefaultAssignment,
+	},
+	{
+		key = "t",
+		mods = "CTRL|SHIFT",
+		action = wezterm.action.DisableDefaultAssignment,
+	},
+	{
+		key = "T",
+		mods = "CMD|SHIFT",
+		action = wezterm.action.DisableDefaultAssignment,
+	},
+	-- Disable split pane vertically
+	{ key = '"', mods = "CMD", action = wezterm.action.DisableDefaultAssignment },
+	-- Disable split pane horizontally
+	{ key = "%", mods = "CMD", action = wezterm.action.DisableDefaultAssignment },
+	-- Disable split pane horizontally
+	{ key = "%", mods = "CMD", action = wezterm.action.DisableDefaultAssignment },
+}
+
 config.window_padding = {
 	left = 50,
 	right = 50,
