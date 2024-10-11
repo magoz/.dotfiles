@@ -26,6 +26,7 @@ return {
 					-- "graphql",
 					"tailwindcss",
 					-- "markdownlint",
+					"ts_ls",
 					"rust_analyzer",
 					"bashls",
 					"jsonls",
