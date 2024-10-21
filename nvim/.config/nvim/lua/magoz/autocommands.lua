@@ -1,12 +1,24 @@
--- Open nvim tree on startup
+-- -- Open nvim tree on startup
 vim.api.nvim_create_autocmd("VimEnter", {
 	callback = function()
-		if vim.fn.argv(0) == "" then
-			vim.cmd("NvimTreeToggle")
-			-- require("telescope.builtin").find_files()
-		end
+		vim.defer_fn(function()
+			if vim.fn.argc() == 0 then
+				local harpoon = require("harpoon")
+				harpoon.ui:toggle_quick_menu(harpoon:list())
+			end
+		end, 0)
 	end,
 })
+
+-- -- Open nvim tree on startup
+-- vim.api.nvim_create_autocmd("VimEnter", {
+-- 	callback = function()
+-- 		if vim.fn.argv(0) == "" then
+-- 			vim.cmd("NvimTreeToggle")
+-- 			-- require("telescope.builtin").find_files()
+-- 		end
+-- 	end,
+-- })
 
 -- Use 'q' to quit from common plugins
 vim.api.nvim_create_autocmd({ "FileType" }, {
