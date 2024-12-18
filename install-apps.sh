@@ -11,16 +11,15 @@ brew analytics off
 # --------------------------------------
 echo "🍺 Installing apps with Homebrew"
 brew install \
-	keyboard-maestro \
-	raycast \
-	amethyst \
-	istat-menus \
-	bartender \
-	appcleaner \
-	postico \
+  keyboard-maestro \
+  raycast \
+  istat-menus \
+  bartender \
+  appcleaner \
+  postico \
   postman \
-	medis \
-	telegram \
-	spotify \
-	todoist \
-	fantastical
+  medis \
+  telegram \
+  spotify \
+  todoist \
+  fontbase

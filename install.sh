@@ -20,7 +20,6 @@ brew install \
   node \
   wezterm \
   font-meslo-lg-nerd-font \
-  iterm2 \
   neovim \
   nikitabobko/tap/aerospace \
   stow \
@@ -44,7 +43,6 @@ brew install borders
 echo "🔗 Running Stow"
 stow stow
 stow nvim
-stow iterm2
 stow wezterm
 stow zsh
 stow tmux
@@ -77,23 +75,6 @@ nvim --headless "+Lazy! sync" +qa
 # ------------- BORDERS ----------------
 # --------------------------------------
 brew services restart borders
-
-# --------------------------------------
-# -------------  ITERM2 ----------------
-# --------------------------------------
-echo "✨ Install Hack Nerd font for symbols"
-brew tap homebrew/cask-fonts
-brew install --cask font-hack-nerd-font
-
-echo "🤖 Installing Iterm2 config"
-# Specify the preferences directory
-defaults write com.googlecode.iterm2.plist PrefsCustomFolder -string "$HOME/.config/iterm2/profile"
-
-# Tell iTerm2 to use the custom preferences in the directory
-defaults write com.googlecode.iterm2.plist LoadPrefsFromCustomFolder -bool true
-
-# Enable support for italic text
-tic iterm2/.config/iterm2/xterm-256color-italic.terminfo
 
 # --------------------------------------
 # ------------- TMUX ----------------
