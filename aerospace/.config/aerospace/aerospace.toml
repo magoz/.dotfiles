@@ -207,7 +207,7 @@ backspace = ['close-all-windows-but-current', 'mode main']
 # 6 = ['secondary', 'dell']        # You can specify multiple patterns. The first matching pattern will be used
 
 [workspace-to-monitor-force-assignment]
-10 = 2 # Assign workspace 10 to the secondary monitor
+10 = '^built-in retina display$' # Assign workspace 10 to the buit-in retina display
 
 ###############
 # Default Application Workspace
