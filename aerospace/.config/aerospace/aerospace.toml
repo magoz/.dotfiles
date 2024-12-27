@@ -234,6 +234,21 @@ if.app-id = 'com.spotify.client'
 run = 'move-node-to-workspace 9'
 
 ###############
+# App patches
+###############
+
+[[on-window-detected]]
+if.window-title-regex-substring = '^(Picture in Picture|Picture-in-Picture)$'
+run = 'layout floating'
+check-further-callbacks = true
+
+[[on-window-detected]]
+if.app-id="com.mitchellh.ghostty"
+run= [
+  "layout tiling",
+]
+
+###############
 # Experimental
 ###############
 
