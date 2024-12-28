@@ -1,0 +1,11 @@
+theme = niji
+mouse-hide-while-typing = true
+confirm-close-surface = false
+macos-titlebar-style = hidden
+window-padding-x = 16
+window-padding-y = 16
+window-padding-balance = true
+window-colorspace = display-p3
+
+keybind = cmd+t=unbind
+keybind = cmd+n=unbind
