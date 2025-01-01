@@ -93,10 +93,10 @@ outer.right =      20
 ###############
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#focus
-alt-shift-h = 'focus left'
-alt-shift-j = 'focus down'
-alt-shift-k = 'focus up'
-alt-shift-l = 'focus right'
+alt-h = 'focus left'
+alt-j = 'focus down'
+alt-k = 'focus up'
+alt-l = 'focus right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
 alt-tab = 'workspace-back-and-forth'
@@ -105,25 +105,26 @@ alt-tab = 'workspace-back-and-forth'
 # Move
 ###############
 
-# Merge current window with the window in the specified direction
-shift-alt-ctrl-h = ['join-with left', 'mode main']
-shift-alt-ctrl-j = ['join-with down', 'mode main']
-shift-alt-ctrl-k = ['join-with up', 'mode main']
-shift-alt-ctrl-l = ['join-with right', 'mode main']
-
 # See: https://nikitabobko.github.io/AeroSpace/commands#move
-shift-alt-ctrl-left = 'move left'
-shift-alt-ctrl-down = 'move down'
-shift-alt-ctrl-up = 'move up'
-shift-alt-ctrl-right = 'move right'
+ctrl-alt-h = 'move left'
+ctrl-alt-j = 'move down'
+ctrl-alt-k = 'move up'
+ctrl-alt-l = 'move right'
+
+# Merge current window with the window in the specified direction
+ctrl-alt-cmd-h = ['join-with left', 'mode main']
+ctrl-alt-cmd-j = ['join-with down', 'mode main']
+ctrl-alt-cmd-k = ['join-with up', 'mode main']
+ctrl-alt-cmd-l = ['join-with right', 'mode main']
+
 
 ###############
 # Rearrange
 ###############
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#resize
-alt-shift-minus = 'resize smart -50'
-alt-shift-equal = 'resize smart +50'
+ctrl-minus = 'resize smart -50'
+ctrl-equal = 'resize smart +50'
 
 ###############
 # Layouts
@@ -131,13 +132,13 @@ alt-shift-equal = 'resize smart +50'
 ###############
 
 # Toggle between Fullscreen an tilling layout
-alt-shift-enter = 'fullscreen'
+ctrl-enter = 'fullscreen'
 
 # Toggle between Floating and tiling layout
-alt-shift-space = 'layout floating tiling'
+ctrl-space = 'layout floating tiling'
 
 # Toggle between Horizontal and Vertical layout
-alt-slash = 'layout tiles horizontal vertical'
+ctrl-slash = 'layout tiles horizontal vertical'
 
 
 ############################################################
@@ -145,31 +146,31 @@ alt-slash = 'layout tiles horizontal vertical'
 ############################################################
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace
-alt-1  = 'workspace 1'
-alt-2  = 'workspace 2'
-alt-3  = 'workspace 3'
-alt-4  = 'workspace 4'
-alt-5  = 'workspace 5'
-alt-6  = 'workspace 6'
-alt-7  = 'workspace 7'
-alt-8  = 'workspace 8'
-alt-9  = 'workspace 9'
-alt-0  = 'workspace 10'
+ctrl-1  = 'workspace 1'
+ctrl-2  = 'workspace 2'
+ctrl-3  = 'workspace 3'
+ctrl-4  = 'workspace 4'
+ctrl-5  = 'workspace 5'
+ctrl-6  = 'workspace 6'
+ctrl-7  = 'workspace 7'
+ctrl-8  = 'workspace 8'
+ctrl-9  = 'workspace 9'
+ctrl-0  = 'workspace 10'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
-shift-alt-1 = ['move-node-to-workspace 1', 'workspace 1']
-shift-alt-2 = ['move-node-to-workspace 2', 'workspace 2']
-shift-alt-3 = ['move-node-to-workspace 3', 'workspace 3']
-shift-alt-4 = ['move-node-to-workspace 4', 'workspace 4']
-shift-alt-5 = ['move-node-to-workspace 5', 'workspace 5']
-shift-alt-6 = ['move-node-to-workspace 6', 'workspace 6']
-shift-alt-7 = ['move-node-to-workspace 7', 'workspace 7']
-shift-alt-8 = ['move-node-to-workspace 8', 'workspace 8']
-shift-alt-9 = ['move-node-to-workspace 9', 'workspace 9']
-shift-alt-0 = ['move-node-to-workspace 10', 'workspace 10']
+ctrl-alt-1 = ['move-node-to-workspace 1', 'workspace 1']
+ctrl-alt-2 = ['move-node-to-workspace 2', 'workspace 2']
+ctrl-alt-3 = ['move-node-to-workspace 3', 'workspace 3']
+ctrl-alt-4 = ['move-node-to-workspace 4', 'workspace 4']
+ctrl-alt-5 = ['move-node-to-workspace 5', 'workspace 5']
+ctrl-alt-6 = ['move-node-to-workspace 6', 'workspace 6']
+ctrl-alt-7 = ['move-node-to-workspace 7', 'workspace 7']
+ctrl-alt-8 = ['move-node-to-workspace 8', 'workspace 8']
+ctrl-alt-9 = ['move-node-to-workspace 9', 'workspace 9']
+ctrl-alt-0 = ['move-node-to-workspace 10', 'workspace 10']
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
-shift-alt-ctrl-m = 'move-workspace-to-monitor --wrap-around next'
+ctrl-alt-m = 'move-workspace-to-monitor --wrap-around next'
 
 
 ############################################################
@@ -177,7 +178,7 @@ shift-alt-ctrl-m = 'move-workspace-to-monitor --wrap-around next'
 ############################################################
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode
-alt-shift-semicolon = 'mode service'
+ctrl-comma = 'mode service'
 
 # 'service' binding mode declaration.
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -242,11 +243,11 @@ if.window-title-regex-substring = '^(Picture in Picture|Picture-in-Picture)$'
 run = 'layout floating'
 check-further-callbacks = true
 
-[[on-window-detected]]
-if.app-id="com.mitchellh.ghostty"
-run= [
-  "layout tiling",
-]
+# [[on-window-detected]]
+# if.app-id="com.mitchellh.ghostty"
+# run= [
+#   "layout tiling",
+# ]
 
 ###############
 # Experimental
