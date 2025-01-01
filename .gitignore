@@ -10,6 +10,10 @@ nvim/.config/nvim/plugin/packer_compiled.lua
 # iterm2
 iterm2/.config/iterm2/AppSupport
 
+# zsh
+zsh/.config/zsh/.zcompcache
+
+
 # vim temp files
 *.swp
 *.swo
