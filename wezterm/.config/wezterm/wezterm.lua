@@ -8,9 +8,11 @@ config.font_size = 12
 config.enable_tab_bar = false
 config.window_decorations = "RESIZE"
 
--- Fix €, £, and other composed key combinations not working
+-- Fix €, £, and other composed key combinations with alt not working
 config.send_composed_key_when_left_alt_is_pressed = true
 config.send_composed_key_when_right_alt_is_pressed = true
+
+-- config.debug_key_events = true
 
 -- Keybindings
 -- See: https://wezfurlong.org/wezterm/config/default-keys.html
@@ -73,8 +75,6 @@ config.colors = {
 	ansi = { "#214969", "#f5480f", "#44FFB1", "#FFE073", "#019CE6", "#d930e6", "#24EAF7", "#ffffff" },
 	brights = { "#214969", "#fc4503", "#44FFB1", "#FFE073", "#b93ec1", "#d930e6", "#d930e6", "#ffffff" },
 }
-
-config.debug_key_events = true
 
 wezterm.on("window-config-reloaded", function(window, pane)
 	wezterm.log_info("Configuration reloaded!")
