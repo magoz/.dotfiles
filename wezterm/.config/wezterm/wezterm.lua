@@ -8,6 +8,10 @@ config.font_size = 12
 config.enable_tab_bar = false
 config.window_decorations = "RESIZE"
 
+-- Fix €, £, and other composed key combinations not working
+config.send_composed_key_when_left_alt_is_pressed = true
+config.send_composed_key_when_right_alt_is_pressed = true
+
 -- Keybindings
 -- See: https://wezfurlong.org/wezterm/config/default-keys.html
 config.keys = {
