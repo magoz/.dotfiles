@@ -88,18 +88,22 @@ outer.right =      20
 # FOCUS & REARRANGE WINDOWS
 ############################################################
 
+# Alt is for managing window focus.
+# Ctrl is for everything else.
+# This is because alt+numbers is used to output characters like €, £, etc.
+
 ###############
 # Focus
 ###############
 
-# See: https://nikitabobko.github.io/AeroSpace/commands#focus
+# See: https://nikitabobko.github.io/AeroSpace/commands#focus-back-and-forth
 alt-h = 'focus left'
 alt-j = 'focus down'
 alt-k = 'focus up'
 alt-l = 'focus right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
-alt-tab = 'workspace-back-and-forth'
+alt-enter = 'focus-back-and-forth'
 
 ###############
 # Move
