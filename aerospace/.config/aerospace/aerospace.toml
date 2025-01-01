@@ -136,13 +136,13 @@ ctrl-equal = 'resize smart +50'
 ###############
 
 # Toggle between Fullscreen an tilling layout
-ctrl-enter = 'fullscreen'
+ctrl-f = 'fullscreen'
 
 # Toggle between Floating and tiling layout
-ctrl-space = 'layout floating tiling'
+ctrl-t = 'layout floating tiling'
 
 # Toggle between Horizontal and Vertical layout
-ctrl-slash = 'layout tiles horizontal vertical'
+ctrl-v = 'layout tiles horizontal vertical'
 
 
 ############################################################
