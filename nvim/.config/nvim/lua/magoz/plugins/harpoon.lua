@@ -14,14 +14,13 @@ return {
 
 		require("which-key").add({ "<leader>h", group = "Harpoon" })
 
+		vim.keymap.set("n", "<F11>", function()
+			harpoon.ui:toggle_quick_menu(harpoon:list())
+		end, { desc = "Toggle Harpoon menu" })
+
 		vim.keymap.set("n", "<F12>", function()
 			harpoon:list():add()
 		end, { desc = "Add file to harpoon" })
-
-		-- For some reason <S-F3> is the equivalent of F13
-		vim.keymap.set("n", "<S-F3>", function()
-			harpoon.ui:toggle_quick_menu(harpoon:list())
-		end, { desc = "Toggle Harpoon menu" })
 
 		vim.keymap.set("n", "<leader>hn", function()
 			harpoon:list():prev({ ui_nav_wrap = true })
