@@ -22,8 +22,26 @@ vim.api.nvim_set_keymap(
 	{ noremap = true, silent = false, expr = false, desc = "Change current directory to current file" }
 )
 
--- Open current file in Finder
-keymap("n", "<leader>o", ":!open -R %<CR>", { silent = true, desc = "Open in Finder" })
+-- Open in Finder
+-- If nvim-tree is active will use the selection
+local function open_in_finder()
+	if vim.bo.filetype == "NvimTree" then
+		local ok, api = pcall(require, "nvim-tree.api")
+		if not ok then
+			vim.notify("nvim-tree.api not found", vim.log.levels.WARN)
+			return
+		end
+
+		local node = api.tree.get_node_under_cursor()
+		if node then
+			local path = node.absolute_path
+			vim.fn.system('open -R "' .. path .. '"')
+		end
+	else
+		vim.cmd(":!open -R %")
+	end
+end
+vim.keymap.set("n", "<leader>o", open_in_finder, { silent = true, desc = "Open in Finder" })
 
 -- --------------------------------------------------
 -- ------------------ Globals -----------------------

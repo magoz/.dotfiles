@@ -103,19 +103,5 @@ return {
 		end)
 
 		vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle nvim tree" })
-
-		-- Open in Finder (only available when nvim-tree is open)
-		vim.api.nvim_create_autocmd("FileType", {
-			pattern = "NvimTree",
-			callback = function()
-				vim.keymap.set("n", "<leader>F", function()
-					local node = api.tree.get_node_under_cursor()
-					if node then
-						local path = node.absolute_path
-						vim.fn.system('open -R "' .. path .. '"')
-					end
-				end, { buffer = true, desc = "Reveal in Finder" })
-			end,
-		})
 	end,
 }
