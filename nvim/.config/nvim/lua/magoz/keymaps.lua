@@ -22,6 +22,9 @@ vim.api.nvim_set_keymap(
 	{ noremap = true, silent = false, expr = false, desc = "Change current directory to current file" }
 )
 
+-- Open current file in Finder
+keymap("n", "<leader>o", ":!open -R %<CR>", { silent = true, desc = "Open in Finder" })
+
 -- --------------------------------------------------
 -- ------------------ Globals -----------------------
 -- --------------------------------------------------
