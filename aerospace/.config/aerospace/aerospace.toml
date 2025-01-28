@@ -223,12 +223,20 @@ if.app-id = 'com.google.Chrome'
 run = 'move-node-to-workspace 1'
 
 [[on-window-detected]]
-if.app-id = 'com.googlecode.iterm2'
+if.app-id = 'com.github.wez.wezterm'
 run = 'move-node-to-workspace 2'
 
 [[on-window-detected]]
-if.app-id = 'com.github.wez.wezterm'
-run = 'move-node-to-workspace 2'
+if.app-id = 'com.adobe.Photoshop'
+run = 'move-node-to-workspace 5'
+
+[[on-window-detected]]
+if.app-id = 'com.adobe.Illustrator'
+run = 'move-node-to-workspace 6'
+
+[[on-window-detected]]
+if.app-id = 'com.adobe.AfterEffects'
+run = 'move-node-to-workspace 7'
 
 [[on-window-detected]]
 if.app-id = 'ru.keepcoder.Telegram'
