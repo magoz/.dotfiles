@@ -1,0 +1,79 @@
+{
+  "actions" : [
+    {
+      "actions" : [
+        {
+          "type" : "url",
+          "value" : "raycast://extensions/raycast/emoji-symbols/search-emoji-symbols",
+          "label" : "Emoji",
+          "key" : "e"
+        },
+        {
+          "type" : "url",
+          "key" : "p",
+          "label" : "Confetti",
+          "value" : "raycast://confetti"
+        },
+        {
+          "label" : "Camera",
+          "type" : "url",
+          "key" : "c",
+          "value" : "raycast://extensions/raycast/system/open-camera"
+        }
+      ],
+      "key" : "r",
+      "type" : "group",
+      "label" : "Raycast"
+    },
+    {
+      "value" : "/Applications/Google Chrome.app",
+      "label" : "Chrome",
+      "key" : "c",
+      "type" : "application"
+    },
+    {
+      "key" : "d",
+      "type" : "application",
+      "value" : "/Applications/Todoist.app",
+      "label" : "Todoist"
+    },
+    {
+      "key" : "s",
+      "value" : "/Applications/Spotify.app",
+      "type" : "application",
+      "label" : "Spotify"
+    },
+    {
+      "label" : "Wezterm",
+      "type" : "application",
+      "value" : "/Applications/WezTerm.app",
+      "key" : "w"
+    },
+    {
+      "type" : "group",
+      "actions" : [
+        {
+          "type" : "folder",
+          "value" : "/Users/magoz/Downloads",
+          "key" : "d",
+          "label" : "Downloads"
+        },
+        {
+          "value" : "/Users/magoz/Dropbox/projects/working",
+          "type" : "folder",
+          "label" : "Working",
+          "key" : "w"
+        }
+      ],
+      "key" : "f",
+      "label" : "Finder"
+    },
+    {
+      "type" : "application",
+      "value" : "/Applications/Telegram.app",
+      "label" : "Telegram",
+      "key" : "t"
+    }
+  ],
+  "type" : "group"
+}

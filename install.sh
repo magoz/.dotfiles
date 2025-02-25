@@ -50,6 +50,7 @@ stow tmux
 stow git
 stow aerospace
 stow borders
+stow leaderkey
 
 # --------------------------------------
 # --------------  ZSH ------------------
