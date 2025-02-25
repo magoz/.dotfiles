@@ -13,6 +13,7 @@ echo "🍺 Installing apps with Homebrew"
 brew install \
   keyboard-maestro \
   raycast \
+  leader-key \
   istat-menus \
   bartender \
   appcleaner \
