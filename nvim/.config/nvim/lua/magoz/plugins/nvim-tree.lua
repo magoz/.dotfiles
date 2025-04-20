@@ -102,6 +102,6 @@ return {
 			vim.cmd("edit " .. file.fname)
 		end)
 
-		vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle nvim tree" })
+		vim.keymap.set("n", "<leader>E", "<cmd>NvimTreeToggle<CR>", { desc = "File Explorer via nvim tree" })
 	end,
 }
