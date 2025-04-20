@@ -103,7 +103,7 @@ alt-k = 'focus up'
 alt-l = 'focus right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
-alt-enter = 'focus-back-and-forth'
+alt-slash = 'focus-back-and-forth'
 
 ###############
 # Move
