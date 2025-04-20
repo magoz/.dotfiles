@@ -20,6 +20,7 @@ else
         ~/dev/core-projects/archival* \
         ~/dev/core-projects/intellect/intellect-monorepo \
         ~/dev/core-projects/intellect/intellect-notes \
+        ~/dev/core-projects/intellect/intellect-ai \
         ~/dev/core-projects/intellect/2022/intellect-notes \
         -mindepth 0 -maxdepth 0 -type d
     ) | fzf
