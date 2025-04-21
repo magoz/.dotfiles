@@ -3,76 +3,76 @@
     {
       "actions" : [
         {
-          "type" : "url",
-          "value" : "raycast://extensions/raycast/emoji-symbols/search-emoji-symbols",
+          "key" : "e",
           "label" : "Emoji",
-          "key" : "e"
+          "type" : "url",
+          "value" : "raycast://extensions/raycast/emoji-symbols/search-emoji-symbols"
         },
         {
-          "type" : "url",
           "key" : "p",
           "label" : "Confetti",
+          "type" : "url",
           "value" : "raycast://confetti"
         },
         {
+          "key" : "c",
           "label" : "Camera",
           "type" : "url",
-          "key" : "c",
           "value" : "raycast://extensions/raycast/system/open-camera"
         }
       ],
       "key" : "r",
-      "type" : "group",
-      "label" : "Raycast"
+      "label" : "Raycast",
+      "type" : "group"
     },
     {
-      "value" : "/Applications/Google Chrome.app",
-      "label" : "Chrome",
       "key" : "c",
-      "type" : "application"
+      "label" : "Chrome",
+      "type" : "application",
+      "value" : "/Applications/Google Chrome.app"
     },
     {
       "key" : "d",
+      "label" : "Todoist",
       "type" : "application",
-      "value" : "/Applications/Todoist.app",
-      "label" : "Todoist"
+      "value" : "/Applications/Todoist.app"
     },
     {
       "key" : "s",
-      "value" : "/Applications/Spotify.app",
+      "label" : "Spotify",
       "type" : "application",
-      "label" : "Spotify"
+      "value" : "/Applications/Spotify.app"
     },
     {
+      "key" : "w",
       "label" : "Wezterm",
       "type" : "application",
-      "value" : "/Applications/WezTerm.app",
-      "key" : "w"
+      "value" : "/Applications/WezTerm.app"
     },
     {
-      "type" : "group",
       "actions" : [
         {
-          "type" : "folder",
-          "value" : "/Users/magoz/Downloads",
           "key" : "d",
-          "label" : "Downloads"
+          "label" : "Downloads",
+          "type" : "folder",
+          "value" : "/Users/magoz/Downloads"
         },
         {
-          "value" : "/Users/magoz/Dropbox/projects/working",
-          "type" : "folder",
+          "key" : "w",
           "label" : "Working",
-          "key" : "w"
+          "type" : "folder",
+          "value" : "/Users/magoz/Dropbox/projects/working"
         }
       ],
       "key" : "f",
-      "label" : "Finder"
+      "label" : "Finder",
+      "type" : "group"
     },
     {
-      "type" : "application",
-      "value" : "/Applications/Telegram.app",
+      "key" : "t",
       "label" : "Telegram",
-      "key" : "t"
+      "type" : "application",
+      "value" : "/Applications/Telegram.app"
     }
   ],
   "type" : "group"
