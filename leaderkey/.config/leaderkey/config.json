@@ -62,6 +62,18 @@
           "label" : "Working",
           "type" : "folder",
           "value" : "/Users/magoz/Dropbox/projects/working"
+        },
+        {
+          "key" : "b",
+          "label" : "BPI",
+          "type" : "folder",
+          "value" : "/Users/magoz/Dropbox/projects/working/bpi france"
+        },
+        {
+          "key" : "g",
+          "label" : "Geoplan",
+          "type" : "folder",
+          "value" : "/Users/magoz/Dropbox/projects/working/geoplan"
         }
       ],
       "key" : "f",
