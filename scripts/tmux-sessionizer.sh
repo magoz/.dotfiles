@@ -9,6 +9,7 @@ else
     (
       find ~/dev/core-projects/clients \
         ~/dev/core-projects/clients/duck \
+        ~/dev/core-projects/clients/geoplan \
         ~/dev/core-projects/afloat/local-dev-setup \
         ~/dev/core-projects/open-source \
         ~/dev/core-projects/rust \
