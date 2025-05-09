@@ -85,6 +85,25 @@
       "label" : "Telegram",
       "type" : "application",
       "value" : "/Applications/Telegram.app"
+    },
+    {
+      "actions" : [
+        {
+          "key" : "1",
+          "label" : "m1",
+          "type" : "url",
+          "value" : "https://mail.google.com/mail/u/0/"
+        },
+        {
+          "key" : "2",
+          "label" : "m2",
+          "type" : "url",
+          "value" : "https://mail.google.com/mail/u/1/"
+        }
+      ],
+      "key" : "m",
+      "label" : "Email",
+      "type" : "group"
     }
   ],
   "type" : "group"
