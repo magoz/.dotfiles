@@ -18,11 +18,14 @@ else
       find ~/.dotfiles \
         ~/dev/core-projects/magoz.com \
         ~/dev/core-projects/guestbook \
+        ~/dev/core-projects/afloat2 \
+        ~/dev/core-projects/afloat-pdf-generator \
         ~/dev/core-projects/archival* \
         ~/dev/core-projects/intellect/intellect-monorepo \
         ~/dev/core-projects/intellect/intellect-notes \
         ~/dev/core-projects/intellect/intellect-ai \
         ~/dev/core-projects/intellect/2022/intellect-notes \
+        ~/dev/core-projects/reality-score* \
         -mindepth 0 -maxdepth 0 -type d
     ) | fzf
   )
