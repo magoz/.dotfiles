@@ -74,9 +74,32 @@ return {
 				vim.keymap.set("n", "<leader>jr", function()
 					require("telescope.builtin").lsp_references({ reuse_win = true })
 				end, { desc = "References" })
+
+				-- vim.keymap.set("n", "<leader>jd", function()
+				-- 	require("telescope.builtin").lsp_definitions({ reuse_win = true })
+				-- end, { desc = "Definition" })
 				vim.keymap.set("n", "<leader>jd", function()
-					require("telescope.builtin").lsp_definitions({ reuse_win = true })
+					local current_win = vim.api.nvim_get_current_win()
+					local win_config = vim.api.nvim_win_get_config(current_win)
+
+					-- This is for jumping to definitions in the hover window
+					if win_config.relative ~= "" then
+						local word = vim.fn.expand("<cword>")
+
+						-- Close hover and execute definition in original buffer context
+						vim.api.nvim_win_close(current_win, true)
+
+						require("telescope.builtin").lsp_workspace_symbols({
+							query = word,
+							reuse_win = true,
+						})
+
+					-- Normal jump to definition
+					else
+						require("telescope.builtin").lsp_definitions({ reuse_win = true })
+					end
 				end, { desc = "Definition" })
+
 				vim.keymap.set("n", "<leader>t", function()
 					require("telescope.builtin").lsp_type_definitions({ reuse_win = true })
 				end, { desc = "Type Definition" })
