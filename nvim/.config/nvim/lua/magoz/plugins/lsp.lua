@@ -89,8 +89,12 @@ return {
 
 				-- Actions
 				wk.add({ "<leader>a", group = "Actions" })
-				vim.keymap.set("n", "<leader>ah", vim.lsp.buf.hover, { desc = "Hover" })
-				vim.keymap.set("n", "<leader>aH", vim.lsp.buf.signature_help, { desc = "Show Signature Help" })
+				vim.keymap.set("n", "<leader>ah", function()
+					vim.lsp.buf.hover({ border = "rounded", max_height = 50 })
+				end, { desc = "Show Hover" })
+				vim.keymap.set("n", "<leader>aH", function()
+					vim.lsp.buf.signature_help({ border = "rounded", max_height = 50 })
+				end, { desc = "Show Signature Help" })
 				vim.keymap.set("n", "<leader>ar", vim.lsp.buf.rename, { desc = "Rename Variable" })
 				vim.keymap.set(
 					"n",
@@ -131,15 +135,6 @@ return {
 				local hl = "DiagnosticSign" .. type
 				vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
 			end
-
-			-- FLOATING WINDOW
-			vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
-				border = "rounded",
-			})
-
-			vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
-				border = "rounded",
-			})
 
 			--
 			--  Configure and enable LSPs
