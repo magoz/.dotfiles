@@ -74,25 +74,34 @@ return {
 				vim.keymap.set("n", "<leader>jr", function()
 					require("telescope.builtin").lsp_references({ reuse_win = true })
 				end, { desc = "References" })
+				-- vim.keymap.set(
+				-- 	"n",
+				-- 	"<leader>jd",
+				-- 	vim.lsp.buf.definition,
+				-- 	{ desc = "Definition" }
+				-- )
 
 				-- vim.keymap.set("n", "<leader>jd", function()
 				-- 	require("telescope.builtin").lsp_definitions({ reuse_win = true })
 				-- end, { desc = "Definition" })
+
 				vim.keymap.set("n", "<leader>jd", function()
 					local current_win = vim.api.nvim_get_current_win()
 					local win_config = vim.api.nvim_win_get_config(current_win)
 
-					-- This is for jumping to definitions in the hover window
 					if win_config.relative ~= "" then
 						local word = vim.fn.expand("<cword>")
 
 						-- Close hover and execute definition in original buffer context
 						vim.api.nvim_win_close(current_win, true)
 
-						require("telescope.builtin").lsp_workspace_symbols({
-							query = word,
-							reuse_win = true,
-						})
+						vim.defer_fn(function()
+							require("telescope.builtin").lsp_workspace_symbols({
+								query = word,
+								reuse_win = true,
+							})
+							-- Use telescope with the word as query
+						end, 100)
 
 					-- Normal jump to definition
 					else
@@ -146,18 +155,16 @@ return {
 				},
 			}
 
-			vim.diagnostic.config(config)
-
-			local signs = {
-				Error = "",
-				Warn = "",
-				Hint = "󰌶",
-				Info = "",
+			config.signs = {
+				text = {
+					[vim.diagnostic.severity.ERROR] = "",
+					[vim.diagnostic.severity.WARN] = "",
+					[vim.diagnostic.severity.HINT] = "󰌶",
+					[vim.diagnostic.severity.INFO] = "",
+				},
 			}
-			for type, icon in pairs(signs) do
-				local hl = "DiagnosticSign" .. type
-				vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
-			end
+
+			vim.diagnostic.config(config)
 
 			--
 			--  Configure and enable LSPs
