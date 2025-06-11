@@ -96,11 +96,13 @@ return {
 			})
 		end, { desc = "Find Files (hidden included)" })
 
-		vim.keymap.set("n", "<leader>fc", "<cmd>Telescope live_grep<cr>", { desc = "Find file Contents" })
+		vim.keymap.set("n", "<leader>fc", function()
+			require("telescope.builtin").live_grep()
+		end, { desc = "Find file Contents" })
 		vim.keymap.set("n", "<leader>fC", function()
 			require("telescope.builtin").live_grep({
-				additional_args = function(args)
-					return vim.list_extend(args, { "--hidden", "--no-ignore" })
+				additional_args = function(opts)
+					return { "--hidden", "--no-ignore" }
 				end,
 			})
 		end, { desc = "Find file Contents (including hidden)" })
