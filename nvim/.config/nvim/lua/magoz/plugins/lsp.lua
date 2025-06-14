@@ -26,7 +26,7 @@ return {
 					-- "graphql",
 					"tailwindcss",
 					-- "markdownlint",
-					"ts_ls",
+					-- "ts_ls" -- we are using typescript-tools.nvim instead,
 					"rust_analyzer",
 					"bashls",
 					"jsonls",
