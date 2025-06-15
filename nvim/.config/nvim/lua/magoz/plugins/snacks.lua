@@ -4,6 +4,5 @@ return {
 	lazy = false,
 	opts = {
 		input = { enabled = true },
-		rename = { enabled = true },
 	},
 }
