@@ -7,7 +7,6 @@ return {
 		"L3MON4D3/LuaSnip", -- snippet engine
 		"saadparwaiz1/cmp_luasnip", -- for autocompletion
 		"rafamadriz/friendly-snippets", -- useful snippets
-		"zbirenbaum/copilot-cmp", -- copilot
 		"onsails/lspkind.nvim", -- vs-code like pictograms
 	},
 	config = function()
@@ -52,15 +51,9 @@ return {
 				-- Set `select` to `false` to only confirm explicitly selected items.
 				["<CR>"] = cmp.mapping.confirm({ select = true }),
 
-				-- Supertab. Different behaviors of tab depending on context.
-				["<Tab>"] = cmp.mapping(function(fallback)
-					-- Otherwise copilot prevents us from using tab in insert mode
-					if require("copilot.suggestion").is_visible() then
-						require("copilot.suggestion").accept()
-					--
-					elseif cmp.visible() then
-						cmp.select_next_item()
-					elseif luasnip.expandable() then
+				-- TODO: evaluate Supertab for snippets. Different behaviors of tab depending on context.
+				["<C-y>"] = cmp.mapping(function(fallback)
+					if luasnip.expandable() then
 						luasnip.expand()
 					elseif luasnip.expand_or_jumpable() then
 						luasnip.expand_or_jump()
@@ -70,24 +63,10 @@ return {
 						fallback()
 					end
 				end, { "i", "s" }),
-
-				["<S-Tab>"] = cmp.mapping(function(fallback)
-					if cmp.visible() then
-						cmp.select_prev_item()
-					elseif luasnip.jumpable(-1) then
-						luasnip.jump(-1)
-					else
-						fallback()
-					end
-				end, {
-					"i",
-					"s",
-				}),
 			}),
 			-- sources for autocompletion
 			sources = cmp.config.sources({
 				{ name = "nvim_lsp" },
-				{ name = "copilot" },
 				{ name = "nvim_lua" },
 				{ name = "luasnip" },
 				-- { name = "buffer" },
