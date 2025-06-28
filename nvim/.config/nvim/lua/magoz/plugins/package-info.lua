@@ -5,7 +5,9 @@ return {
 		"MunifTanjim/nui.nvim",
 	},
 	config = function()
-		require("package-info").setup()
+		require("package-info").setup({
+			autostart = false,
+		})
 
 		require("which-key").add({ "<leader>p", group = "package.json actions" })
 		vim.keymap.set(
