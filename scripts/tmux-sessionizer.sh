@@ -8,6 +8,7 @@ else
   selected=$(
     (
       find ~/dev/core-projects/clients \
+        ~/dev/core-projects/studio \
         ~/dev/core-projects/clients/duck \
         ~/dev/core-projects/clients/geoplan \
         ~/dev/core-projects/clients/impressions \
