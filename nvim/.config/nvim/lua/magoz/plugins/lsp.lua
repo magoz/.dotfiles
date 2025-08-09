@@ -32,76 +32,6 @@ return {
 					"jsonls",
 					"yamlls",
 				},
-				handlers = {
-					-- Custom vtsls configuration
-					vtsls = function()
-						local lspconfig = require("lspconfig")
-						local cmp_nvim_lsp = require("cmp_nvim_lsp")
-						local capabilities = cmp_nvim_lsp.default_capabilities()
-						
-						lspconfig.vtsls.setup({
-							capabilities = capabilities,
-							on_attach = function(client, bufnr)
-								-- vtsls-specific keymaps
-								vim.keymap.set("n", "<leader>ai", function()
-									vim.lsp.buf.code_action({
-										apply = true,
-										context = { only = { "source.addMissingImports" } }
-									})
-								end, { buffer = bufnr, desc = "Add missing imports" })
-								
-								vim.keymap.set("n", "<leader>aI", function()
-									vim.lsp.buf.code_action({
-										apply = true,
-										context = { only = { "source.removeUnused" } }
-									})
-								end, { buffer = bufnr, desc = "Remove unused imports" })
-								
-								vim.keymap.set("n", "<leader>ao", function()
-									vim.lsp.buf.code_action({
-										apply = true,
-										context = { only = { "source.organizeImports" } }
-									})
-								end, { buffer = bufnr, desc = "Organize imports" })
-								
-								vim.keymap.set("n", "<leader>aF", function()
-									vim.lsp.buf.code_action({
-										apply = true,
-										context = { only = { "source.fixAll" } }
-									})
-								end, { buffer = bufnr, desc = "Fix all issues" })
-								
-								vim.keymap.set("n", "<leader>aR", function()
-									vim.lsp.buf.rename()
-								end, { buffer = bufnr, desc = "Rename file" })
-								
-								vim.keymap.set("n", "<leader>js", function()
-									require("vtsls").commands.goto_source_definition(0)
-								end, { buffer = bufnr, desc = "Jump to source definition" })
-								
-								vim.keymap.set("n", "<leader>jR", function()
-									require("vtsls").commands.file_references(0)
-								end, { buffer = bufnr, desc = "File references" })
-							end,
-							settings = {
-								vtsls = {
-									experimental = {
-										completion = {
-											enableServerSideFuzzyMatch = true,
-										},
-									},
-								},
-								typescript = {
-									preferences = {
-										go_to_source_definition = {
-											fallback = true,
-										},
-									},
-								},
-							},
-						})
-					end,
-				},
 			})
 
 			require("mason-tool-installer").setup({
@@ -204,6 +134,59 @@ return {
 					vim.lsp.buf.code_action,
 					{ desc = "Show Actions (extract code, move to file, etc)" }
 				)
+
+				-- vtsls-specific keymaps (only for TypeScript files)
+				local filetype = vim.bo.filetype
+				if
+					filetype == "typescript"
+					or filetype == "typescriptreact"
+					or filetype == "javascript"
+					or filetype == "javascriptreact"
+				then
+					vim.keymap.set("n", "<leader>ai", function()
+						vim.lsp.buf.code_action({
+							apply = true,
+							context = { only = { "source.addMissingImports" } },
+						})
+					end, { desc = "Add missing imports" })
+
+					vim.keymap.set("n", "<leader>aI", function()
+						vim.lsp.buf.code_action({
+							apply = true,
+							context = { only = { "source.removeUnused" } },
+						})
+					end, { desc = "Remove unused imports" })
+
+					vim.keymap.set("n", "<leader>ao", function()
+						vim.lsp.buf.code_action({
+							apply = true,
+							context = { only = { "source.organizeImports" } },
+						})
+					end, { desc = "Organize imports" })
+
+					vim.keymap.set("n", "<leader>aF", function()
+						vim.lsp.buf.code_action({
+							apply = true,
+							context = { only = { "source.fixAll" } },
+						})
+					end, { desc = "Fix all issues" })
+
+					vim.keymap.set("n", "<leader>aR", function()
+						require("vtsls").commands.rename_file()
+					end, { desc = "Rename file" })
+
+					vim.keymap.set("n", "<leader>js", function()
+						require("vtsls").commands.goto_source_definition(0)
+					end, { desc = "Jump to source definition" })
+
+					vim.keymap.set("n", "<leader>jR", function()
+						require("vtsls").commands.file_references(0)
+					end, { desc = "File references" })
+
+					vim.keymap.set("n", "<leader>at", function()
+						vim.lsp.buf.execute_command({ command = "typescript.selectTypeScriptVersion" })
+					end, { desc = "Select TypeScript Version" })
+				end
 			end
 
 			-- used to enable autocompletion (assign to every lsp server config)
@@ -330,6 +313,31 @@ return {
 					yaml = {
 						schemaStore = {
 							enable = true,
+						},
+					},
+				},
+			})
+
+			lspconfig["vtsls"].setup({
+				capabilities = capabilities,
+				on_attach = on_attach,
+				settings = {
+					vtsls = {
+						autoUseWorkspaceTsdk = true,
+						experimental = {
+							completion = {
+								enableServerSideFuzzyMatch = true,
+							},
+						},
+					},
+					typescript = {
+						tsserver = {
+							pluginPaths = { "./node_modules" },
+						},
+						preferences = {
+							go_to_source_definition = {
+								fallback = true,
+							},
 						},
 					},
 				},
