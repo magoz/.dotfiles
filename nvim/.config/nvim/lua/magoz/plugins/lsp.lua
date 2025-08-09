@@ -183,9 +183,18 @@ return {
 						require("vtsls").commands.file_references(0)
 					end, { desc = "File references" })
 
+					-- Pick a TypeScript version
 					vim.keymap.set("n", "<leader>at", function()
 						vim.lsp.buf.execute_command({ command = "typescript.selectTypeScriptVersion" })
 					end, { desc = "Select TypeScript Version" })
+
+					-- Two Slash to see the type
+					vim.api.nvim_set_keymap(
+						"n",
+						"<leader>a/",
+						"<cmd>TwoslashQueriesInspect<CR>",
+						{ desc = "Inspect with Two Slash" }
+					)
 				end
 			end
 
@@ -320,7 +329,10 @@ return {
 
 			lspconfig["vtsls"].setup({
 				capabilities = capabilities,
-				on_attach = on_attach,
+				-- on_attach = on_attach,
+				on_attach = function(client, bufnr)
+					require("twoslash-queries").attach(client, bufnr)
+				end,
 				settings = {
 					vtsls = {
 						autoUseWorkspaceTsdk = true,
