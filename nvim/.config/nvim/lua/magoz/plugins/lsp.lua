@@ -26,11 +26,81 @@ return {
 					-- "graphql",
 					"tailwindcss",
 					-- "markdownlint",
-					-- "ts_ls" -- we are using typescript-tools.nvim instead,
+					"vtsls",
 					"rust_analyzer",
 					"bashls",
 					"jsonls",
 					"yamlls",
+				},
+				handlers = {
+					-- Custom vtsls configuration
+					vtsls = function()
+						local lspconfig = require("lspconfig")
+						local cmp_nvim_lsp = require("cmp_nvim_lsp")
+						local capabilities = cmp_nvim_lsp.default_capabilities()
+						
+						lspconfig.vtsls.setup({
+							capabilities = capabilities,
+							on_attach = function(client, bufnr)
+								-- vtsls-specific keymaps
+								vim.keymap.set("n", "<leader>ai", function()
+									vim.lsp.buf.code_action({
+										apply = true,
+										context = { only = { "source.addMissingImports" } }
+									})
+								end, { buffer = bufnr, desc = "Add missing imports" })
+								
+								vim.keymap.set("n", "<leader>aI", function()
+									vim.lsp.buf.code_action({
+										apply = true,
+										context = { only = { "source.removeUnused" } }
+									})
+								end, { buffer = bufnr, desc = "Remove unused imports" })
+								
+								vim.keymap.set("n", "<leader>ao", function()
+									vim.lsp.buf.code_action({
+										apply = true,
+										context = { only = { "source.organizeImports" } }
+									})
+								end, { buffer = bufnr, desc = "Organize imports" })
+								
+								vim.keymap.set("n", "<leader>aF", function()
+									vim.lsp.buf.code_action({
+										apply = true,
+										context = { only = { "source.fixAll" } }
+									})
+								end, { buffer = bufnr, desc = "Fix all issues" })
+								
+								vim.keymap.set("n", "<leader>aR", function()
+									vim.lsp.buf.rename()
+								end, { buffer = bufnr, desc = "Rename file" })
+								
+								vim.keymap.set("n", "<leader>js", function()
+									require("vtsls").commands.goto_source_definition(0)
+								end, { buffer = bufnr, desc = "Jump to source definition" })
+								
+								vim.keymap.set("n", "<leader>jR", function()
+									require("vtsls").commands.file_references(0)
+								end, { buffer = bufnr, desc = "File references" })
+							end,
+							settings = {
+								vtsls = {
+									experimental = {
+										completion = {
+											enableServerSideFuzzyMatch = true,
+										},
+									},
+								},
+								typescript = {
+									preferences = {
+										go_to_source_definition = {
+											fallback = true,
+										},
+									},
+								},
+							},
+						})
+					end,
 				},
 			})
 
@@ -280,53 +350,6 @@ return {
 								[vim.fn.expand("$VIMRUNTIME/lua")] = true,
 								[vim.fn.stdpath("config") .. "/lua"] = true,
 							},
-						},
-					},
-				},
-			})
-		end,
-	},
-	{
-		"pmizio/typescript-tools.nvim",
-		dependencies = { "nvim-lua/plenary.nvim", "neovim/nvim-lspconfig" },
-		config = function()
-			require("typescript-tools").setup({
-				on_attach = function()
-					-- Actions
-					vim.keymap.set("n", "<leader>ai", ":TSToolsAddMissingImports<CR>", { desc = "Add missing imports" })
-					vim.keymap.set(
-						"n",
-						"<leader>aI",
-						":TSToolsRemoveUnusedImports<CR>",
-						{ desc = "Remove unused imports" }
-					)
-					vim.keymap.set(
-						"n",
-						"<leader>ao",
-						":TSToolsOrganizeImports<CR>",
-						{ desc = "Sort and remove unused imports" }
-					)
-					vim.keymap.set("n", "<leader>aF", ":TSToolsFixAll<CR>", { desc = "Fix all issues" })
-					vim.keymap.set("n", "<leader>aR", ":TSToolsRenameFile<CR>", { desc = "Rename file" })
-
-					-- Jump
-					vim.keymap.set(
-						"n",
-						"<leader>js",
-						":TSToolsGoToSourceDefinition<CR>",
-						{ desc = "Jump to source definition" }
-					)
-					vim.keymap.set(
-						"n",
-						"<leader>jR",
-						":TSToolsFileReferences<CR>",
-						{ desc = "Jump to files that reference the current file" }
-					)
-				end,
-				settings = {
-					tsserver_file_preferences = {
-						go_to_source_definition = {
-							fallback = true,
 						},
 					},
 				},

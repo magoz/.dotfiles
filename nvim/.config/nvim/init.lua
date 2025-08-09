@@ -20,6 +20,9 @@ require("lazy").setup({
 	change_detection = {
 		notify = false,
 	},
+	git = {
+		timeout = 600, -- 10 minutes instead of default
+	},
 })
 require("magoz.options")
 require("magoz.keymaps")
