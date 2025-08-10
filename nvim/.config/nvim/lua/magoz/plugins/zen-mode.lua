@@ -27,7 +27,7 @@ return {
 				gitsigns = { enabled = false }, -- disables git signs
 			},
 
-			-- Enalbe/Disable indent-blankline
+			-- Enable/Disable indent-blankline
 			on_open = function(win)
 				vim.cmd("IBLDisable")
 			end,
