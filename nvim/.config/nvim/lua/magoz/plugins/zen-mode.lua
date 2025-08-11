@@ -4,7 +4,7 @@ return {
 		require("zen-mode").setup({
 			window = {
 				backdrop = 1, -- shade the backdrop of the Zen window. Set to 1 to keep the same as Normal
-				width = 80, -- width of the Zen window
+				width = 100, -- width of the Zen window
 				height = 0.8, -- height of the Zen window
 				options = {
 					signcolumn = "no", -- disable signcolumn
@@ -16,6 +16,8 @@ return {
 					list = false, -- disable whitespace characters
 					listchars = "", -- remove all listchars to hide indentation guides
 					wrap = true, -- enable line wrapping
+					breakindent = true, -- preserve indentation on wrapped lines
+					linebreak = true, -- wrap at word boundaries, not mid-word
 				},
 			},
 			plugins = {
