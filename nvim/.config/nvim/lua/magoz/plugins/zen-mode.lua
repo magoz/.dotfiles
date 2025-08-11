@@ -15,6 +15,7 @@ return {
 					foldcolumn = "0", -- disable fold column
 					list = false, -- disable whitespace characters
 					listchars = "", -- remove all listchars to hide indentation guides
+					wrap = true, -- enable line wrapping
 				},
 			},
 			plugins = {
