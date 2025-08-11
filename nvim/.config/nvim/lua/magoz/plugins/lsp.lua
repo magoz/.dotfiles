@@ -6,64 +6,11 @@ return {
 			"WhoIsSethDaniel/mason-tool-installer.nvim",
 		},
 		config = function()
-			require("mason").setup({
-				ui = {
-					icons = {
-						package_installed = "✓",
-						package_pending = "➜",
-						package_uninstalled = "✗",
-					},
-				},
-			})
-
-			require("mason-lspconfig").setup({
-				ensure_installed = {
-					"lua_ls",
-					"cssls",
-					"cssmodules_ls",
-					"html",
-					"prismals",
-					-- "graphql",
-					"tailwindcss",
-					-- "markdownlint",
-					"vtsls",
-					"rust_analyzer",
-					"bashls",
-					"jsonls",
-					"yamlls",
-				},
-			})
-
-			require("mason-tool-installer").setup({
-				ensure_installed = {
-					"prettier",
-					"stylua",
-					"eslint",
-					-- Shell
-					"shfmt",
-					"shellcheck",
-				},
-			})
-		end,
-	},
-	{
-
-		"williamboman/mason-lspconfig.nvim",
-		config = function() end,
-	},
-
-	{
-		"neovim/nvim-lspconfig",
-		event = { "BufReadPre", "BufNewFile" },
-		dependencies = {
-			"hrsh7th/cmp-nvim-lsp",
-			{ "antosha417/nvim-lsp-file-operations", config = true },
-			"b0o/schemastore.nvim",
-		},
-		config = function()
 			local wk = require("which-key")
-			local lspconfig = require("lspconfig")
 			local cmp_nvim_lsp = require("cmp_nvim_lsp")
+
+			-- used to enable autocompletion (assign to every lsp server config)
+			local capabilities = cmp_nvim_lsp.default_capabilities()
 
 			local on_attach = function()
 				-- Jump to
@@ -74,16 +21,6 @@ return {
 				vim.keymap.set("n", "<leader>jr", function()
 					require("telescope.builtin").lsp_references({ reuse_win = true })
 				end, { desc = "References" })
-				-- vim.keymap.set(
-				-- 	"n",
-				-- 	"<leader>jd",
-				-- 	vim.lsp.buf.definition,
-				-- 	{ desc = "Definition" }
-				-- )
-
-				-- vim.keymap.set("n", "<leader>jd", function()
-				-- 	require("telescope.builtin").lsp_definitions({ reuse_win = true })
-				-- end, { desc = "Definition" })
 
 				vim.keymap.set("n", "<leader>jd", function()
 					local current_win = vim.api.nvim_get_current_win()
@@ -100,7 +37,6 @@ return {
 								query = word,
 								reuse_win = true,
 							})
-							-- Use telescope with the word as query
 						end, 100)
 
 					-- Normal jump to definition
@@ -198,9 +134,6 @@ return {
 				end
 			end
 
-			-- used to enable autocompletion (assign to every lsp server config)
-			local capabilities = cmp_nvim_lsp.default_capabilities()
-
 			-- DIAGNOSTICS
 			local config = {
 				virtual_text = false, -- disable virtual text
@@ -229,108 +162,65 @@ return {
 			vim.diagnostic.config(config)
 
 			--
-			--  Configure and enable LSPs
+			--  Mason and LSP setup
 			--
 
-			lspconfig["html"].setup({
-				capabilities = capabilities,
-				on_attach = on_attach,
-			})
-
-			lspconfig["jsonls"].setup({
-				capabilities = capabilities,
-				on_attach = on_attach,
-
-				settings = {
-					json = {
-						schemas = require("schemastore").json.schemas(),
+			require("mason").setup({
+				ui = {
+					icons = {
+						package_installed = "✓",
+						package_pending = "➜",
+						package_uninstalled = "✗",
 					},
 				},
 			})
 
-			lspconfig["cssls"].setup({
-				capabilities = capabilities,
-				on_attach = on_attach,
+			require("mason-lspconfig").setup({
+				ensure_installed = {
+					"lua_ls",
+					"cssls",
+					"cssmodules_ls",
+					"html",
+					"prismals",
+					-- "graphql",
+					"tailwindcss",
+					-- "markdownlint",
+					"vtsls",
+					"rust_analyzer",
+					"bashls",
+					"jsonls",
+					"yamlls",
+				},
+				automatic_enable = false, -- Disable auto-enable so we can configure manually
 			})
 
-			lspconfig["tailwindcss"].setup({
-				capabilities = capabilities,
-				on_attach = on_attach,
-				settings = {
-					tailwindCSS = {
-						lint = {
-							cssConflict = "warning",
-							invalidApply = "error",
-							invalidConfigPath = "error",
-							invalidScreen = "error",
-							invalidTailwindDirective = "error",
-							invalidVariant = "error",
-							recommendedVariantOrder = "warning",
-						},
-						validate = true,
-
-						-- Add autocomplete for Class Variance Authority package
-						-- https://github.com/joe-bell/cva#tailwind-css-intellisense
-						-- https://github.com/tailwindlabs/tailwindcss-intellisense
-						experimental = {
-							classRegex = {
-								"tw`([^`]*)",
-								'tw="([^"]*)',
-								'tw={"([^"}]*)',
-								"tw\\.\\w+`([^`]*)",
-								"tw\\(.*?\\)`([^`]*)",
-								{ "cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
-								{ "clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)" },
-								{ "classnames\\(([^)]*)\\)", "'([^']*)'" },
-							},
-						},
-					},
+			require("mason-tool-installer").setup({
+				ensure_installed = {
+					"prettier",
+					"stylua",
+					"eslint",
+					-- Shell
+					"shfmt",
+					"shellcheck",
 				},
 			})
 
-			lspconfig["cssmodules_ls"].setup({
+			-- Modern LSP configurations using vim.lsp.config() (Neovim 0.11+)
+
+			-- Basic servers with default config
+			local basic_servers = { "html", "cssls", "bashls", "prismals", "rust_analyzer", "cssmodules_ls" }
+			for _, server in ipairs(basic_servers) do
+				vim.lsp.config(server, {
+					capabilities = capabilities,
+					on_attach = on_attach,
+				})
+			end
+
+			-- Custom configurations for specific servers
+			vim.lsp.config("vtsls", {
 				capabilities = capabilities,
-				on_attach = on_attach,
-			})
-
-			lspconfig["prismals"].setup({
-				capabilities = capabilities,
-				on_attach = on_attach,
-			})
-
-			-- lspconfig["graphql"].setup({
-			-- 	capabilities = capabilities,
-			-- 	on_attach = on_attach,
-			-- 	filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" },
-			-- })
-
-			lspconfig["rust_analyzer"].setup({
-				capabilities = capabilities,
-				on_attach = on_attach,
-			})
-
-			lspconfig["bashls"].setup({
-				capabilities = capabilities,
-				on_attach = on_attach,
-			})
-
-			lspconfig["yamlls"].setup({
-				capabilities = capabilities,
-				on_attach = on_attach,
-
-				settings = {
-					yaml = {
-						schemaStore = {
-							enable = true,
-						},
-					},
-				},
-			})
-
-			lspconfig["vtsls"].setup({
-				capabilities = capabilities,
-				-- on_attach = on_attach,
 				on_attach = function(client, bufnr)
+					on_attach()
 					require("twoslash-queries").attach(client, bufnr)
 				end,
 				settings = {
@@ -355,17 +245,56 @@ return {
 				},
 			})
 
-			lspconfig["lua_ls"].setup({
+			vim.lsp.config("tailwindcss", {
 				capabilities = capabilities,
 				on_attach = on_attach,
-				settings = { -- custom settings for lua
+				settings = {
+					tailwindCSS = {
+						lint = {
+							cssConflict = "warning",
+							invalidApply = "error",
+							invalidConfigPath = "error",
+							invalidScreen = "error",
+							invalidTailwindDirective = "error",
+							invalidVariant = "error",
+							recommendedVariantOrder = "warning",
+						},
+						validate = true,
+						experimental = {
+							classRegex = {
+								"tw`([^`]*)",
+								'tw="([^"]*)',
+								'tw={"([^"}]*)',
+								"tw\\.\\w+`([^`]*)",
+								"tw\\(.*?\\)`([^`]*)",
+								{ "cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+								{ "clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)" },
+								{ "classnames\\(([^)]*)\\)", "'([^']*)'" },
+							},
+						},
+					},
+				},
+			})
+
+			vim.lsp.config("jsonls", {
+				capabilities = capabilities,
+				on_attach = on_attach,
+				settings = {
+					json = {
+						schemas = require("schemastore").json.schemas(),
+					},
+				},
+			})
+
+			vim.lsp.config("lua_ls", {
+				capabilities = capabilities,
+				on_attach = on_attach,
+				settings = {
 					Lua = {
-						-- make the language server recognize "vim" global
 						diagnostics = {
 							globals = { "vim" },
 						},
 						workspace = {
-							-- make language server aware of runtime files
 							library = {
 								[vim.fn.expand("$VIMRUNTIME/lua")] = true,
 								[vim.fn.stdpath("config") .. "/lua"] = true,
@@ -374,6 +303,55 @@ return {
 					},
 				},
 			})
+
+			vim.lsp.config("yamlls", {
+				capabilities = capabilities,
+				on_attach = on_attach,
+				settings = {
+					yaml = {
+						schemaStore = {
+							enable = true,
+						},
+					},
+				},
+			})
+
+			-- Enable all configured servers
+			local all_servers = {
+				"html",
+				"cssls",
+				"bashls",
+				"prismals",
+				"rust_analyzer",
+				"cssmodules_ls",
+				"vtsls",
+				"tailwindcss",
+				"jsonls",
+				"lua_ls",
+				"yamlls",
+			}
+			for _, server in ipairs(all_servers) do
+				vim.lsp.enable(server)
+			end
+		end,
+	},
+	{
+
+		"williamboman/mason-lspconfig.nvim",
+		config = function() end,
+	},
+
+	{
+		"neovim/nvim-lspconfig",
+		event = { "BufReadPre", "BufNewFile" },
+		dependencies = {
+			"hrsh7th/cmp-nvim-lsp",
+			{ "antosha417/nvim-lsp-file-operations", config = true },
+			"b0o/schemastore.nvim",
+		},
+		config = function()
+			-- LSP configs are now handled above in mason setup
 		end,
 	},
 }
+
