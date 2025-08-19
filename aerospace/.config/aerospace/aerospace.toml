@@ -162,16 +162,16 @@ ctrl-9  = 'workspace 9'
 ctrl-0  = 'workspace 10'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
-ctrl-alt-1 = ['move-node-to-workspace 1', 'workspace 1']
-ctrl-alt-2 = ['move-node-to-workspace 2', 'workspace 2']
-ctrl-alt-3 = ['move-node-to-workspace 3', 'workspace 3']
-ctrl-alt-4 = ['move-node-to-workspace 4', 'workspace 4']
-ctrl-alt-5 = ['move-node-to-workspace 5', 'workspace 5']
-ctrl-alt-6 = ['move-node-to-workspace 6', 'workspace 6']
-ctrl-alt-7 = ['move-node-to-workspace 7', 'workspace 7']
-ctrl-alt-8 = ['move-node-to-workspace 8', 'workspace 8']
-ctrl-alt-9 = ['move-node-to-workspace 9', 'workspace 9']
-ctrl-alt-0 = ['move-node-to-workspace 10', 'workspace 10']
+ctrl-alt-1 = 'move-node-to-workspace 1 --focus-follows-window'
+ctrl-alt-2 = 'move-node-to-workspace 2 --focus-follows-window'
+ctrl-alt-3 = 'move-node-to-workspace 3 --focus-follows-window'
+ctrl-alt-4 = 'move-node-to-workspace 4 --focus-follows-window'
+ctrl-alt-5 = 'move-node-to-workspace 5 --focus-follows-window'
+ctrl-alt-6 = 'move-node-to-workspace 6 --focus-follows-window'
+ctrl-alt-7 = 'move-node-to-workspace 7 --focus-follows-window'
+ctrl-alt-8 = 'move-node-to-workspace 8 --focus-follows-window'
+ctrl-alt-9 = 'move-node-to-workspace 9 --focus-follows-window'
+ctrl-alt-0 = 'move-node-to-workspace 0 --focus-follows-window'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
 ctrl-alt-m = 'move-workspace-to-monitor --wrap-around next'
