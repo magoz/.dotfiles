@@ -10,7 +10,7 @@ return {
 			local wk = require("which-key")
 
 			-- used to enable autocompletion (assign to every lsp server config)
-			local capabilities = require('blink.cmp').get_lsp_capabilities()
+			local capabilities = require("blink.cmp").get_lsp_capabilities()
 
 			local on_attach = function()
 				-- Jump to
@@ -240,6 +240,9 @@ return {
 							go_to_source_definition = {
 								fallback = true,
 							},
+							updateImportsOnFileMove = {
+								enabled = "always",
+							},
 						},
 					},
 				},
@@ -353,4 +356,3 @@ return {
 		end,
 	},
 }
-
