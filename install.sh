@@ -17,7 +17,7 @@ echo "🍺 Installing basic config packages with Homebrew"
 brew install \
   bat \
   git \
-  node \
+  fnm \
   wezterm \
   font-meslo-lg-nerd-font \
   neovim \
