@@ -23,22 +23,12 @@ vim.api.nvim_set_keymap(
 )
 
 -- Open in Finder
--- If nvim-tree is active will use the selection
 local function open_in_finder()
-	if vim.bo.filetype == "NvimTree" then
-		local ok, api = pcall(require, "nvim-tree.api")
-		if not ok then
-			vim.notify("nvim-tree.api not found", vim.log.levels.WARN)
-			return
-		end
-
-		local node = api.tree.get_node_under_cursor()
-		if node then
-			local path = node.absolute_path
-			vim.fn.system('open -R "' .. path .. '"')
-		end
+	local path = vim.fn.expand("%:p")
+	if path ~= "" then
+		vim.fn.system('open -R "' .. path .. '"')
 	else
-		vim.cmd(":!open -R %")
+		vim.notify("No file to open", vim.log.levels.WARN)
 	end
 end
 vim.keymap.set("n", "<leader>o", open_in_finder, { silent = true, desc = "Open in Finder" })
