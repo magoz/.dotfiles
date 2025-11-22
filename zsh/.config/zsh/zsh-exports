@@ -19,6 +19,9 @@ esac
 eval "$(/opt/homebrew/bin/brew shellenv)"
 export PATH="/opt/homebrew/bin:$PATH"
 
+# fnm (node version manager)
+eval "$(fnm env --use-on-cd --version-file-strategy=recursive --shell zsh)"
+
 # User shell colors
 export CLICOLOR=1
 
