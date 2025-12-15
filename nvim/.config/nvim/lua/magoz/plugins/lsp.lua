@@ -348,7 +348,6 @@ return {
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufNewFile" },
 		dependencies = {
-			{ "antosha417/nvim-lsp-file-operations", config = true },
 			"b0o/schemastore.nvim",
 		},
 		config = function()

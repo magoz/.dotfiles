@@ -18,6 +18,7 @@ else
         ~/dev/ecosystem \
         -mindepth 1 -maxdepth 1 -type d
       find ~/.dotfiles \
+        ~/dev/docs \
         ~/dev/core-projects/magoz.com \
         ~/dev/core-projects/guestbook \
         ~/dev/core-projects/afloat2 \
