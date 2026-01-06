@@ -8,6 +8,9 @@ config.font_size = 12
 config.enable_tab_bar = false
 config.window_decorations = "RESIZE"
 
+-- Enable CSI u mode for proper modifier key encoding (Shift+Enter, etc.)
+config.enable_csi_u_key_encoding = true
+
 -- Fix €, £, and other composed key combinations with alt not working
 config.send_composed_key_when_left_alt_is_pressed = true
 config.send_composed_key_when_right_alt_is_pressed = true
