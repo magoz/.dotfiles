@@ -24,6 +24,7 @@ brew install \
   nikitabobko/tap/aerospace \
   stow \
   tmux \
+  opencode \
   zsh \
   eza \
   zoxide \
@@ -48,6 +49,7 @@ stow ghostty
 stow zsh
 stow tmux
 stow git
+stow opencode
 stow aerospace
 stow borders
 stow leaderkey
