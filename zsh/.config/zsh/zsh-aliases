@@ -10,6 +10,9 @@ alias vim='nvim'
 # PNPM
 alias p=pnpm
 
+# OPENCODE
+alias o=opencode
+
 # EZA/LS
 alias ls='eza'
 
