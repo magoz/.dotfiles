@@ -14,6 +14,7 @@ return {
 				css = { "prettier" },
 				html = { "prettier" },
 				json = { "prettier" },
+				jsonc = { "prettier" },
 				rust = { "rustfmt" },
 				yaml = { "prettier" },
 				markdown = { "prettier" },
@@ -28,7 +29,7 @@ return {
 					return
 				end
 				return {
-					timeout_ms = 500,
+					timeout_ms = 1000,
 					lsp_format = "fallback",
 				}
 			end,
