@@ -22,6 +22,7 @@ else
         ~/dev/core-projects/magoz.com \
         ~/dev/core-projects/guestbook \
         ~/dev/core-projects/afloat2 \
+        ~/dev/core-projects/ralph \
         ~/dev/core-projects/afloat-pdf-generator \
         ~/dev/core-projects/archival* \
         ~/dev/core-projects/intellect/intellect-monorepo \
