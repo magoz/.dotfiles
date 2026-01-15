@@ -41,18 +41,7 @@ brew install borders
 # --------------------------------------
 # --------------  STOW -----------------
 # --------------------------------------
-echo "🔗 Running Stow"
-stow stow
-stow nvim
-stow wezterm
-stow ghostty
-stow zsh
-stow tmux
-stow git
-stow opencode
-stow aerospace
-stow borders
-stow leaderkey
+./stow.sh
 
 # --------------------------------------
 # --------------  ZSH ------------------
