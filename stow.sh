@@ -18,5 +18,6 @@ stow -R opencode
 stow -R aerospace
 stow -R borders
 stow -R leaderkey
+stow -R scripts
 
 echo "✅ Stow complete"
