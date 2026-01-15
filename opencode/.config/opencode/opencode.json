@@ -31,7 +31,7 @@
       "secrets/*": "deny"
     },
     "external_directory": {
-      "/Users/magoz/docs/*": "allow"
+      "/Users/magoz/dev/docs/*": "allow"
     }
   }
 }
