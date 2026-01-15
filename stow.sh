@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # set current directory, in case the script is called from another directory.
 cd "$(dirname "$0")" || exit
@@ -12,6 +13,7 @@ stow -R ghostty
 stow -R zsh
 stow -R tmux
 stow -R git
+stow -R lazygit
 stow -R opencode
 stow -R aerospace
 stow -R borders
