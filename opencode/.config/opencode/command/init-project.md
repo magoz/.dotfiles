@@ -4,10 +4,10 @@ description: Scaffold a new Next.js app with Effect-TS services (auth, db, email
 
 Create a new Next.js application with Effect-TS integration, including better-auth authentication, Drizzle ORM database, Resend email, and Sentry/PostHog telemetry.
 
-First, invoke the skill tool to load the nextjs-effect-starter skill:
+First, invoke the skill tool to load the init-project skill:
 
 ```
-skill({ name: 'nextjs-effect-starter' })
+skill({ name: 'init-project' })
 ```
 
 Then follow the skill instructions to scaffold and configure the application.
