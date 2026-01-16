@@ -1,6 +1,11 @@
-# Next.js Effect Starter
+---
+name: init-project
+description: Scaffold a new Next.js application with Effect-TS integration, including shadcn/ui, authentication, database, email, and telemetry services.
+---
 
-Scaffold a new Next.js application with Effect-TS integration, including authentication, database, email, and telemetry services.
+# Init Project
+
+Scaffold a new Next.js application with Effect-TS integration, including shadcn/ui (baseui style), authentication, database, email, and telemetry services.
 
 ## When to Use
 
@@ -13,6 +18,7 @@ Use this skill when:
 ## Prerequisites
 
 - Node.js 18+ installed
+- pnpm installed (`npm install -g pnpm`)
 - A target directory for the new project
 - Access to create environment variables for:
   - `DATABASE_URL` (PostgreSQL connection string, e.g., Neon)
@@ -26,7 +32,7 @@ Use this skill when:
 
 ```bash
 # Create the Next.js app with recommended settings
-npx create-next-app@latest <project-name> \
+pnpm create next-app@latest <project-name> \
   --typescript \
   --tailwind \
   --eslint \
@@ -42,26 +48,54 @@ After creation, `cd` into the project directory.
 
 ```bash
 # Core Effect ecosystem
-npm install effect @effect/sql-pg @effect-aws/sql-drizzle @effect/opentelemetry @effect/platform-node
+pnpm add effect @effect/sql-pg @effect/sql-drizzle @effect/opentelemetry @effect/platform-node
 
 # Database (Drizzle ORM)
-npm install drizzle-orm @neondatabase/serverless @paralleldrive/cuid2
-npm install -D drizzle-kit
+pnpm add drizzle-orm @neondatabase/serverless @paralleldrive/cuid2
+pnpm add -D drizzle-kit
 
 # Authentication (better-auth)
-npm install better-auth
+pnpm add better-auth
 
 # Email (Resend)
-npm install resend
+pnpm add resend
 
 # Telemetry (Sentry + PostHog + OpenTelemetry)
-npm install @sentry/nextjs @sentry/opentelemetry @opentelemetry/sdk-logs posthog-js
+pnpm add @sentry/nextjs @sentry/opentelemetry @opentelemetry/sdk-logs posthog-js
 
 # UI (shadcn/ui prerequisites)
-npm install class-variance-authority clsx tailwind-merge lucide-react sonner
+pnpm add class-variance-authority clsx tailwind-merge lucide-react sonner
 ```
 
-### Phase 3: Create Directory Structure
+### Phase 3: Initialize shadcn/ui
+
+Initialize shadcn/ui with the preferred configuration:
+
+```bash
+pnpm dlx shadcn@latest init
+```
+
+When prompted, select:
+- **Style:** baseui (preferred)
+- **Base color:** Choose based on project needs
+- **CSS variables:** Yes
+
+**Important:** We prefer Tailwind CSS with the `baseui` style for shadcn components. This provides a clean, minimal aesthetic that's easy to customize.
+
+Add commonly used components:
+
+```bash
+pnpm dlx shadcn@latest add button input label card toast
+```
+
+Add more components as needed throughout development:
+
+```bash
+# Example: adding more components later
+pnpm dlx shadcn@latest add dialog dropdown-menu avatar
+```
+
+### Phase 4: Create Directory Structure
 
 ```bash
 mkdir -p src/lib/services/auth
@@ -75,11 +109,11 @@ mkdir -p src/app/api/auth/[...all]
 mkdir -p src/app/\(auth\)/login
 ```
 
-### Phase 4: Create Core Files
+### Phase 5: Create Core Files
 
 Create each file in sequence. The agent should use the detailed reference documents for complete implementations.
 
-#### 4.1 Database Service
+#### 5.1 Database Service
 
 **Read:** `references/db.md` for complete implementation
 
@@ -90,7 +124,7 @@ Create these files:
 - `src/lib/services/db/types.ts` - Effect Schema validators (optional)
 - `drizzle.config.ts` - Drizzle Kit configuration
 
-#### 4.2 Email Service
+#### 5.2 Email Service
 
 **Read:** `references/email.md` for complete implementation
 
@@ -99,7 +133,7 @@ Create these files:
 - `src/lib/services/email/index.ts` - Resend Effect service
 - `src/lib/schemas/email.ts` - Email validation schema (optional)
 
-#### 4.3 Authentication Service
+#### 5.3 Authentication Service
 
 **Read:** `references/auth.md` for complete implementation
 
@@ -113,7 +147,7 @@ Create these files:
 
 **Note:** Auth depends on Email service for OTP delivery.
 
-#### 4.4 Telemetry Service
+#### 5.4 Telemetry Service
 
 **Read:** `references/telemetry.md` for complete implementation
 
@@ -125,7 +159,7 @@ Create these files:
 - `src/lib/services/telemetry/report-error.ts` - Error reporting
 - `src/lib/services/telemetry/report-warning.ts` - Warning reporting
 
-#### 4.5 Next-Effect Integration
+#### 5.5 Next-Effect Integration
 
 **Read:** `references/next-effect.md` for complete implementation
 
@@ -133,14 +167,14 @@ Create these files:
 
 - `src/lib/next-effect/index.ts` - Redirect handling for Effect
 
-#### 4.6 Utilities
+#### 5.6 Utilities
 
 Create these files:
 
 - `src/lib/utils/db-retry-policy.ts` - Database retry policies
 - `src/lib/core/errors/index.ts` - Common tagged errors
 
-#### 4.7 Layer Composition
+#### 5.7 Layer Composition
 
 Create `src/lib/layers.ts`:
 
@@ -161,9 +195,9 @@ export const AuthLayer = Layer.provide(
 export const AppLayer = Layer.mergeAll(AuthLayer, DbLayer, TelemetryLayer);
 ```
 
-### Phase 5: Configuration Files
+### Phase 6: Configuration Files
 
-#### 5.1 Environment Variables
+#### 6.1 Environment Variables
 
 Create `.env.local`:
 
@@ -182,7 +216,47 @@ SENTRY_DSN=https://xxxx@sentry.io/xxxx
 NEXT_PUBLIC_POSTHOG_KEY=phc_xxxxxxxxxxxx
 ```
 
-#### 5.2 Update next.config.ts
+#### 6.2 ESLint Configuration
+
+Create `eslint.config.mjs`:
+
+```javascript
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
+```
+
+#### 6.3 Prettier Configuration
+
+Create `.prettierrc.json`:
+
+```json
+{
+  "trailingComma": "none",
+  "tabWidth": 2,
+  "semi": false,
+  "singleQuote": true,
+  "printWidth": 100,
+  "arrowParens": "avoid"
+}
+```
+
+#### 6.4 Update next.config.ts
 
 Add PostHog reverse proxy and Sentry:
 
@@ -208,7 +282,7 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(nextConfig);
 ```
 
-#### 5.3 Add npm Scripts
+#### 6.5 Add pnpm Scripts
 
 Update `package.json`:
 
@@ -227,34 +301,34 @@ Update `package.json`:
 }
 ```
 
-### Phase 6: Initialize Database
+### Phase 7: Initialize Database
 
 ```bash
 # Push schema to database
-npm run db:push
+pnpm db:push
 
 # Optionally open Drizzle Studio to verify
-npm run db:studio
+pnpm db:studio
 ```
 
-### Phase 7: Create Sample Pages
+### Phase 8: Create Sample Pages
 
-#### 7.1 Login Page
+#### 8.1 Login Page
 
 Create `src/app/(auth)/login/page.tsx` - use patterns from `references/next-effect.md`
 
-#### 7.2 Protected Dashboard
+#### 8.2 Protected Dashboard
 
 Create `src/app/(dashboard)/page.tsx` - use patterns from `references/next-effect.md`
 
-### Phase 8: Verify Setup
+### Phase 9: Verify Setup
 
 ```bash
 # Type check
-npm run tsc
+pnpm tsc
 
 # Run development server
-npm run dev
+pnpm dev
 ```
 
 Visit `http://localhost:3000` to verify the app loads.
@@ -307,7 +381,7 @@ For dependency resolution, create files in this order:
 Ensure all Effect packages are installed:
 
 ```bash
-npm install effect @effect/sql-pg @effect-aws/sql-drizzle @effect/opentelemetry @effect/platform-node
+pnpm add effect @effect/sql-pg @effect/sql-drizzle @effect/opentelemetry @effect/platform-node
 ```
 
 ### Database connection fails
