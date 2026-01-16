@@ -81,5 +81,13 @@ echo "✅ Sourced Tmux"
 # tlrc is tldr
 echo "🚀 Installing DEV packages with Homebrew"
 brew install \
-  pnpm \
   tlrc
+
+# pnpm (standalone, works with fnm)
+if ! command -v pnpm &>/dev/null; then
+  curl -fsSL https://get.pnpm.io/install.sh | sh -
+  # Installer appends to .zshrc but we already have PNPM_HOME in zsh-exports
+  sed -i '' '/# pnpm/,/# pnpm end/d' "$HOME/.config/zsh/.zshrc"
+else
+  echo "pnpm already installed, skipping"
+fi
