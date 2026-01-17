@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# env-example: Generate .env.example from .env and .env.local files
+# Extracts variable names and creates a template without values
+
+set -e
+
+ENV_FILES=()
+
+# Check for .env files
+[[ -f ".env" ]] && ENV_FILES+=(".env")
+[[ -f ".env.local" ]] && ENV_FILES+=(".env.local")
+
+if [[ ${#ENV_FILES[@]} -eq 0 ]]; then
+  echo "No .env or .env.local files found in current directory"
+  exit 1
+fi
+
+# Extract variable names (lines with = that aren't comments)
+# Preserves order and removes duplicates across files
+seen=()
+total=0
+
+# Write to .env.example
+{
+  first_file=true
+  for file in "${ENV_FILES[@]}"; do
+    file_vars=()
+    
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      # Skip empty lines and comments
+      [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+      
+      # Extract variable name (everything before first =)
+      if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)= ]]; then
+        var_name="${BASH_REMATCH[1]}"
+        
+        # Skip if already seen globally
+        if [[ ! " ${seen[*]} " =~ " ${var_name} " ]]; then
+          seen+=("$var_name")
+          file_vars+=("$var_name")
+        fi
+      fi
+    done < "$file"
+    
+    # Only output section if file has new variables
+    if [[ ${#file_vars[@]} -gt 0 ]]; then
+      $first_file || echo ""
+      first_file=false
+      echo "# $file"
+      for var in "${file_vars[@]}"; do
+        echo "${var}="
+      done
+      ((total += ${#file_vars[@]}))
+    fi
+  done
+} > .env.example
+
+if [[ $total -eq 0 ]]; then
+  rm -f .env.example
+  echo "No environment variables found"
+  exit 1
+fi
+
+echo "Created .env.example with $total variables"
