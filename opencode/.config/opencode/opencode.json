@@ -32,7 +32,7 @@
     },
     "external_directory": {
       "/Users/magoz/dev/docs/*": "allow",
-      "/Users/magoz/.dotfiles/opencode/*": "allow"
+      "/Users/magoz/.dotfiles/opencode/*": "allow",
       "/Users/magoz/dev/core-projects/clients/init/*": "allow"
     }
   }
