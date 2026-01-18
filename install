@@ -18,6 +18,7 @@ brew install \
   bat \
   git \
   fnm \
+  jq \
   wezterm \
   font-meslo-lg-nerd-font \
   neovim \
