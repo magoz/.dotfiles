@@ -12,16 +12,6 @@ Complete one task from a PRD file. Pick the next logical task to work on (should
 
 Where `<prd-name>` matches `.opencode/state/<prd-name>/prd.json`
 
-## Before Starting
-
-First, invoke the skill tool to detect the VCS:
-
-```
-skill({ name: 'vcs-detect' })
-```
-
-Use the detected VCS (jj or git) for all version control operations.
-
 ## File Locations
 
 **IMPORTANT**: The `.opencode/state/` directory may not be at cwd. Search for it:
@@ -68,7 +58,7 @@ Once found, use **absolute paths** for all file operations:
     3. Spikes/unknowns
     4. Standard features
     5. Polish/cleanup
-- Check recent history (jj: `jj log --limit 10`, git: `git log --oneline -10`)
+- Check recent history (`git log --oneline -10`)
 
 ### 2. Initialize Progress (if needed)
 
@@ -93,8 +83,7 @@ Started: <YYYY-MM-DD>
 
 Extract `prdName` from PRD, then:
 
-- jj: `jj new -m '<prdName>'`
-- git: `git checkout -b <prdName>` (or checkout if exists)
+- `git checkout -b <prdName>` (or checkout if exists)
 
 ### 4. Implement Task
 
@@ -131,10 +120,7 @@ If you discover a **reusable pattern**, also add to `## Codebase Patterns` at th
 
 ### 8. Commit
 
-- jj: `jj describe -m 'feat(<scope>): <description>' && jj bookmark create <prdName>/<task-id> && jj new`
-- git: `git add -A && git commit -m 'feat(<scope>): <description>'`
-
-Bookmark format: `<prdName>/<task-id>` (e.g., `lib-relay-implementation/types-2`)
+- `git add -A && git commit -m 'feat(<scope>): <description>'`
 
 ## Completion
 
