@@ -15,11 +15,70 @@ Based on [Anthropic's research on long-running agents](https://www.anthropic.com
 
 1. User requests: "Load the prd-task skill and convert prd-<name>.md"
 2. Read the markdown PRD
-3. Extract tasks with verification steps
-4. Create `.opencode/state/<prd-name>/` directory
-5. Move markdown PRD to `.opencode/state/<prd-name>/prd.md`
-6. Output JSON to `.opencode/state/<prd-name>/prd.json`
-7. Create empty `.opencode/state/<prd-name>/progress.txt`
+3. **Exhaustively analyze the current project** (see Project Analysis below)
+4. Extract tasks with verification steps, informed by project analysis
+5. Create `.opencode/state/<prd-name>/` directory
+6. Move markdown PRD to `.opencode/state/<prd-name>/prd.md`
+7. Output JSON to `.opencode/state/<prd-name>/prd.json`
+8. Create empty `.opencode/state/<prd-name>/progress.txt`
+
+## Project Analysis (CRITICAL)
+
+Before converting PRD tasks, **exhaustively analyze the current project**. This ensures tasks account for existing state, patterns, and constraints.
+
+### What to Check
+
+#### 1. Project Documentation
+- `AGENTS.md` (root and subdirectories) - coding standards, patterns, constraints
+- `specs/` directory - detailed specifications, best practices, conventions (e.g., testing strategy, data access patterns, framework-specific guides)
+- `README.md` - project overview, setup, architecture
+- `CONTRIBUTING.md` - contribution guidelines
+- `docs/` directory - additional documentation
+
+#### 2. Project Status
+- Existing implementation of related features
+- Database schema state (migrations, existing tables)
+- API routes already defined
+- Components/modules that overlap with PRD scope
+- Tests that already exist for related functionality
+
+#### 3. Codebase Patterns
+- File/folder naming conventions
+- Code organization patterns (barrel exports, co-location)
+- Error handling patterns
+- Validation patterns (zod, io-ts, etc.)
+- State management patterns
+- Testing patterns (unit, integration, e2e)
+
+#### 4. Technical Constraints
+- Dependencies and their versions
+- Framework-specific patterns (Next.js App Router vs Pages, etc.)
+- Type definitions and shared types
+- Environment configuration patterns
+
+### How to Apply
+
+1. **Mark tasks as already passing** if implementation already exists and meets verification steps
+2. **Adjust verification steps** to align with existing patterns (e.g., if project uses zod, verification should expect zod validation)
+3. **Add project-specific context** to `context.patterns` based on discovered patterns
+4. **Flag conflicts** - if PRD conflicts with existing patterns/constraints, note in output
+5. **Reference existing code** - include specific file paths in `context.keyFiles` that are relevant
+
+### Output Enrichment
+
+After analysis, the `context` object should include:
+
+```json
+{
+  "context": {
+    "patterns": ["discovered patterns from codebase analysis"],
+    "keyFiles": ["files relevant to PRD tasks"],
+    "nonGoals": ["from PRD"],
+    "projectConstraints": ["constraints from AGENTS.md, README, etc."],
+    "existingImplementation": ["what already exists that relates to PRD"]
+  }
+}
+```
 
 State folder structure:
 ```
@@ -99,7 +158,9 @@ Move PRD and generate JSON in `.opencode/state/<prd-name>/`:
   "context": {
     "patterns": ["API routes: src/routes/items.ts"],
     "keyFiles": ["src/db/schema.ts"],
-    "nonGoals": ["OAuth/social login", "Password reset"]
+    "nonGoals": ["OAuth/social login", "Password reset"],
+    "projectConstraints": ["from AGENTS.md and project docs"],
+    "existingImplementation": ["what already exists relevant to tasks"]
   }
 }
 ```
@@ -145,9 +206,11 @@ Quality over speed. Small steps compound into big progress.
 - **Split large sections** into multiple focused tasks
 
 ### Context Preserved
-- `context.patterns` - existing code patterns to follow
-- `context.keyFiles` - files to explore first
+- `context.patterns` - existing code patterns to follow (from PRD + discovered)
+- `context.keyFiles` - files to explore first (from PRD + discovered)
 - `context.nonGoals` - explicit scope boundaries
+- `context.projectConstraints` - constraints from AGENTS.md, README, etc.
+- `context.existingImplementation` - what already exists relevant to PRD
 
 ## Philosophy
 
@@ -180,11 +243,18 @@ PRD converted and moved to .opencode/state/<prd-name>/
   - progress.txt (empty)
 
 PRD: <prd-name>
-Tasks: X total
+Tasks: X total (Y already passing)
   - functional: N
   - testing: N
 
+Project Analysis:
+  - Constraints found: <count from AGENTS.md, etc.>
+  - Existing implementation: <what already exists>
+  - Patterns discovered: <key patterns>
+
 Non-goals (excluded): <list>
+
+Conflicts/Notes: <any PRD vs project conflicts>
 
 To complete tasks:
   /complete-next-task <prd-name>
@@ -303,10 +373,24 @@ User can retrieve their favorites.
   "context": {
     "patterns": [
       "API routes: src/routes/items.ts",
-      "Auth middleware: src/middleware/auth.ts"
+      "Auth middleware: src/middleware/auth.ts",
+      "Zod validation on all inputs (discovered)",
+      "Drizzle ORM for DB (discovered)"
     ],
-    "keyFiles": ["src/db/schema.ts"],
-    "nonGoals": ["Favorite folders", "Sharing favorites"]
+    "keyFiles": [
+      "src/db/schema.ts",
+      "src/lib/validation.ts (discovered)",
+      "src/routes/items.ts (reference pattern)"
+    ],
+    "nonGoals": ["Favorite folders", "Sharing favorites"],
+    "projectConstraints": [
+      "No any types (from AGENTS.md)",
+      "All API routes require auth middleware"
+    ],
+    "existingImplementation": [
+      "User table exists with id, email, createdAt",
+      "Items table exists with id, name, userId"
+    ]
   }
 }
 ```
