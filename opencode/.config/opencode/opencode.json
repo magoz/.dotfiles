@@ -10,6 +10,7 @@
     "input_delete_to_line_start": "none",
     "input_delete": "delete,shift+delete"
   },
+  "plugin": ["opencode-anthropic-auth@0.0.9"],
   "mcp": {
     "context7": {
       "type": "remote",
