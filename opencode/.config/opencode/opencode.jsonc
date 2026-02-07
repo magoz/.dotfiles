@@ -1,0 +1,57 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": true,
+  "theme": "tokyonight",
+  "keybinds": {
+    "leader": "ctrl+o",
+    "messages_half_page_up": "ctrl+u",
+    "messages_half_page_down": "ctrl+d",
+    "input_delete_to_line_start": "none",
+    "input_delete": "delete,shift+delete",
+  },
+
+  // Model
+  // Qhy both? Opencode's server-side variant resolution (`session/prompt.ts:846-853`) only applies the agent's variant when `agent.model` exists AND matches the resolved model.
+  // Without `model` on the agent, the variant is silently ignored.
+  // The web UI may still show "Default" in the variant picker -- this is cosmetic. The server resolves `variant: "max"` via agent config fallback.
+  // Verified by checking message data on machines: user messages contain `"variant": "max"`.
+  "model": "anthropic/claude-opus-4-6",
+  "agent": {
+    "build": {
+      "model": "anthropic/claude-opus-4-6",
+      "variant": "max",
+    },
+    "plan": {
+      "model": "anthropic/claude-opus-4-6",
+      "variant": "max",
+    },
+  },
+
+  "plugin": ["opencode-anthropic-auth@0.0.13"],
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true,
+    },
+    "grep_app": {
+      "type": "remote",
+      "url": "https://mcp.grep.app",
+      "enabled": true,
+    },
+  },
+  "permission": {
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.envrc": "deny",
+      "secrets/*": "deny",
+    },
+    "external_directory": {
+      "/Users/magoz/dev/docs/*": "allow",
+      "/Users/magoz/.dotfiles/opencode/*": "allow",
+      "/Users/magoz/dev/core-projects/clients/init/*": "allow",
+    },
+  },
+}
