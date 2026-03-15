@@ -1,14 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "autoupdate": true,
-  "theme": "tokyonight",
-  "keybinds": {
-    "leader": "ctrl+o",
-    "messages_half_page_up": "ctrl+u",
-    "messages_half_page_down": "ctrl+d",
-    "input_delete_to_line_start": "none",
-    "input_delete": "delete,shift+delete",
-  },
 
   // Model
   // Qhy both? Opencode's server-side variant resolution (`session/prompt.ts:846-853`) only applies the agent's variant when `agent.model` exists AND matches the resolved model.
@@ -45,6 +37,7 @@
       "*": "allow",
       "*.env": "deny",
       "*.env.*": "deny",
+      ".env.example": "allow",
       "*.envrc": "deny",
       "secrets/*": "deny",
     },
