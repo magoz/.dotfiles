@@ -1,0 +1,8 @@
+{
+  "name": "opencode-global-config",
+  "private": true,
+  "dependencies": {
+    "@opencode-ai/plugin": "1.2.26",
+    "@openauthjs/openauth": "^0.4.3"
+  }
+}

@@ -13,6 +13,9 @@ iterm2/.config/iterm2/AppSupport
 # zsh
 zsh/.config/zsh/.zcompcache
 
+# opencode
+opencode/.config/opencode/node_modules/
+
 
 # vim temp files
 *.swp

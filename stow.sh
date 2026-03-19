@@ -20,4 +20,11 @@ stow -R borders
 stow -R leaderkey
 stow -R scripts
 
+if command -v bun >/dev/null 2>&1; then
+  echo "📦 Installing opencode plugin deps..."
+  bun install --cwd "$PWD/opencode/.config/opencode"
+else
+  echo "⚠️ bun missing; skipped opencode plugin deps"
+fi
+
 echo "✅ Stow complete"
