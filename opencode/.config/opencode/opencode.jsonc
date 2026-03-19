@@ -19,7 +19,7 @@
     },
   },
 
-  "plugin": ["opencode-anthropic-auth@0.0.13"],
+  "plugin": ["file:///Users/magoz/.config/opencode/plugins/opencode-anthropic-auth.mjs"],
   "mcp": {
     "context7": {
       "type": "remote",
