@@ -21,6 +21,15 @@
 
   "plugin": ["file:///Users/magoz/.config/opencode/plugins/opencode-anthropic-auth.mjs"],
   "mcp": {
+    "figma": {
+      "type": "remote",
+      "url": "https://mcp.figma.com/mcp",
+      "oauth": {
+        "clientId": "{env:FIGMA_MCP_CLIENT_ID}",
+        "clientSecret": "{env:FIGMA_MCP_CLIENT_SECRET}",
+      },
+      "enabled": true,
+    },
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
