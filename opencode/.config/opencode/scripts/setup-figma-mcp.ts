@@ -9,13 +9,7 @@
  */
 
 import { Effect, pipe } from "effect"
-import {
-  FetchHttpClient,
-  FileSystem,
-  HttpClient,
-  HttpClientRequest,
-  HttpClientResponse,
-} from "@effect/platform"
+import { FileSystem } from "@effect/platform"
 import { BunFileSystem } from "@effect/platform-bun"
 import { homedir } from "os"
 import { join } from "path"
@@ -113,40 +107,65 @@ const readCredentialsFromEnv = pipe(
   ),
 )
 
-/** Register a new OAuth client with Figma */
-const registerWithFigma = pipe(
-  HttpClientRequest.post(FIGMA_REGISTER_URL),
-  HttpClientRequest.bodyJson({
-    client_name: "OpenCode (figma)",
-    redirect_uris: [CALLBACK_URL],
-    grant_types: ["authorization_code", "refresh_token"],
-    response_types: ["code"],
-    token_endpoint_auth_method: "none",
-  }),
-  Effect.flatMap(HttpClient.execute),
-  Effect.flatMap(HttpClientResponse.filterStatusOk),
-  Effect.flatMap((res) => res.json),
-  Effect.flatMap((data: unknown) => {
-    const d = data as { client_id?: string; client_secret?: string }
-    return d.client_id && d.client_secret
-      ? Effect.succeed({ clientId: d.client_id, clientSecret: d.client_secret })
-      : Effect.fail(new SetupError("missing client_id or client_secret in response"))
-  }),
-  Effect.catchTag("HttpClientError", (err) =>
-    Effect.fail(
-      new SetupError(
-        `Figma registration failed: ${err.message}. Set FIGMA_MCP_CLIENT_ID and FIGMA_MCP_CLIENT_SECRET in ${ENV_FILE} manually.`,
-      ),
-    ),
+/** Read Figma PAT from env file or process.env */
+const readFigmaPat = pipe(
+  fileExists(ENV_FILE),
+  Effect.flatMap((envExists): Effect.Effect<string | null, SetupError, FileSystem.FileSystem> =>
+    envExists
+      ? pipe(
+          readTextFile(ENV_FILE),
+          Effect.map((content) => parseEnvVar(content, "FIGMA_PERSONAL_ACCESS_TOKEN") ?? null),
+        )
+      : Effect.succeed(null),
   ),
-  Effect.catchTag("ResponseError", (err) =>
-    Effect.fail(
-      new SetupError(
-        `Figma returned ${err.response.status}. Set FIGMA_MCP_CLIENT_ID and FIGMA_MCP_CLIENT_SECRET in ${ENV_FILE} manually.`,
-      ),
-    ),
-  ),
+  Effect.map((fromFile) => fromFile ?? process.env.FIGMA_PERSONAL_ACCESS_TOKEN ?? null),
 )
+
+/** Register a new OAuth client with Figma (PAT required for non-whitelisted clients) */
+const registerWithFigma = (pat: string | null) =>
+  Effect.tryPromise({
+    try: async () => {
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (pat) headers["X-Figma-Token"] = pat
+
+      const res = await fetch(FIGMA_REGISTER_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          client_name: "Claude Code (figma)",
+          redirect_uris: [CALLBACK_URL],
+          grant_types: ["authorization_code", "refresh_token"],
+          response_types: ["code"],
+          token_endpoint_auth_method: "none",
+        }),
+      })
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "")
+        if (res.status === 403) {
+          throw new SetupError(
+            [
+              `Figma returned 403.${body ? ` Response: ${body}` : ""}`,
+              pat ? `PAT was sent but rejected.` : `No PAT provided.`,
+              `Add a valid Personal Access Token to ${ENV_FILE}:`,
+              `  export FIGMA_PERSONAL_ACCESS_TOKEN="your-token"`,
+              `Generate one at: Figma > Settings > Security > Personal access tokens`,
+              `Then re-run this script.`,
+            ].join("\n"),
+          )
+        }
+        throw new SetupError(`Figma returned ${res.status}: ${body}`)
+      }
+
+      const data: unknown = await res.json()
+      const d = data as { client_id?: string; client_secret?: string }
+      if (!d.client_id || !d.client_secret) {
+        throw new SetupError("missing client_id or client_secret in response")
+      }
+      return { clientId: d.client_id, clientSecret: d.client_secret } satisfies Credentials
+    },
+    catch: (err) => (err instanceof SetupError ? err : new SetupError(`Figma registration failed: ${err}`)),
+  })
 
 /** Save credentials to ~/.env */
 const saveCredentialsToEnv = (creds: Credentials) =>
@@ -167,7 +186,7 @@ const saveCredentialsToEnv = (creds: Credentials) =>
     Effect.tap(() => info(`saved credentials to ${ENV_FILE}`)),
   )
 
-/** Resolve credentials: env file first, then register */
+/** Resolve credentials: env file first, then register with PAT */
 const resolveCredentials = pipe(
   readCredentialsFromEnv,
   Effect.flatMap((existing) =>
@@ -178,7 +197,11 @@ const resolveCredentials = pipe(
         )
       : pipe(
           info("registering OAuth client with Figma..."),
-          Effect.flatMap(() => registerWithFigma),
+          Effect.flatMap(() => readFigmaPat),
+          Effect.tap((pat) =>
+            pat ? info("using FIGMA_PERSONAL_ACCESS_TOKEN") : info("no PAT found, trying unauthenticated..."),
+          ),
+          Effect.flatMap((pat) => registerWithFigma(pat)),
           Effect.tap((creds) => info(`registered client: ${creds.clientId}`)),
           Effect.tap(saveCredentialsToEnv),
         ),
@@ -221,27 +244,34 @@ const cleanStaleAuth = pipe(
 
 // ── main ────────────────────────────────────────────────────────────
 
-const main = pipe(
+const ensureCredentials = pipe(
+  resolveCredentials,
+  Effect.tap(() => info("credentials ok")),
+)
+
+const ensureConfig = pipe(
   checkAlreadyConfigured,
-  Effect.flatMap(() => resolveCredentials),
   Effect.flatMap(() => patchConfig),
+  Effect.catchAll((err) =>
+    err === "already_configured"
+      ? info(`figma MCP already configured in ${OPENCODE_CONFIG}`)
+      : Effect.fail(err),
+  ),
+)
+
+const main = pipe(
+  ensureCredentials,
+  Effect.flatMap(() => ensureConfig),
   Effect.flatMap(() => cleanStaleAuth),
   Effect.flatMap(() => info("done. now run:")),
   Effect.tap(() => Effect.sync(() => console.log("\n  opencode mcp auth figma\n"))),
   Effect.tap(() => info("this will open your browser to complete the OAuth flow.")),
-  Effect.catchAll((err) => {
-    if (err === "already_configured") {
-      return pipe(
-        info(`figma MCP already configured in ${OPENCODE_CONFIG}`),
-        Effect.tap(() => info("to re-auth: opencode mcp auth figma")),
-      )
-    }
-    return Effect.sync(() => {
+  Effect.catchAll((err) =>
+    Effect.sync(() => {
       console.error(`error: ${err instanceof SetupError ? err.message : err}`)
       process.exit(1)
-    })
-  }),
-  Effect.provide(FetchHttpClient.layer),
+    }),
+  ),
   Effect.provide(BunFileSystem.layer),
 )
 
