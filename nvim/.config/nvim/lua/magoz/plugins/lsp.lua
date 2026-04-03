@@ -2,6 +2,7 @@ return {
 	{
 		"williamboman/mason.nvim",
 		dependencies = {
+			"neovim/nvim-lspconfig",
 			"williamboman/mason-lspconfig.nvim",
 			"WhoIsSethDaniel/mason-tool-installer.nvim",
 			"saghen/blink.cmp",
@@ -12,127 +13,130 @@ return {
 			-- used to enable autocompletion (assign to every lsp server config)
 			local capabilities = require("blink.cmp").get_lsp_capabilities()
 
-			local on_attach = function()
-				-- Jump to
-				wk.add({ "<leader>j", group = "Jump to..." })
-				vim.keymap.set("n", "<leader>ji", function()
-					require("telescope.builtin").lsp_implementations({ reuse_win = true })
-				end, { desc = "Implementation" })
-				vim.keymap.set("n", "<leader>jr", function()
-					require("telescope.builtin").lsp_references({ reuse_win = true })
-				end, { desc = "References" })
-
-				vim.keymap.set("n", "<leader>jd", function()
-					local current_win = vim.api.nvim_get_current_win()
-					local win_config = vim.api.nvim_win_get_config(current_win)
-
-					if win_config.relative ~= "" then
-						local word = vim.fn.expand("<cword>")
-
-						-- Close hover and execute definition in original buffer context
-						vim.api.nvim_win_close(current_win, true)
-
-						vim.defer_fn(function()
-							require("telescope.builtin").lsp_workspace_symbols({
-								query = word,
-								reuse_win = true,
-							})
-						end, 100)
-
-					-- Normal jump to definition
-					else
-						require("telescope.builtin").lsp_definitions({ reuse_win = true })
+			-- LspAttach autocmd (vim.lsp.config does NOT support on_attach)
+			vim.api.nvim_create_autocmd("LspAttach", {
+				callback = function(args)
+					local bufnr = args.buf
+					local client = vim.lsp.get_clients({ id = args.data.client_id })[1]
+					local opts = function(desc)
+						return { buffer = bufnr, desc = desc }
 					end
-				end, { desc = "Definition" })
 
-				vim.keymap.set("n", "<leader>t", function()
-					require("telescope.builtin").lsp_type_definitions({ reuse_win = true })
-				end, { desc = "Type Definition" })
-				vim.keymap.set(
-					"n",
-					"<leader>D",
-					vim.lsp.buf.declaration,
-					{ desc = "Declaration (not supported in ts/js/css)" }
-				)
+					-- Jump to
+					wk.add({ "<leader>j", group = "Jump to..." })
+					vim.keymap.set("n", "<leader>ji", function()
+						require("telescope.builtin").lsp_implementations({ reuse_win = true })
+					end, opts("Implementation"))
+					vim.keymap.set("n", "<leader>jr", function()
+						require("telescope.builtin").lsp_references({ reuse_win = true })
+					end, opts("References"))
 
-				-- Actions
-				wk.add({ "<leader>a", group = "Actions" })
-				vim.keymap.set("n", "<leader>ah", function()
-					vim.lsp.buf.hover({ border = "rounded", max_height = 50 })
-				end, { desc = "Show Hover" })
-				vim.keymap.set("n", "<leader>aH", function()
-					vim.lsp.buf.signature_help({ border = "rounded", max_height = 50 })
-				end, { desc = "Show Signature Help" })
-				vim.keymap.set("n", "<leader>ar", vim.lsp.buf.rename, { desc = "Rename Variable" })
-				vim.keymap.set(
-					"n",
-					"<leader>aa",
-					vim.lsp.buf.code_action,
-					{ desc = "Show Actions (extract code, move to file, etc)" }
-				)
+					vim.keymap.set("n", "<leader>jd", function()
+						local current_win = vim.api.nvim_get_current_win()
+						local win_config = vim.api.nvim_win_get_config(current_win)
 
-				-- vtsls-specific keymaps (only for TypeScript files)
-				local filetype = vim.bo.filetype
-				if
-					filetype == "typescript"
-					or filetype == "typescriptreact"
-					or filetype == "javascript"
-					or filetype == "javascriptreact"
-				then
-					vim.keymap.set("n", "<leader>ai", function()
-						vim.lsp.buf.code_action({
-							apply = true,
-							context = { only = { "source.addMissingImports" } },
-						})
-					end, { desc = "Add missing imports" })
+						if win_config.relative ~= "" then
+							local word = vim.fn.expand("<cword>")
 
-					vim.keymap.set("n", "<leader>aI", function()
-						vim.lsp.buf.code_action({
-							apply = true,
-							context = { only = { "source.removeUnused" } },
-						})
-					end, { desc = "Remove unused imports" })
+							-- Close hover and execute definition in original buffer context
+							vim.api.nvim_win_close(current_win, true)
 
-					vim.keymap.set("n", "<leader>ao", function()
-						vim.lsp.buf.code_action({
-							apply = true,
-							context = { only = { "source.organizeImports" } },
-						})
-					end, { desc = "Organize imports" })
+							vim.defer_fn(function()
+								require("telescope.builtin").lsp_workspace_symbols({
+									query = word,
+									reuse_win = true,
+								})
+							end, 100)
 
-					vim.keymap.set("n", "<leader>aF", function()
-						vim.lsp.buf.code_action({
-							apply = true,
-							context = { only = { "source.fixAll" } },
-						})
-					end, { desc = "Fix all issues" })
+						-- Normal jump to definition
+						else
+							require("telescope.builtin").lsp_definitions({ reuse_win = true })
+						end
+					end, opts("Definition"))
 
-					vim.keymap.set("n", "<leader>aR", function()
-						require("vtsls").commands.rename_file()
-					end, { desc = "Rename file" })
-
-					vim.keymap.set("n", "<leader>js", function()
-						require("vtsls").commands.goto_source_definition(0)
-					end, { desc = "Jump to source definition" })
-
-					vim.keymap.set("n", "<leader>jR", function()
-						require("vtsls").commands.file_references(0)
-					end, { desc = "File references" })
-
-					-- Pick a TypeScript version
-					vim.keymap.set("n", "<leader>at", function()
-						vim.lsp.buf.execute_command({ command = "typescript.selectTypeScriptVersion" })
-					end, { desc = "Select TypeScript Version" })
-
-					-- Two Slash to see the type
-					vim.api.nvim_set_keymap(
+					vim.keymap.set("n", "<leader>t", function()
+						require("telescope.builtin").lsp_type_definitions({ reuse_win = true })
+					end, opts("Type Definition"))
+					vim.keymap.set(
 						"n",
-						"<leader>a/",
-						"<cmd>TwoslashQueriesInspect<CR>",
-						{ desc = "Inspect with Two Slash" }
+						"<leader>D",
+						vim.lsp.buf.declaration,
+						opts("Declaration (not supported in ts/js/css)")
 					)
-				end
-			end
+
+					-- Actions
+					wk.add({ "<leader>a", group = "Actions" })
+					vim.keymap.set("n", "<leader>ah", function()
+						vim.lsp.buf.hover({ border = "rounded", max_height = 50 })
+					end, opts("Show Hover"))
+					vim.keymap.set("n", "<leader>aH", function()
+						vim.lsp.buf.signature_help({ border = "rounded", max_height = 50 })
+					end, opts("Show Signature Help"))
+					vim.keymap.set("n", "<leader>ar", vim.lsp.buf.rename, opts("Rename Variable"))
+					vim.keymap.set(
+						"n",
+						"<leader>aa",
+						vim.lsp.buf.code_action,
+						opts("Show Actions (extract code, move to file, etc)")
+					)
+
+					-- vtsls-specific keymaps
+					if client and client.name == "vtsls" then
+						require("twoslash-queries").attach(client, bufnr)
+
+						vim.keymap.set("n", "<leader>ai", function()
+							vim.lsp.buf.code_action({
+								apply = true,
+								context = { only = { "source.addMissingImports" } },
+							})
+						end, opts("Add missing imports"))
+
+						vim.keymap.set("n", "<leader>aI", function()
+							vim.lsp.buf.code_action({
+								apply = true,
+								context = { only = { "source.removeUnused" } },
+							})
+						end, opts("Remove unused imports"))
+
+						vim.keymap.set("n", "<leader>ao", function()
+							vim.lsp.buf.code_action({
+								apply = true,
+								context = { only = { "source.organizeImports" } },
+							})
+						end, opts("Organize imports"))
+
+						vim.keymap.set("n", "<leader>aF", function()
+							vim.lsp.buf.code_action({
+								apply = true,
+								context = { only = { "source.fixAll" } },
+							})
+						end, opts("Fix all issues"))
+
+						vim.keymap.set("n", "<leader>aR", function()
+							require("vtsls").commands.rename_file()
+						end, opts("Rename file"))
+
+						vim.keymap.set("n", "<leader>js", function()
+							require("vtsls").commands.goto_source_definition(0)
+						end, opts("Jump to source definition"))
+
+						vim.keymap.set("n", "<leader>jR", function()
+							require("vtsls").commands.file_references(0)
+						end, opts("File references"))
+
+						vim.keymap.set("n", "<leader>at", function()
+							vim.lsp.buf.execute_command({ command = "typescript.selectTypeScriptVersion" })
+						end, opts("Select TypeScript Version"))
+
+						vim.keymap.set(
+							"n",
+							"<leader>a/",
+							"<cmd>TwoslashQueriesInspect<CR>",
+							opts("Inspect with Two Slash")
+						)
+					end
+				end,
+			})
 
 			-- DIAGNOSTICS
 			local config = {
@@ -212,17 +216,12 @@ return {
 			for _, server in ipairs(basic_servers) do
 				vim.lsp.config(server, {
 					capabilities = capabilities,
-					on_attach = on_attach,
 				})
 			end
 
 			-- Custom configurations for specific servers
 			vim.lsp.config("vtsls", {
 				capabilities = capabilities,
-				on_attach = function(client, bufnr)
-					on_attach()
-					require("twoslash-queries").attach(client, bufnr)
-				end,
 				settings = {
 					vtsls = {
 						autoUseWorkspaceTsdk = true,
@@ -250,7 +249,6 @@ return {
 
 			vim.lsp.config("tailwindcss", {
 				capabilities = capabilities,
-				on_attach = on_attach,
 				settings = {
 					tailwindCSS = {
 						lint = {
@@ -281,7 +279,6 @@ return {
 
 			vim.lsp.config("jsonls", {
 				capabilities = capabilities,
-				on_attach = on_attach,
 				settings = {
 					json = {
 						schemas = require("schemastore").json.schemas(),
@@ -291,7 +288,6 @@ return {
 
 			vim.lsp.config("lua_ls", {
 				capabilities = capabilities,
-				on_attach = on_attach,
 				settings = {
 					Lua = {
 						diagnostics = {
@@ -309,7 +305,6 @@ return {
 
 			vim.lsp.config("yamlls", {
 				capabilities = capabilities,
-				on_attach = on_attach,
 				settings = {
 					yaml = {
 						schemaStore = {
@@ -346,12 +341,9 @@ return {
 
 	{
 		"neovim/nvim-lspconfig",
-		event = { "BufReadPre", "BufNewFile" },
+		lazy = false,
 		dependencies = {
 			"b0o/schemastore.nvim",
 		},
-		config = function()
-			-- LSP configs are now handled above in mason setup
-		end,
 	},
 }
