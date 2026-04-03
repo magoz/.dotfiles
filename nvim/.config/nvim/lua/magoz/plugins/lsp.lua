@@ -19,7 +19,7 @@ return {
 					local bufnr = args.buf
 					local client = vim.lsp.get_clients({ id = args.data.client_id })[1]
 					local opts = function(desc)
-						return { buffer = bufnr, desc = desc }
+						return { buf = bufnr, desc = desc }
 					end
 
 					-- Jump to
