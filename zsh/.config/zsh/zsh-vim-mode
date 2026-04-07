@@ -30,4 +30,6 @@ zle-line-init() {
 }
 zle -N zle-line-init
 echo -ne '\e[5 q' # Use beam shape cursor on startup.
-preexec() { echo -ne '\e[5 q' ;} # Use beam shape cursor for each new prompt.
+autoload -Uz add-zsh-hook
+_vim_mode_cursor_preexec() { echo -ne '\e[5 q' } # Use beam shape cursor for each new prompt.
+add-zsh-hook preexec _vim_mode_cursor_preexec
