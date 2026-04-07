@@ -9,6 +9,34 @@ return {
 		config = function()
 			local treesitter = require("nvim-treesitter.configs")
 
+			if not vim.g.magoz_treesitter_capture_list_compat then
+				vim.g.magoz_treesitter_capture_list_compat = true
+
+				-- Neovim 0.12 can pass capture matches as node lists.
+				local unwrap_node = function(node)
+					if type(node) ~= "table" or not vim.islist(node) then
+						return node
+					end
+
+					local first = node[1]
+					if type(first) ~= "userdata" then
+						return node
+					end
+
+					return first
+				end
+
+				local get_range = vim.treesitter.get_range
+				vim.treesitter.get_range = function(node, source, metadata)
+					return get_range(unwrap_node(node), source, metadata)
+				end
+
+				local get_node_text = vim.treesitter.get_node_text
+				vim.treesitter.get_node_text = function(node, source, opts)
+					return get_node_text(unwrap_node(node), source, opts)
+				end
+			end
+
 			treesitter.setup({
 				highlight = {
 					enable = true,
