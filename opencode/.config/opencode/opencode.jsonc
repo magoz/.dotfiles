@@ -11,15 +11,19 @@
   "agent": {
     "build": {
       "model": "anthropic/claude-opus-4-6",
+      "prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
       "variant": "max",
     },
     "plan": {
       "model": "anthropic/claude-opus-4-6",
+      "prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
       "variant": "max",
     },
   },
 
-  "plugin": ["file:///Users/magoz/.config/opencode/plugins/opencode-anthropic-auth.mjs"],
+  "plugin": [
+    "file:///Users/magoz/.config/opencode/plugins/opencode-anthropic-auth.mjs",
+  ],
   "mcp": {
     "figma": {
       "type": "remote",
