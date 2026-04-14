@@ -47,6 +47,25 @@ Patch behavior:
 - move all other system text into the first user message
 - avoid weaker `OpenCode` string replacement hacks
 
+### 3. PascalCase `mcp_` tool names hotfix
+
+Problem:
+
+Anthropic started fingerprinting tool name casing after the `mcp_` prefix.
+Lowercase names like `mcp_bash` and `mcp_read` trigger the same misleading 400 rejection.
+
+Cherry-picked behavior from:
+
+- repo: `ex-machina-co/opencode-anthropic-auth`
+- PR: `#81`
+- release: `v1.6.0`
+
+Patch behavior:
+
+- rewrite tool names to Claude Code style: `bash` -> `mcp_Bash`
+- rewrite `tool_use` block names the same way
+- strip `mcp_` on streamed responses and restore lowercase-first names
+
 ## Updating
 
 If Anthropic breaks OAuth again:
