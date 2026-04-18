@@ -1,6 +1,6 @@
 ---
 name: create-skill
-description: Create a custom skill for this project. Determines skill type, writes SKILL.md (and optional references/scripts) to .opencode/skill/<name>/, commits and pushes. Load FIRST before writing any skill.
+description: Create a custom skill for this project. Determines skill type, writes SKILL.md (and optional references/scripts) to .opencode/skills/<name>/, commits and pushes. Load FIRST before writing any skill.
 ---
 
 # Create Skill
@@ -110,10 +110,10 @@ Proposed skill:
   Description: <description>
   Type: <minimal | reference | script | multi-file>
   Files:
-    - .opencode/skill/<name>/SKILL.md
+    - .opencode/skills/<name>/SKILL.md
     - .opencode/command/<name>.md
-    [- .opencode/skill/<name>/references/... ]
-    [- .opencode/skill/<name>/scripts/... ]
+    [- .opencode/skills/<name>/references/... ]
+    [- .opencode/skills/<name>/scripts/... ]
 ```
 
 Wait for the user to confirm or adjust before proceeding.
@@ -143,7 +143,7 @@ Bad:
 
 ### Step 3: Write the Skill Files
 
-Create at `.opencode/skill/<name>/SKILL.md`. For multi-file skills, create subdirectories as needed.
+Create at `.opencode/skills/<name>/SKILL.md`. For multi-file skills, create subdirectories as needed.
 
 **Frontmatter (required, must start at line 1, no blank lines before `---`):**
 
@@ -277,7 +277,7 @@ This pattern:
 ### Step 5: Commit and Push
 
 ```bash
-git add .opencode/skill/<name>/ .opencode/command/<name>.md
+git add .opencode/skills/<name>/ .opencode/command/<name>.md
 git commit -m "add <name> skill"
 git push
 ```
@@ -314,9 +314,9 @@ Both the skill and command are available after restarting opencode. Tell the use
 
 ## Important Notes
 
-- **Always create both files** — `.opencode/skill/<name>/SKILL.md` + `.opencode/command/<name>.md`
+- **Always create both files** — `.opencode/skills/<name>/SKILL.md` + `.opencode/command/<name>.md`
 - **File must be named `SKILL.md`** (uppercase) — opencode ignores other names
 - **Directory name must match** the `name` field in frontmatter
 - **Skills are project-scoped** — stored in `.opencode/` and committed to git
 - **No registration needed** — opencode discovers skills and commands automatically
-- **Both `skill/` and `skills/` work** — opencode scans both, prefer `skill/` for consistency
+- **Both `skill/` and `skills/` work** — opencode scans both, prefer `skills/` for consistency
