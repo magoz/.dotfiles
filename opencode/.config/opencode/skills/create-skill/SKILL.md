@@ -111,7 +111,7 @@ Proposed skill:
   Type: <minimal | reference | script | multi-file>
   Files:
     - .opencode/skills/<name>/SKILL.md
-    - .opencode/command/<name>.md
+    - .opencode/commands/<name>.md
     [- .opencode/skills/<name>/references/... ]
     [- .opencode/skills/<name>/scripts/... ]
 ```
@@ -248,7 +248,7 @@ description: <what + when>
 
 ### Step 4: Create the Slash Command
 
-Every skill needs a companion slash command so users can invoke it via `/<name>`. Create `.opencode/command/<name>.md`:
+Every skill needs a companion slash command so users can invoke it via `/<name>`. Create `.opencode/commands/<name>.md`:
 
 ```markdown
 ---
@@ -277,7 +277,7 @@ This pattern:
 ### Step 5: Commit and Push
 
 ```bash
-git add .opencode/skills/<name>/ .opencode/command/<name>.md
+git add .opencode/skills/<name>/ .opencode/commands/<name>.md
 git commit -m "add <name> skill"
 git push
 ```
@@ -294,7 +294,7 @@ Both the skill and command are available after restarting opencode. Tell the use
 
 | Mistake                         | Fix                                            |
 | ------------------------------- | ---------------------------------------------- |
-| No slash command created        | Create `.opencode/command/<name>.md` alongside |
+| No slash command created        | Create `.opencode/commands/<name>.md` alongside |
 | Blank lines before `---`        | Frontmatter must start at line 1               |
 | Missing closing `---`           | Add `---` after frontmatter fields             |
 | Name doesn't match directory    | Make `name:` field = directory name            |
@@ -314,9 +314,10 @@ Both the skill and command are available after restarting opencode. Tell the use
 
 ## Important Notes
 
-- **Always create both files** — `.opencode/skills/<name>/SKILL.md` + `.opencode/command/<name>.md`
+- **Always create both files** — `.opencode/skills/<name>/SKILL.md` + `.opencode/commands/<name>.md`
 - **File must be named `SKILL.md`** (uppercase) — opencode ignores other names
 - **Directory name must match** the `name` field in frontmatter
 - **Skills are project-scoped** — stored in `.opencode/` and committed to git
 - **No registration needed** — opencode discovers skills and commands automatically
 - **Both `skill/` and `skills/` work** — opencode scans both, prefer `skills/` for consistency
+- **Both `command/` and `commands/` work** — opencode scans both, prefer `commands/` for consistency
