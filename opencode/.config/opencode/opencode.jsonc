@@ -7,15 +7,15 @@
   // Without `model` on the agent, the variant is silently ignored.
   // The web UI may still show "Default" in the variant picker -- this is cosmetic. The server resolves `variant: "max"` via agent config fallback.
   // Verified by checking message data on machines: user messages contain `"variant": "max"`.
-  "model": "anthropic/claude-opus-4-6",
+  "model": "openai/gpt-5.5",
   "agent": {
     "build": {
-      "model": "anthropic/claude-opus-4-6",
+      "model": "openai/gpt-5.5",
       "prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
       "variant": "max",
     },
     "plan": {
-      "model": "anthropic/claude-opus-4-6",
+      "model": "openai/gpt-5.5",
       "prompt": "You are Claude Code, Anthropic's official CLI for Claude.",
       "variant": "max",
     },
