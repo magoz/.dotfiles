@@ -66,6 +66,49 @@ Patch behavior:
 - rewrite `tool_use` block names the same way
 - strip `mcp_` on streamed responses and restore lowercase-first names
 
+### 4. Claude Code billing/header parity hotfix
+
+Problem:
+
+Anthropic tightened OAuth request parity checks beyond prompt/tool names.
+Old requests can fail with the same misleading usage-limit errors.
+
+Cherry-picked behavior from:
+
+- repo: `ex-machina-co/opencode-anthropic-auth`
+- releases: `v1.5.0`..`v1.8.1`
+- repo: `griffinmartin/opencode-claude-auth`
+- PR: `#207`
+- release: `v1.5.1`
+
+Patch behavior:
+
+- inject Claude Code CCH billing header into `system[0]`
+- send Claude Code beta/header/user-agent parity fields
+- use current `platform.claude.com` OAuth URLs/scopes
+- dedupe token refresh and re-read auth before refresh
+
+### 5. Prompt/stream edge hotfixes
+
+Problem:
+
+Anthropic added another OpenCode prompt fingerprint and tool streams can split JSON names across chunks.
+
+Cherry-picked behavior from:
+
+- repo: `ex-machina-co/opencode-anthropic-auth`
+- PR: `#118`
+- release: `v1.7.5`
+- repo: `griffinmartin/opencode-claude-auth`
+- releases: `v1.4.5`, `v1.5.2`
+
+Patch behavior:
+
+- rewrite `Here is some useful information about the environment you are running in:`
+- preserve `StructuredOutput` casing when stripping `mcp_`
+- strip unsupported effort fields for Haiku
+- buffer streamed SSE events before stripping tool prefixes
+
 ## Updating
 
 If Anthropic breaks OAuth again:
