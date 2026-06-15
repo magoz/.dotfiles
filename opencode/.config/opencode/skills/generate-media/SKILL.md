@@ -32,396 +32,210 @@ Content-Type: application/json
 
 ### Step 1: Pick the Right Model
 
-Choose based on what the user wants. When in doubt, use the **recommended default**.
+Choose based on what the user wants. When in doubt, use the **recommended default** (bolded).
+
+**Note:** Models are frequently updated on kie.ai. The tables below are curated recommendations — **model IDs may be approximate or outdated**. After picking a model, **always fetch fresh API docs in Step 2** and use the exact model ID from the docs, not from these tables.
 
 #### Image Generation — "I want to create an image"
 
-| Use case                                        | Model                 | ID / Endpoint                 | Speed   |
-| ----------------------------------------------- | --------------------- | ----------------------------- | ------- |
-| **Product photos, e-commerce, stock imagery**   | Google Imagen 4       | `google/imagen4`              | ~5-10s  |
-| Quick mockups, thumbnails, drafts               | Google Imagen 4 Fast  | `google/imagen4-fast`         | ~3-5s   |
-| Print-ready hero images, billboards             | Google Imagen 4 Ultra | `google/imagen4-ultra`        | ~10-20s |
-| **Photo restoration, marketing with text**      | Nano Banana Pro       | `nano-banana-pro`             | ~5-10s  |
-| Multi-image composition, 4K output              | Nano Banana 2         | `nano-banana-2`               | ~5-10s  |
-| Social media posts, style transfer (Ghibli etc) | GPT Image 1.5         | `gpt-image/1.5-text-to-image` | ~10-15s |
-| **Logos, posters, signage, packaging**          | Ideogram 3.0          | `ideogram/v3-text-to-image`   | ~5-10s  |
-| Brand assets, batch catalogs, automation        | Flux 2 Pro            | `flux-2/pro-text-to-image`    | ~5-10s  |
-| Character sheets, consistent multi-scene        | Ideogram Character    | `ideogram/character`          | ~5-10s  |
-| Memes, unrestricted people/portrait photos      | Grok Imagine          | `grok-imagine/text-to-image`  | ~5-10s  |
-| K-beauty, Asian fashion, CJK marketing          | Seedream 5.0 Lite     | `seedream/5-lite-text-to-image` | ~5-10s |
-| Chinese/multilingual marketing materials        | Qwen                  | `qwen/text-to-image`          | ~5-10s  |
-| Image gen + editing in one model                | Wan 2.7 Image         | `wan/2-7-image`               | ~5-10s  |
+| Use case | Model | ID |
+|----------|-------|----|
+| **Best all-round, photorealism, text, up to 4K** | GPT Image 2 | `gpt-image-2-text-to-image` |
+| Multi-image input, photo restoration, 4K | Nano Banana Pro | `nano-banana-pro` |
+| **Product photos, e-commerce, stock** | Google Imagen 4 | `google/imagen4` |
+| Quick mockups, thumbnails, drafts | Google Imagen 4 Fast | `google/imagen4-fast` |
+| Print-ready hero images, billboards | Google Imagen 4 Ultra | `google/imagen4-ultra` |
+| Multi-image composition, 4K output | Nano Banana 2 | `nano-banana-2` |
+| Social media posts, style transfer (Ghibli etc) | GPT Image 1.5 | `gpt-image/1.5-text-to-image` |
+| **Logos, posters, signage, packaging** | Ideogram 3.0 | `ideogram/v3-text-to-image` |
+| Brand assets, batch catalogs, automation | Flux 2 Pro | `flux-2/pro-text-to-image` |
+| Character sheets, consistent multi-scene | Ideogram Character | `ideogram/character` |
+| Memes, unrestricted people/portrait photos | Grok Imagine | `grok-imagine/text-to-image` |
+| K-beauty, Asian fashion, CJK marketing | Seedream 5.0 Lite | `seedream/5-lite-text-to-image` |
+| Chinese/multilingual marketing materials | Qwen | `qwen/text-to-image` |
+| Image gen + editing in one model | Wan 2.7 Image | `wan/2-7-image` |
 
 **How to pick:**
 
-- **Photography** (products, food, real estate) → Imagen 4. Best photorealism fidelity, fine-grained textures
-- **Marketing materials with text** → Nano Banana Pro. Excels at photo restoration, text overlays, social media ads with accurate copy. Up to 4K resolution
-- **Design** (logos, posters, packaging) → Ideogram 3.0. Purpose-built for legible typography. Best text-in-image accuracy
-- **Social media / style transfer** → GPT Image 1.5. Viral for Ghibli/Pixar/Vermeer style transfers. Easiest for non-technical users
-- **Multi-image composition** → Nano Banana 2. Accepts up to 14 input images, 4K output
-- **Automation/batch** → Flux 2 Pro. Supports reference images + JSON-structured prompts. Open-source community favorite
-- **Unrestricted portraits** → Grok Imagine. Fewest content restrictions of any major model
+- **Best all-round** → GPT Image 2. Near-perfect typography, world-knowledge realism, up to 4K, fast (~3s)
+- **Multi-image / restoration** → Nano Banana Pro or Nano Banana 2. Multi-image input, photo restoration, 4K
+- **Product photography** → Imagen 4. Fine-grained textures, clean photorealism
+- **Design** (logos, posters, packaging) → Ideogram 3.0. Best pure typography
+- **Style transfer** → GPT Image 1.5. Ghibli/Pixar style transfers
+- **Automation/batch** → Flux 2 Pro. Reference images + JSON prompts
+- **Unrestricted portraits** → Grok Imagine. Fewest restrictions
 
 #### Image Editing — "I want to modify an existing image"
 
-| Use case                                       | Model             | Endpoint                      | Speed   |
-| ---------------------------------------------- | ----------------- | ----------------------------- | ------- |
-| **Photo editing, compositing, visual mashups** | 4o Image (GPT)    | 4o Image endpoint             | ~10-20s |
-| Outfit/object swaps, character consistency     | Flux Kontext Pro  | Flux Kontext endpoint         | ~5-10s  |
-| Complex edits, typography changes              | Flux Kontext Max  | Flux Kontext endpoint         | ~10-15s |
-| Inpainting, regional touch-ups                 | Seedream 4.5 Edit | `seedream/4.5-edit`           | ~5-10s  |
-| Total style transformation                     | Flux 2 Pro I2I    | `flux-2/pro-image-to-image`   | ~5-10s  |
-| Background removal for product cutouts         | Recraft           | `recraft/remove-background`   | ~3-5s   |
-| Reframe / change aspect ratio                  | Ideogram Reframe  | `ideogram/v3-reframe`         | ~5-10s  |
-| Editing with non-English instructions          | Qwen Edit         | `qwen/image-edit`             | ~5-10s  |
-| Photo restoration, cleanup, colorization       | Nano Banana Edit  | `google/nano-banana-edit`     | ~5-10s  |
-| Style transfer from image input                | GPT Image 1.5 I2I | `gpt-image/1.5-image-to-image`| ~10-15s |
+| Use case | Model | API Family |
+|----------|-------|------------|
+| **Pixel-level edits, product recolor, compositing** | GPT Image 2 I2I | Market (`gpt-image-2-image-to-image`) |
+| Photo editing, compositing, mashups | 4o Image (GPT) | 4o Image |
+| Outfit/object swaps, consistency | Flux Kontext Pro | Flux Kontext |
+| Complex edits, typography | Flux Kontext Max | Flux Kontext |
+| Inpainting, regional touch-ups | Seedream 4.5 Edit | Market (`seedream/4.5-edit`) |
+| Total style transformation | Flux 2 Pro I2I | Market (`flux-2/pro-image-to-image`) |
+| Background removal | Recraft | Market (`recraft/remove-background`) |
+| Reframe / change aspect ratio | Ideogram Reframe | Market (`ideogram/v3-reframe`) |
+| Non-English editing instructions | Qwen Edit | Market (`qwen/image-edit`) |
+| Photo restoration, colorization | Nano Banana Edit | Market (`google/nano-banana-edit`) |
+| Style transfer from image input | GPT Image 1.5 I2I | Market (`gpt-image/1.5-image-to-image`) |
 
 #### Image Upscaling — "I want higher resolution"
 
-| Use case                             | Model         | ID                      | Speed   |
-| ------------------------------------ | ------------- | ----------------------- | ------- |
-| **Enlarge for print, crisp details** | Recraft Crisp | `recraft/crisp-upscale` | ~5-15s  |
-| Photo enhancement + upscale for web  | Topaz         | `topaz/image-upscale`   | ~10-20s |
-| Quick upscale, less critical quality | Grok Upscale  | `grok-imagine/upscale`  | ~5-10s  |
+| Use case | Model | ID |
+|----------|-------|----|
+| **Enlarge for print, crisp details** | Recraft Crisp | `recraft/crisp-upscale` |
+| Photo enhancement + upscale for web | Topaz | `topaz/image-upscale` |
+| Quick upscale, less critical quality | Grok Upscale | `grok-imagine/upscale` |
 
 #### Video Generation — "I want to create a video"
 
-| Use case                                      | Model                  | Endpoint                                    | Speed    |
-| --------------------------------------------- | ---------------------- | ------------------------------------------- | -------- |
-| **Explainers, clips with voiceover/dialogue** | Veo 3.1 Fast           | Veo endpoint (`veo3_fast`)                  | ~1-3 min |
-| Short films, ads with native audio            | Veo 3.1 Quality        | Veo endpoint (`veo3`)                       | ~2-5 min |
-| Budget video with audio                       | Veo 3.1 Lite           | Veo endpoint (`veo3_lite`)                  | ~1-2 min |
-| **Music videos, branded content, fashion**    | Runway Gen-4           | Runway endpoint                             | ~1-3 min |
-| **Comedy/parody, social media, up to 15s**    | Kling 3.0              | `kling-3.0/video` (Market)                  | ~1-3 min |
-| Animate product photos, reveal sequences      | Kling 2.6 I2V          | `kling/image-to-video` (Market)             | ~1-3 min |
-| Cinematic trailers, artistic short films      | Sora 2 Pro             | `sora-2-pro-text-to-video` (Market)         | ~2-5 min |
-| TikTok/Reels, viral social media clips        | Hailuo Standard        | `hailuo/02-text-to-video-standard` (Market) | ~1-2 min |
-| Animate still photos, portrait motion         | Wan 2.7 I2V            | `wan/2-7-image-to-video` (Market)           | ~1-3 min |
-| Talking head videos, presentations            | Kling AI Avatar        | `kling/ai-avatar-pro` (Market)              | ~1-3 min |
-| Fast promo videos, ads with audio             | Bytedance Seedance 2   | `bytedance/seedance-2` (Market)             | ~1-2 min |
-| Quick video from text description             | Grok Video             | `grok-imagine/text-to-video` (Market)       | ~1-3 min |
+| Use case | Model | API Family |
+|----------|-------|------------|
+| **Explainers, clips with voiceover/dialogue** | Veo 3.1 Fast | Veo (`veo3_fast`) |
+| Short films, ads with native audio | Veo 3.1 Quality | Veo (`veo3`) |
+| Budget video with audio | Veo 3.1 Lite | Veo (`veo3_lite`) |
+| **Music videos, branded content, fashion** | Runway Gen-4 | Runway |
+| **Comedy/parody, social media, up to 15s** | Kling 3.0 | Market (`kling-3.0/video`) |
+| Animate product photos, reveal sequences | Kling 2.6 I2V | Market (`kling/image-to-video`) |
+| Cinematic trailers, artistic short films | Sora 2 Pro | Market (`sora-2-pro-text-to-video`) |
+| Character-consistent multi-shot | Sora 2 Characters Pro | Market (`sora2/sora-2-characters-pro`) |
+| TikTok/Reels, viral social media clips | Hailuo Standard | Market (`hailuo/02-text-to-video-standard`) |
+| General T2V, motion physics, long scenes | Wan 2.7 T2V | Market (`wan/2-7-text-to-video`) |
+| Animate still photos, portrait motion | Wan 2.7 I2V | Market (`wan/2-7-image-to-video`) |
+| Talking head videos, presentations | Kling AI Avatar | Market (`kling/ai-avatar-pro`) |
+| Fast promo videos, ads with audio | Bytedance Seedance 2 | Market (`bytedance/seedance-2`) |
+| Budget fast promo, quick turnaround | Bytedance Seedance 2 Fast | Market (`bytedance/seedance-2-fast`) |
+| Quick video from text description | Grok Video | Market (`grok-imagine/text-to-video`) |
 
 **How to pick:**
 
-- **With audio/dialogue** → Veo 3.1. Only model generating synchronized audio natively. `veo3` for quality, `veo3_fast` for speed, `veo3_lite` for budget
-- **Comedy/parody** → Kling 3.0. Multi-shot support, element references, up to 15s at 1080p (pro mode)
-- **Music videos / brand films** → Runway Gen-4. Pioneer in AI video, best character consistency across shots
-- **Social/viral clips** → Hailuo for TikTok templates. Seedance 2 for audio + references
-- **Cinematic quality** → Sora 2 Pro for raw visual quality. Veo 3.1 Quality for quality + audio
-- **Animate a photo** → Wan 2.7 I2V or Kling 2.6 I2V. Both strong at bringing stills to life
-- **Reference-driven** → Seedance 2. Accepts up to 9 reference images, 3 videos, 3 audio files
+- **With audio/dialogue** → Veo 3.1. Only model with native synchronized audio
+- **Comedy/parody** → Kling 3.0. Multi-shot, element references, up to 15s 1080p
+- **Music videos / brand films** → Runway Gen-4. Best character consistency
+- **Social/viral clips** → Hailuo or Seedance 2
+- **Character consistency** → Sora 2 Characters Pro. Same characters across shots
+- **Cinematic quality** → Sora 2 Pro or Veo 3.1 Quality
+- **Text-to-video (general)** → Wan 2.7 T2V. Good motion, long scenes
+- **Animate a photo** → Wan 2.7 I2V or Kling 2.6 I2V
 
 #### Video Editing — "I want to modify an existing video"
 
-| Use case                                 | Model        | Endpoint                          | Speed    |
-| ---------------------------------------- | ------------ | --------------------------------- | -------- |
-| **Restyle footage, add visual effects**  | Runway Aleph | Aleph endpoint                    | ~1-3 min |
-| Upscale video to higher resolution       | Topaz Video  | `topaz/video-upscale` (Market)    | ~2-5 min |
-| Restyle existing video, change aesthetic | Wan 2.6 V2V  | `wan/2-6-video-to-video` (Market) | ~2-5 min |
-| Video editing with text instructions     | Wan 2.7 Edit | `wan/2-7-videoedit` (Market)      | ~2-5 min |
+| Use case | Model | API Family |
+|----------|-------|------------|
+| **Restyle footage, add visual effects** | Runway Aleph | Runway Aleph |
+| Upscale video to higher resolution | Topaz Video | Market (`topaz/video-upscale`) |
+| Restyle existing video, change aesthetic | Wan 2.6 V2V | Market (`wan/2-6-video-to-video`) |
+| Video editing with text instructions | Wan 2.7 Edit | Market (`wan/2-7-videoedit`) |
 
 #### Music & Audio — "I want to create music or audio"
 
-| Use case                                    | Model                | Endpoint                                       | Speed   |
-| ------------------------------------------- | -------------------- | ---------------------------------------------- | ------- |
-| **Full songs, jingles, background music**   | Suno V5.5            | Suno endpoint                                  | ~30-60s |
-| Songs with specific vocal style             | Suno V5              | Suno endpoint                                  | ~30-60s |
-| Sound effects, loops, foley (Suno)          | Suno Sounds          | Suno sounds endpoint                           | ~30-60s |
-| **Voiceovers, narration, podcasts**         | ElevenLabs TTS       | `elevenlabs/text-to-speech-turbo-2-5` (Market) | ~3-10s  |
-| Custom sound effects, foley                 | ElevenLabs SFX       | `elevenlabs/sound-effect-v2` (Market)          | ~5-10s  |
-| Video game dialogue, multi-character scenes | ElevenLabs Dialogue  | `elevenlabs/text-to-dialogue-v3` (Market)      | ~10-20s |
-| Transcription, subtitles                    | ElevenLabs STT       | `elevenlabs/speech-to-text` (Market)           | ~5-10s  |
-| Remove background noise, isolate vocals     | ElevenLabs Isolation | `elevenlabs/audio-isolation` (Market)          | ~5-10s  |
+| Use case | Model | API Family |
+|----------|-------|------------|
+| **Full songs, jingles, background music** | Suno V5.5 | Suno |
+| Songs with specific vocal style | Suno V5 | Suno |
+| Sound effects, loops, foley | Suno Sounds | Suno |
+| **Voiceovers, narration, podcasts** | ElevenLabs TTS | Market (`elevenlabs/text-to-speech-turbo-2-5`) |
+| Custom sound effects, foley | ElevenLabs SFX | Market (`elevenlabs/sound-effect-v2`) |
+| Video game dialogue, multi-character | ElevenLabs Dialogue | Market (`elevenlabs/text-to-dialogue-v3`) |
+| Transcription, subtitles | ElevenLabs STT | Market (`elevenlabs/speech-to-text`) |
+| Remove background noise, isolate vocals | ElevenLabs Isolation | Market (`elevenlabs/audio-isolation`) |
 
 **How to pick:**
 
-- **Music** → Suno V5.5 (latest, best quality). V5 for predictable output. Suno now supports mashups, persona voices, section replacement, MIDI export
-- **Sound effects/loops** → Suno Sounds for musical loops with BPM/key control. ElevenLabs SFX for non-musical sound effects
-- **Voice** → ElevenLabs TTS. Industry-leading voice realism and cloning fidelity
-- **SFX** → ElevenLabs SFX. Generate any sound effect from text description, royalty-free
+- **Music** → Suno V5.5 (latest, best quality). Supports mashups, persona voices, section replacement, MIDI
+- **Sound effects/loops** → Suno Sounds for musical loops. ElevenLabs SFX for non-musical
+- **Voice** → ElevenLabs TTS. Best realism and cloning fidelity
+- **SFX** → ElevenLabs SFX. Any sound from text, royalty-free
 
-### Step 2: Generate Content
+### Step 2: Fetch Fresh API Documentation
 
-There are **6 API families**, each with its own create/poll endpoints. Use the right one.
+**MANDATORY.** Before making any API call, fetch the latest docs for your chosen model. kie.ai updates models and parameters frequently — hardcoded params go stale.
 
----
+Fetch the relevant doc page from `https://docs.kie.ai` using web fetch tools or `curl`:
 
-#### A. Market Models (unified endpoint — most models)
+#### For Market models (most models)
 
-Used for: Imagen, Grok, Flux 2, Seedream, GPT Image 1.5, Ideogram, Qwen, Recraft, Topaz, Kling, Sora, Hailuo, Wan, Bytedance, ElevenLabs, Nano Banana, Z-Image.
+Fetch the model's doc page:
 
-**Create:**
+```
+https://docs.kie.ai/market/{provider}/{model-slug}
+```
+
+The provider is the first segment of the model ID (e.g., `google` from `google/imagen4`). The model-slug is the rest with dots replaced by dashes and slashes replaced by dashes. Some model IDs don't contain a `/` (e.g., `nano-banana-pro`) — these don't follow this pattern. Use the sitemap fallback below to find their doc URL.
+
+Examples:
+
+| Model ID | Doc URL |
+|----------|---------|
+| `google/imagen4` | `https://docs.kie.ai/market/google/imagen4` |
+| `ideogram/v3-text-to-image` | `https://docs.kie.ai/market/ideogram/v3-text-to-image` |
+| `kling-3.0/video` | `https://docs.kie.ai/market/kling/kling-3-0` |
+| `elevenlabs/text-to-speech-turbo-2-5` | `https://docs.kie.ai/market/elevenlabs/text-to-speech-turbo-2-5` |
+
+Model doc pages return an **OpenAPI spec** with the exact request body schema, all parameters, and response format.
+
+Also fetch the shared task detail endpoint docs for polling:
+
+```
+https://docs.kie.ai/market/common/get-task-detail
+```
+
+#### For non-market API families
+
+These have dedicated endpoints — fetch their specific docs:
+
+| API Family | Create endpoint docs | Poll endpoint docs |
+|------------|---------------------|--------------------|
+| 4o Image | `https://docs.kie.ai/4o-image-api/generate-4-o-image` | `https://docs.kie.ai/4o-image-api/get-4-o-image-details` |
+| Flux Kontext | `https://docs.kie.ai/flux-kontext-api/generate-or-edit-image` | `https://docs.kie.ai/flux-kontext-api/get-image-details` |
+| Veo | `https://docs.kie.ai/veo3-api/generate-veo-3-video` | `https://docs.kie.ai/veo3-api/get-veo-3-video-details` |
+| Runway | `https://docs.kie.ai/runway-api/generate-ai-video` | `https://docs.kie.ai/runway-api/get-ai-video-details` |
+| Runway Aleph | `https://docs.kie.ai/runway-api/generate-aleph-video` | `https://docs.kie.ai/runway-api/get-aleph-video-details` |
+| Suno | `https://docs.kie.ai/suno-api/generate-music` | `https://docs.kie.ai/suno-api/get-music-details` |
+
+#### Discovering new models
+
+Check `https://kie.ai/changelog` for recently added models, parameter changes, and new features. Useful when the user asks for a model not listed in the tables above.
+
+#### If you can't find a model's doc URL
+
+1. Check `https://kie.ai/{model-slug}` — playground pages often have param lists even before API docs are published (e.g., `https://kie.ai/nano-banana-pro`)
+2. Fetch `https://docs.kie.ai/sitemap.xml` — lists all available doc pages
+3. Search for the model name/ID in the URLs
+4. Ignore `/cn/` paths (Chinese translations) — use English paths
+
+#### If web fetch is blocked
+
+If `mcp_Webfetch` or `curl` to docs.kie.ai fails (e.g., rate limiting, network issues), use the `agent-browser` skill to browse the docs interactively.
+
+### Step 3: Generate Content
+
+Use the **fetched docs** to construct the correct API call. General patterns:
+
+**Market models** use a unified endpoint:
 
 ```bash
 curl -s -X POST "https://api.kie.ai/api/v1/jobs/createTask" \
   -H "Authorization: Bearer $KIE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "google/imagen4",
+    "model": "<model-id>",
     "input": {
-      "prompt": "A serene mountain lake at sunset, photorealistic",
-      "aspect_ratio": "16:9"
+      "prompt": "...",
+      ...other params from fetched docs
     }
   }'
 ```
+
+**Non-market APIs** have dedicated create endpoints — use the exact URL and body from the fetched docs.
 
 **Common aspect ratios:** `1:1`, `16:9`, `9:16`, `3:2`, `2:3`, `3:4`, `4:3`
 
-**Image reference params by model** (pass inside `input`):
+### Step 4: Poll for Results
 
-| Model | Image param | Max | Notes |
-|-------|------------|-----|-------|
-| `nano-banana-2` | `image_input` (uri[]) | 14 | Multi-image composition, editing |
-| `nano-banana-pro` | `image_input` (uri[]) | 8 | Multi-image, up to 4K |
-| `google/nano-banana-edit` | `image_urls` (uri[]) | 10 | Image editing |
-| `gpt-image/1.5-image-to-image` | `input_urls` (uri[]) | 16 | Style transfer, editing |
-| `flux-2/pro-image-to-image` | `input_urls` (uri[]) | 8 | Multi-ref restyle |
-| `grok-imagine/image-to-image` | `image_urls` (uri[]) | 5 | Image editing. Ref in prompt via `@image1` |
-| `qwen/image-edit` | `image_url` (string) | 1 | Instruction-based edit |
-| `seedream/4.5-edit` | `image_urls` (uri[]) | 14 | Regional edits, up to 4K |
-| `ideogram/v3-edit` | `image_url` (string) + `mask_url` (string) | 1 | Inpainting with mask |
-| `ideogram/v3-remix` | `image_url` (string) | 1 | Remix existing image |
-| `ideogram/character-edit` | `image_url` (string) | 1 | Character consistency edit |
-| `recraft/crisp-upscale` | `image` (string) | 1 | Upscale input |
-| `recraft/remove-background` | `image` (string) | 1 | Background removal |
-| `topaz/image-upscale` | `image` (string) | 1 | Upscale input |
-| `wan/2-7-image` | `input_urls` (uri[]) | 9 | Image editing, bbox regions, 4K |
-| `wan/2-7-image-pro` | `input_urls` (uri[]) | 9 | Image editing (pro) |
-| `kling-3.0/video` | `image_urls` (uri[]) | 2 | First/last frame control |
-| `bytedance/seedance-2` | `first_frame_url`, `last_frame_url`, `reference_image_urls` (uri[]) | 9 refs | Most flexible: images + video + audio refs |
-| `grok-imagine/image-to-video` | `image_urls` (uri[]) | 1 | Animate a still |
-
-Example with image reference:
-
-```bash
-curl -s -X POST "https://api.kie.ai/api/v1/jobs/createTask" \
-  -H "Authorization: Bearer $KIE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "nano-banana-2",
-    "input": {
-      "prompt": "Transform this photo into a Studio Ghibli style painting",
-      "image_input": ["https://example.com/photo.jpg"],
-      "aspect_ratio": "16:9",
-      "resolution": "2K"
-    }
-  }'
-```
-
-**Poll:**
-
-```bash
-curl -s "https://api.kie.ai/api/v1/jobs/recordInfo?taskId=$TASK_ID" \
-  -H "Authorization: Bearer $KIE_API_KEY"
-```
-
-**States:** `waiting`, `queuing`, `generating` → keep polling. `success` → parse `resultJson`. `fail` → check `failMsg`.
-
-**Result:** `data.resultJson` is a JSON string: `{"resultUrls":["https://..."]}`
-
----
-
-#### B. 4o Image (GPT image editing)
-
-**Create:**
-
-```bash
-curl -s -X POST "https://api.kie.ai/api/v1/gpt4o-image/generate" \
-  -H "Authorization: Bearer $KIE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Make this image look like a watercolor painting",
-    "filesUrl": ["https://example.com/source-image.jpg"],
-    "size": "1:1"
-  }'
-```
-
-**Sizes:** `1:1`, `3:2`, `2:3`. **filesUrl:** Up to 5 images (.jpg, .png, .webp).
-**Options:** `maskUrl` (uri, for inpainting), `isEnhance` (bool), `enableFallback` (bool), `fallbackModel` (`GPT_IMAGE_1` or `FLUX_MAX`)
-
-**Poll:** `GET /api/v1/gpt4o-image/record-info?taskId=xxx`
-
-**Poll response uses `successFlag`:** `0` = generating, `1` = success, `2` = failed
-**Result:** `data.response.resultUrls[]`
-**Progress:** `data.progress` ("0.00" to "1.00")
-
----
-
-#### C. Flux Kontext (image generation + editing)
-
-**Create:**
-
-```bash
-curl -s -X POST "https://api.kie.ai/api/v1/flux/kontext/generate" \
-  -H "Authorization: Bearer $KIE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "A futuristic cityscape at night with neon lights",
-    "aspectRatio": "16:9",
-    "model": "flux-kontext-pro"
-  }'
-```
-
-**Models:** `flux-kontext-pro` (standard), `flux-kontext-max` (higher quality)
-**Aspect ratios:** `21:9`, `16:9`, `4:3`, `1:1`, `3:4`, `9:16`, `16:21`
-**Image editing:** Add `"inputImage": "https://example.com/image.jpg"` to edit an existing image.
-**Options:** `promptUpsampling` (bool), `safetyTolerance` (0-6 generate, 0-2 edit), `outputFormat` (`jpeg`/`png`), `enableTranslation` (bool, default true)
-
-**Poll:** `GET /api/v1/flux/kontext/record-info?taskId=xxx`
-
-**Poll response uses `successFlag`** (not `state`):
-
-- `0` = generating, `1` = success, `2` = create failed, `3` = generate failed
-- Result: `data.response.resultImageUrl`
-
----
-
-#### D. Veo 3.1 Video
-
-**Create:**
-
-```bash
-curl -s -X POST "https://api.kie.ai/api/v1/veo/generate" \
-  -H "Authorization: Bearer $KIE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "A golden retriever running through autumn leaves in slow motion",
-    "model": "veo3_fast",
-    "aspect_ratio": "16:9"
-  }'
-```
-
-**Models:** `veo3` (quality), `veo3_fast` (speed), `veo3_lite` (budget)
-**Aspect ratios:** `16:9`, `9:16`, `Auto`
-**Resolution:** `720p`, `1080p`, `4k`
-
-**Generation types:**
-
-- `TEXT_2_VIDEO` — text only (default)
-- `FIRST_AND_LAST_FRAMES_2_VIDEO` — 1-2 images as first/last frame control. Add `"imageUrls": ["https://..."]`
-- `REFERENCE_2_VIDEO` — material-to-video (`veo3_fast` only, 1-3 images). Add `"imageUrls": [...]`
-
-**Other params:** `seeds` (int 10000-99999), `enableTranslation` (bool, default true)
-
-**Extend video:** `POST /api/v1/veo/extend` with `{ "taskId": "...", "prompt": "...", "model": "fast" }` (model values: `fast`, `quality`, `lite`)
-
-**HD upgrade:** After success, call:
-- `GET /api/v1/veo/get-1080p-video?taskId=xxx&index=0`
-- `POST /api/v1/veo/get-4k-video` with `{ "taskId": "...", "index": 0 }` (extra credits, 5-10 min processing)
-
-**Poll:** `GET /api/v1/veo/record-info?taskId=xxx`
-
-**Poll response uses `successFlag`:** `0` = generating, `1` = success, `2`/`3` = failed
-**Result:** `data.response.resultUrls[]`
-
----
-
-#### E. Runway Video
-
-**Create:**
-
-```bash
-curl -s -X POST "https://api.kie.ai/api/v1/runway/generate" \
-  -H "Authorization: Bearer $KIE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "A fluffy cat dancing in a colorful room with disco lights",
-    "duration": 5,
-    "quality": "720p",
-    "aspectRatio": "16:9"
-  }'
-```
-
-**Duration:** `5` or `10` seconds. **Quality:** `720p` (all durations), `1080p` (5s only).
-**Aspect ratios:** `16:9`, `9:16`, `1:1`, `4:3`, `3:4`
-**Image-to-video:** Add `"imageUrl": "https://..."`
-**Extend video:** `POST /api/v1/runway/extend` with `{ "taskId": "...", "prompt": "...", "quality": "720p" }`
-
-**Poll:** `GET /api/v1/runway/record-detail?taskId=xxx`
-
-**States:** `wait`, `queueing`, `generating` → keep polling. `success` → done. `fail` → check `failMsg`.
-**Result:** `data.videoInfo.videoUrl`
-
-**Runway Aleph (video-to-video):**
-
-```bash
-curl -s -X POST "https://api.kie.ai/api/v1/aleph/generate" \
-  -H "Authorization: Bearer $KIE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Transform into anime style",
-    "videoUrl": "https://example.com/input.mp4",
-    "aspectRatio": "16:9"
-  }'
-```
-
-**Aleph aspect ratios:** `16:9`, `9:16`, `4:3`, `3:4`, `1:1`, `21:9`
-**Aleph options:** `seed` (int), `referenceImage` (uri)
-
-**Aleph poll:** `GET /api/v1/aleph/record-info?taskId=xxx`
-
-**Aleph uses `successFlag`:** `0` = generating, `1` = success
-**Aleph result:** `data.response.resultVideoUrl`
-
----
-
-#### F. Suno Music
-
-**Create:**
-
-```bash
-curl -s -X POST "https://api.kie.ai/api/v1/generate" \
-  -H "Authorization: Bearer $KIE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "upbeat electronic track with synth melodies",
-    "customMode": false,
-    "instrumental": true,
-    "model": "V5_5",
-    "callBackUrl": "https://example.com/callback"
-  }'
-```
-
-**Models:** `V4` (better vocals, max 4 min), `V4_5` (smart prompts, max 8 min), `V4_5PLUS` (richer sound, max 8 min), `V4_5ALL` (smart + fast, max 8 min), `V5` (superior musicality, max 8 min), `V5_5` (latest, best quality, max 8 min)
-
-**Custom mode (`customMode: true`):** Requires `style` and `title` fields. Prompt is lyrics.
-
-**Optional params:** `vocalGender` (`m`/`f`), `styleWeight` (0-1), `weirdnessConstraint` (0-1), `audioWeight` (0-1), `negativeTags`, `personaId`
-
-**Extend music:** `POST /api/v1/generate/extend` with `{ "audioId": "...", "prompt": "...", "model": "V5_5" }`
-
-**Generate lyrics:** `POST /api/v1/lyrics` with `{ "prompt": "..." }`
-
-**Poll:** `GET /api/v1/generate/record-info?taskId=xxx`
-
-**Statuses:** `PENDING`, `TEXT_SUCCESS` → keep polling. `SUCCESS` / `FIRST_SUCCESS` → done. `GENERATE_AUDIO_FAILED`, `CREATE_TASK_FAILED`, `SENSITIVE_WORD_ERROR` → failed.
-**Result:** `data.response.sunoData[].audioUrl`
-
-**Suno sub-endpoints:**
-
-| Endpoint | Purpose | Key params |
-|----------|---------|------------|
-| `POST /api/v1/generate/sounds` | Sound effects/loops | `prompt`, `model`, `soundLoop`, `soundTempo` (1-300 BPM), `soundKey` |
-| `POST /api/v1/generate/add-instrumental` | Add accompaniment to audio | `uploadUrl`, `title`, `tags`, `negativeTags` |
-| `POST /api/v1/generate/add-vocals` | Add vocals to audio | `prompt`, `uploadUrl`, `title`, `style`, `negativeTags` |
-| `POST /api/v1/generate/replace-section` | Replace time segment | `taskId`, `audioId`, `prompt`, `tags`, `title`, `infillStartS`, `infillEndS` (6-60s, max 50%) |
-| `POST /api/v1/generate/mashup` | Remix 2 tracks | `uploadUrlList` (exactly 2 URIs), `customMode`, `model` |
-| `POST /api/v1/generate/generate-persona` | Create voice persona | `taskId`, `audioId`, `name`, `description`, `vocalStart`, `vocalEnd` (10-30s) |
-| `POST /api/v1/suno/cover/generate` | Generate cover art | `taskId` |
-| `POST /api/v1/vocal-removal/generate` | Separate vocals/instruments | `taskId` |
-| `POST /api/v1/midi/generate` | Convert to MIDI | `taskId` (from vocal separation) |
-| `POST /api/v1/mp4/generate` | Create music video | `taskId` |
-| `POST /api/v1/wav/generate` | Convert to WAV | `taskId` |
-| `POST /api/v1/style/generate` | Boost style | `taskId` |
-
-All Suno sub-endpoints use the same poll: `GET /api/v1/generate/record-info?taskId=xxx`
-
----
-
-### Step 3: Poll for Results
-
-Use the correct polling endpoint for the API family (see Step 2 above). Generic polling pattern:
+Each API family has its own poll endpoint and state field. Refer to fetched docs for exact details. Universal polling pattern:
 
 ```bash
 poll_task() {
@@ -470,19 +284,21 @@ poll_task() {
 }
 ```
 
-**Polling endpoint reference:**
+**Quick polling reference:**
 
-| API Family   | Create Endpoint                 | Poll Endpoint                      | State Field        | Result Location                    |
-| ------------ | ------------------------------- | ---------------------------------- | ------------------ | ---------------------------------- |
-| Market       | `/api/v1/jobs/createTask`       | `/api/v1/jobs/recordInfo`          | `data.state`       | `data.resultJson` (JSON string)    |
-| 4o Image     | `/api/v1/gpt4o-image/generate`  | `/api/v1/gpt4o-image/record-info`  | `data.successFlag` | `data.response.resultUrls[]`       |
-| Flux Kontext | `/api/v1/flux/kontext/generate` | `/api/v1/flux/kontext/record-info` | `data.successFlag` | `data.response.resultImageUrl`     |
-| Veo 3.1      | `/api/v1/veo/generate`          | `/api/v1/veo/record-info`          | `data.successFlag` | `data.response.resultUrls[]`       |
-| Runway       | `/api/v1/runway/generate`       | `/api/v1/runway/record-detail`     | `data.state`       | `data.videoInfo.videoUrl`          |
-| Runway Aleph | `/api/v1/aleph/generate`        | `/api/v1/aleph/record-info`        | `data.successFlag` | `data.response.resultVideoUrl`     |
-| Suno         | `/api/v1/generate`              | `/api/v1/generate/record-info`     | `data.status`      | `data.response.sunoData[].audioUrl`|
+| API Family | Poll Endpoint | State Field | Result Location |
+|------------|--------------|-------------|-----------------|
+| Market | `/api/v1/jobs/recordInfo` | `data.state` | `data.resultJson` (JSON string) |
+| 4o Image | `/api/v1/gpt4o-image/record-info` | `data.successFlag` | `data.response.resultUrls[]` |
+| Flux Kontext | `/api/v1/flux/kontext/record-info` | `data.successFlag` | `data.response.resultImageUrl` |
+| Veo | `/api/v1/veo/record-info` | `data.successFlag` | `data.response.resultUrls[]` |
+| Runway | `/api/v1/runway/record-detail` | `data.state` | `data.videoInfo.videoUrl` |
+| Runway Aleph | `/api/v1/aleph/record-info` | `data.successFlag` | `data.response.resultVideoUrl` |
+| Suno | `/api/v1/generate/record-info` | `data.status` | `data.response.sunoData[].audioUrl` |
 
-### Step 4: Download Results
+**Poll intervals:** 3s for Market images, 5-10s for video/music. Increase to 15-30s after 2 min. Max poll: ~5 min images, ~10 min video/music.
+
+### Step 5: Download Results
 
 Result URLs expire (14 days for most). **Always download immediately.**
 
@@ -501,9 +317,9 @@ curl -s -X POST "https://api.kie.ai/api/v1/common/download-url" \
   -d '{ "url": "https://..." }'
 ```
 
-### Step 5: Upload Files (when needed)
+### Step 6: Upload Files (when needed)
 
-Some endpoints require publicly accessible URLs for input images/videos. If the user has a local file, upload it first.
+Some endpoints require publicly accessible URLs for input images/videos. If the user has a local file, upload it first. For full upload API details, fetch: `https://docs.kie.ai/file-upload-api/quickstart`
 
 **Upload base URL:** `https://kieai.redpandaai.co`
 
@@ -532,25 +348,24 @@ Uploaded files expire after **3 days**. Use the returned `fileUrl` as input to g
 
 ## Error Handling
 
-| Code | Meaning              | Action                                   |
-| ---- | -------------------- | ---------------------------------------- |
-| 200  | Success              | Parse result                             |
-| 401  | Unauthorized         | Check KIE_API_KEY                        |
-| 402  | Insufficient credits | User tops up at https://kie.ai/pricing   |
-| 408  | Upstream timeout     | Task took >10 min, retry                 |
-| 422  | Validation error     | Check params                             |
-| 429  | Rate limited         | Wait and retry (max 20 requests per 10s) |
-| 433  | Sub-key limit        | API key usage cap exceeded               |
-| 455  | Service unavailable  | Maintenance, retry later                 |
-| 500  | Server error         | Retry after a few seconds                |
-| 501  | Generation failed    | Check failMsg, adjust prompt             |
-| 505  | Feature disabled     | Feature not available                    |
+| Code | Meaning | Action |
+|------|---------|--------|
+| 200 | Success | Parse result |
+| 401 | Unauthorized | Check KIE_API_KEY |
+| 402 | Insufficient credits | Top up at https://kie.ai/pricing |
+| 408 | Upstream timeout | Task took >10 min, retry |
+| 422 | Validation error | Check params against fetched docs |
+| 429 | Rate limited | Wait and retry (max 20 req/10s) |
+| 433 | Sub-key limit | API key usage cap exceeded |
+| 455 | Service unavailable | Maintenance, retry later |
+| 500 | Server error | Retry after a few seconds |
+| 501 | Generation failed | Check failMsg, adjust prompt |
+| 505 | Feature disabled | Feature not available |
 
 ## Important Notes
 
 - **Always download results immediately** — URLs expire (14 days for most)
 - **Use `jq` to parse JSON** — install via `brew install jq` if needed
-- **Poll interval:** 3s for Market images, 5-10s for video/music. Increase to 15-30s after 2 min
-- **Max poll time:** ~5 min images, ~10 min video/music
+- **Always fetch fresh docs** before API calls — models and params change frequently
 - **Full API docs:** https://docs.kie.ai
 - **Pricing:** https://kie.ai/pricing (typically 30-50% cheaper than official APIs)

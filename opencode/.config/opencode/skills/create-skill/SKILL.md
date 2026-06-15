@@ -319,5 +319,5 @@ Both the skill and command are available after restarting opencode. Tell the use
 - **Directory name must match** the `name` field in frontmatter
 - **Skills are project-scoped** — stored in `.opencode/` and committed to git
 - **No registration needed** — opencode discovers skills and commands automatically
-- **Both `skill/` and `skills/` work** — opencode scans both, prefer `skills/` for consistency
-- **Both `command/` and `commands/` work** — opencode scans both, prefer `commands/` for consistency
+- **Use `skills/`** — keep skill directories plural for consistency
+- **Use `commands/`** — keep slash command directories plural for consistency
