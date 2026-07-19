@@ -11,7 +11,7 @@ alias vim='nvim'
 alias p=pnpm
 
 # OPENCODE
-alias o=opencode
+alias o=opencode2
 
 # EZA/LS
 alias ls='eza'

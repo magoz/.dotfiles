@@ -25,7 +25,6 @@ brew install \
   nikitabobko/tap/aerospace \
   stow \
   tmux \
-  opencode \
   zsh \
   eza \
   zoxide \
@@ -85,6 +84,9 @@ brew install \
   tlrc
 
 # pnpm (standalone, works with fnm)
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PNPM_HOME/bin:$PATH"
+
 if ! command -v pnpm &>/dev/null; then
   curl -fsSL https://get.pnpm.io/install.sh | sh -
   # Installer appends to .zshrc but we already have PNPM_HOME in zsh-exports
@@ -92,3 +94,7 @@ if ! command -v pnpm &>/dev/null; then
 else
   echo "pnpm already installed, skipping"
 fi
+
+# OpenCode 2 beta
+echo "🤖 Installing OpenCode 2"
+pnpm add -g --allow-build=@opencode-ai/cli @opencode-ai/cli@next
