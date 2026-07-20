@@ -16,6 +16,7 @@ rm ~/.zprofile
 echo "🍺 Installing basic config packages with Homebrew"
 brew install \
   bat \
+  bun \
   git \
   fnm \
   jq \
@@ -33,6 +34,11 @@ brew install \
   zsh-autosuggestions \
   zsh-syntax-highlighting \
   zsh-completions
+
+# Node/npm are required for local OpenCode plugin dependencies.
+eval "$(fnm env --shell bash)"
+fnm install --lts --use
+fnm default "$(fnm current)"
 
 # Borders
 brew tap FelixKratz/formulae
