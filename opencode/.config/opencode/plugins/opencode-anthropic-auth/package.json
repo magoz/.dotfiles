@@ -1,0 +1,12 @@
+{
+  "name": "opencode-anthropic-auth-local",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@opencode-ai/plugin": "0.0.0-next-15853",
+    "effect": "4.0.0-beta.98"
+  },
+  "scripts": {
+    "test": "node --test index.test.mjs"
+  }
+}

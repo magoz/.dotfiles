@@ -4,11 +4,35 @@ Local OpenCode runtime plugins.
 
 ## Current plugin
 
-- `opencode-anthropic-auth.mjs`
+- `opencode-anthropic-auth/index.mjs`
 
 ## Why this plugin exists
 
 Local Anthropic OAuth auth for OpenCode without installing external plugin packages at runtime.
+
+V2 architecture:
+
+- registers `Claude Pro/Max` through `integration.transform`
+- lets V2 own credential persistence and refresh timing
+- routes Anthropic models through an authenticated loopback adapter
+- adapter applies Claude Code request/stream compatibility patches
+
+Why loopback:
+
+V2 exposes integration and catalog transforms, but no native HTTP request hook.
+Anthropic now uses OpenCode's native LLM runtime, so the V1 custom `fetch` hook
+cannot be ported directly. The adapter binds only `127.0.0.1` and uses a random,
+per-process path.
+
+Dependencies are isolated in the plugin directory because V2 beta requires
+Effect 4 while global Figma setup scripts still require Effect 3.
+
+V2 catalog compatibility:
+
+- `next-15853` stores provider/model endpoint overrides in `settings.baseURL`
+- newer V2 builds store them in `api.url`
+- `setBaseURL` supports both shapes; removing either path can empty the entire
+  catalog because a failed transform blocks all providers, not only Anthropic
 
 Base source:
 

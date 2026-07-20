@@ -22,7 +22,7 @@
   },
 
   "plugin": [
-    "file:///Users/magoz/.config/opencode/plugins/opencode-anthropic-auth.mjs",
+    "file:///Users/magoz/.config/opencode/plugins/opencode-anthropic-auth/index.mjs",
   ],
   "mcp": {
     "figma": {
