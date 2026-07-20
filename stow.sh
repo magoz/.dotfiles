@@ -21,10 +21,17 @@ stow -R leaderkey
 stow -R scripts
 
 if command -v bun >/dev/null 2>&1; then
-  echo "📦 Installing opencode plugin deps..."
+  echo "📦 Installing opencode deps..."
   bun install --cwd "$PWD/opencode/.config/opencode"
 else
-  echo "⚠️ bun missing; skipped opencode plugin deps"
+  echo "⚠️ bun missing; skipped opencode deps"
+fi
+
+if command -v npm >/dev/null 2>&1; then
+  echo "📦 Installing Anthropic plugin deps..."
+  npm ci --prefix "$PWD/opencode/.config/opencode/plugins/opencode-anthropic-auth"
+else
+  echo "⚠️ npm missing; skipped Anthropic plugin deps"
 fi
 
 echo "✅ Stow complete"
