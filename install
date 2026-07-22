@@ -103,4 +103,4 @@ fi
 
 # OpenCode 2 beta
 echo "🤖 Installing OpenCode 2"
-pnpm add -g --allow-build=@opencode-ai/cli @opencode-ai/cli@next
+npm install -g @opencode-ai/cli@next
