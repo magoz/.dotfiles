@@ -103,4 +103,5 @@ fi
 
 # OpenCode 2 beta
 echo "🤖 Installing OpenCode 2"
+export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
 npm install -g @opencode-ai/cli@next
