@@ -19,6 +19,10 @@ case ":$PATH:" in
 esac
 # pnpm end
 
+# npm global packages (stable across fnm Node versions)
+export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
+export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+
 # Brew
 eval "$(/opt/homebrew/bin/brew shellenv)"
 export PATH="/opt/homebrew/bin:$PATH"
