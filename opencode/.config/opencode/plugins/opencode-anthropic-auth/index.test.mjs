@@ -1,11 +1,37 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
+import plugin, {
   parseCallbackInput,
   setBaseURL,
   stripToolPrefix,
   transformRequestBody,
 } from "./index.mjs";
+
+test("registers OAuth through the Promise plugin API", async (t) => {
+  let registration;
+  const cleanup = await plugin.setup({
+    integration: {
+      transform: async (transform) =>
+        transform({
+          method: {
+            update: (value) => {
+              registration = value;
+            },
+          },
+        }),
+    },
+    catalog: {
+      transform: async (transform) =>
+        transform({ provider: { get: () => undefined } }),
+    },
+  });
+  t.after(cleanup);
+
+  assert.ok(registration);
+  const authorization = registration.authorize({});
+  assert.ok(authorization instanceof Promise);
+  assert.equal((await authorization).mode, "code");
+});
 
 test("parses supported OAuth callback formats", () => {
   assert.deepEqual(parseCallbackInput("code#state"), {
