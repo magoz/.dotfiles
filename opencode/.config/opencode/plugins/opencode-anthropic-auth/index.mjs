@@ -4,8 +4,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { createServer } from "node:http";
-import { Plugin } from "@opencode-ai/plugin/v2";
-import { Effect } from "effect";
 
 const CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const CLAUDE_CODE_VERSION = "2.1.112";
@@ -470,14 +468,6 @@ async function refresh(credential) {
   return refreshPromise;
 }
 
-function effectFromPromise(run) {
-  return Effect.tryPromise({
-    try: run,
-    catch: (cause) =>
-      cause instanceof Error ? cause : new Error("Anthropic OAuth failed"),
-  });
-}
-
 function requestHeaders(request) {
   const headers = new Headers();
   for (const [name, value] of Object.entries(request.headers)) {
@@ -672,7 +662,7 @@ export function setBaseURL(target, baseURL) {
   };
 }
 
-export default Plugin.define({
+export default {
   id: "magoz.anthropic-oauth",
   setup: async (ctx) => {
     const proxy = await startProxy();
@@ -686,20 +676,17 @@ export default Plugin.define({
             type: "oauth",
             label: "Claude Pro/Max",
           },
-          authorize: () =>
-            effectFromPromise(async () => {
-              const authorization = await authorize();
-              return {
-                mode: "code",
-                url: authorization.url,
-                instructions: "Paste the authorization code here.",
-                callback: (code) =>
-                  effectFromPromise(() =>
-                    exchange(code, authorization.verifier, authorization.state),
-                  ),
-              };
-            }),
-          refresh: (credential) => effectFromPromise(() => refresh(credential)),
+          authorize: async () => {
+            const authorization = await authorize();
+            return {
+              mode: "code",
+              url: authorization.url,
+              instructions: "Paste the authorization code here.",
+              callback: (code) =>
+                exchange(code, authorization.verifier, authorization.state),
+            };
+          },
+          refresh,
         });
       });
 
@@ -724,4 +711,4 @@ export default Plugin.define({
 
     return proxy.close;
   },
-});
+};

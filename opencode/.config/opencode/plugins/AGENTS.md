@@ -24,8 +24,9 @@ Anthropic now uses OpenCode's native LLM runtime, so the V1 custom `fetch` hook
 cannot be ported directly. The adapter binds only `127.0.0.1` and uses a random,
 per-process path.
 
-Dependencies are isolated in the plugin directory because V2 beta requires
-Effect 4 while global Figma setup scripts still require Effect 3.
+The plugin has no runtime dependencies. OpenCode plugins are structural
+objects, and OAuth hooks use the Promise API so this plugin never couples to
+OpenCode's internal Effect or plugin package versions.
 
 V2 catalog compatibility:
 
