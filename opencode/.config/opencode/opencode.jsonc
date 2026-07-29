@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "autoupdate": true,
+  "autoupdate": false,
 
   // Model
   // Qhy both? Opencode's server-side variant resolution (`session/prompt.ts:846-853`) only applies the agent's variant when `agent.model` exists AND matches the resolved model.
