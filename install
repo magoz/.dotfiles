@@ -101,7 +101,12 @@ else
   echo "pnpm already installed, skipping"
 fi
 
+export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
+
+# Pi coding agent
+echo "🥧 Installing Pi"
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
 # OpenCode 2 beta
 echo "🤖 Installing OpenCode 2"
-export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
 npm install -g @opencode-ai/cli@next
