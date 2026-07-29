@@ -15,6 +15,8 @@ stow -R tmux
 stow -R git
 stow -R lazygit
 stow -R opencode
+mkdir -p "$HOME/.pi/agent"
+stow -R pi
 stow -R aerospace
 stow -R borders
 stow -R leaderkey
