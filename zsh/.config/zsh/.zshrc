@@ -134,3 +134,11 @@ if type brew &>/dev/null; then
  compinit
 fi
 
+
+# pnpm
+export PNPM_HOME="/Users/magoz/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end
