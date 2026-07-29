@@ -1,0 +1,13 @@
+{
+  "name": "pi-anthropic-auth-local",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test *.test.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
