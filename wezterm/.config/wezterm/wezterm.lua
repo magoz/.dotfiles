@@ -26,6 +26,12 @@ config.keys = {
 		mods = "ALT",
 		action = wezterm.action.DisableDefaultAssignment,
 	},
+	-- Disable command palette
+	{
+		key = "p",
+		mods = "CTRL|SHIFT",
+		action = wezterm.action.DisableDefaultAssignment,
+	},
 	-- Disable Hide
 	{
 		key = "m",
