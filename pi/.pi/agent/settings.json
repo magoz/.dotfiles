@@ -3,8 +3,19 @@
   "theme": "tokyonight-moon",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "high",
   "packages": [
+    "npm:pi-subagents",
+    "npm:pi-vimmode",
     "npm:@juanibiapina/pi-tokyonight"
-  ]
+  ],
+  "piVimMode": {
+    "ui": {
+      "status": {
+        "enabled": false
+      }
+    }
+  },
+  "enableInstallTelemetry": false,
+  "editorPaddingX": 0
 }
