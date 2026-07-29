@@ -20,6 +20,7 @@ opencode/.config/opencode/service.json
 opencode/.config/opencode/service-*.json
 
 # pi runtime state
+/.pi-subagents/
 pi/.pi/agent/auth.json
 pi/.pi/agent/bin/
 pi/.pi/agent/git/
