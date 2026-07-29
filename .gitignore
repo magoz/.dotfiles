@@ -29,6 +29,8 @@ pi/.pi/agent/npm/
 pi/.pi/agent/sessions/
 pi/.pi/agent/trust.json
 pi/.pi/agent/*.log
+pi/.pi/node_modules/
+pi/.pi/agent/extensions/**/node_modules/
 
 
 # vim temp files
