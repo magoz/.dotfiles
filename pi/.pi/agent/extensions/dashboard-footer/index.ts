@@ -255,7 +255,9 @@ export default function dashboardFooter(pi: ExtensionAPI) {
             }
           }
 
-          lines.push("");
+          // Render a materialized blank row so differential updates keep the
+          // bottom spacing stable while the working indicator animates.
+          lines.push(" ".repeat(width));
           return lines;
         },
       };
