@@ -2,7 +2,7 @@
  * ask_user - Lets the model ask a single multiple-choice question.
  *
  * - 2 to 5 model-provided options, plus an always-present "Write my own answer" option
- * - Popup UI: arrow keys or number keys to pick, Enter to confirm
+ * - Popup UI: arrow keys, j/k, or number keys to pick, Enter to confirm
  * - "Write my own answer" opens an inline editor (Esc returns to the options)
  * - Esc on the options dismisses the question (the model is told you declined)
  */
@@ -221,13 +221,13 @@ export default function askUser(pi: ExtensionAPI) {
               return;
             }
 
-            if (matchesKey(data, Key.up)) {
+            if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
               optionIndex =
                 (optionIndex - 1 + allOptions.length) % allOptions.length;
               refresh();
               return;
             }
-            if (matchesKey(data, Key.down)) {
+            if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
               optionIndex = (optionIndex + 1) % allOptions.length;
               refresh();
               return;
@@ -307,7 +307,7 @@ export default function askUser(pi: ExtensionAPI) {
               add(
                 theme.fg(
                   "dim",
-                  ` ↑↓ or 1-${allOptions.length} select • Enter confirm • Esc dismiss`,
+                  ` ↑↓/jk or 1-${allOptions.length} select • Enter confirm • Esc dismiss`,
                 ),
               );
             }
