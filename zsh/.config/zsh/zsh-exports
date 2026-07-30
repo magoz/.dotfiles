@@ -36,7 +36,7 @@ export CLICOLOR=1
 # Environment variables set everywhere
 export EDITOR="nvim"
 export TERMINAL="iterm2"
-export BROWSER="chrome"
+unset BROWSER
 
 # nnn
 export NNN_PLUG='v:imgview'
