@@ -8,7 +8,6 @@
     "npm:pi-subagents@0.37.2",
     "npm:pi-vimmode@0.9.0",
     "npm:@juanibiapina/pi-tokyonight@1.1.0",
-    "npm:pi-workspace-history@0.2.2",
     "npm:@plannotator/pi-extension"
   ],
   "piVimMode": {
