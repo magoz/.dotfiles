@@ -50,10 +50,17 @@ brew install \
   zsh-syntax-highlighting \
   zsh-completions
 
-# Node/npm are required for local OpenCode plugin dependencies.
+# Node/npm are required for Pi, OpenCode, and local extension dependencies.
 eval "$(fnm env --shell bash)"
 fnm install --lts --use
 fnm default "$(fnm current)"
+
+export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
+export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+
+# Install Pi before stowing its configuration.
+echo "🥧 Installing Pi"
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
 # Borders
 brew tap FelixKratz/formulae
@@ -64,6 +71,25 @@ brew install borders
 # --------------  STOW -----------------
 # --------------------------------------
 ./stow.sh
+
+# --------------------------------------
+# -------- CONFIG DEPENDENCIES ----------
+# --------------------------------------
+echo "📦 Installing OpenCode dependencies"
+bun install --cwd "$PWD/opencode/.config/opencode"
+
+npm ci --prefix "$PWD/opencode/.config/opencode/plugins/opencode-anthropic-auth"
+
+echo "📦 Installing Pi extension dependencies"
+# Extensions resolve from their real (stowed) source paths in this repo, so
+# their shared node_modules must live beside the repo's package.json.
+npm ci --omit=dev --prefix "$PWD/pi/.pi"
+
+# Install the pinned Pi packages declared by the stowed settings file.
+echo "📦 Installing Pi packages"
+while IFS= read -r package; do
+  pi install "$package"
+done < <(jq -r '.packages[] | if type == "string" then . else .source end' "$HOME/.pi/agent/settings.json")
 
 # --------------------------------------
 # --------------  ZSH ------------------
@@ -120,19 +146,6 @@ if ! command -v pnpm &>/dev/null; then
 else
   echo "pnpm already installed, skipping"
 fi
-
-export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
-export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
-
-# Pi coding agent
-echo "🥧 Installing Pi"
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
-
-# Install the pinned Pi packages declared by the stowed settings file.
-echo "📦 Installing Pi packages"
-while IFS= read -r package; do
-  pi install "$package"
-done < <(jq -r '.packages[] | if type == "string" then . else .source end' "$HOME/.pi/agent/settings.json")
 
 # OpenCode 2 beta
 echo "🤖 Installing OpenCode 2"
