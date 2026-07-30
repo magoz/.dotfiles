@@ -1,8 +1,8 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# set current directory, in case the script is called from another directory.
-cd "$(dirname "$0")" || exit
+# Set current directory in case the script is called from elsewhere.
+cd "$(dirname "$0")"
 
 echo "🔗 Running stow..."
 
@@ -12,7 +12,6 @@ stow -R wezterm
 stow -R ghostty
 stow -R zsh
 stow -R tmux
-stow -R herdr
 stow -R git
 stow -R lazygit
 stow -R opencode
@@ -35,7 +34,7 @@ if command -v npm >/dev/null 2>&1; then
   echo "📦 Installing Anthropic plugin deps..."
   npm ci --prefix "$PWD/opencode/.config/opencode/plugins/opencode-anthropic-auth"
   echo "📦 Installing Pi extension deps..."
-  npm ci --omit=dev --prefix "$PWD/pi/.pi"
+  npm ci --omit=dev --prefix "$HOME/.pi"
 else
   echo "⚠️ npm missing; skipped Anthropic plugin and Pi extension deps"
 fi

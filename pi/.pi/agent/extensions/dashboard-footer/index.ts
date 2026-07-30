@@ -243,7 +243,7 @@ export default function dashboardFooter(pi: ExtensionAPI) {
           }
 
           const lines = [
-            columns(theme.fg("text", formatDirectory(ctx.cwd)), theme.fg("muted", modelLabel), width),
+            columns(theme.fg("text", modelLabel), theme.fg("muted", formatDirectory(ctx.cwd)), width),
             columns(theme.fg("muted", `${context} · ${cost} · ${speed}`), theme.fg("muted", gitLabel), width),
           ];
 
@@ -254,6 +254,8 @@ export default function dashboardFooter(pi: ExtensionAPI) {
               lines.push(truncateToWidth(line, width, theme.fg("dim", "...")));
             }
           }
+
+          lines.push("");
           return lines;
         },
       };
