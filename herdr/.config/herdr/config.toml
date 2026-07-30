@@ -1,0 +1,70 @@
+onboarding = false
+
+[theme]
+name = "terminal"
+
+[ui]
+prompt_new_tab_name = false
+
+[keys]
+prefix = "ctrl+t"
+reload_config = "prefix+r"
+resize_mode = "prefix+shift+r"
+previous_workspace = "prefix+k"
+next_workspace = "prefix+j"
+switch_tab = "prefix+1..9"
+switch_workspace = "prefix+shift+1..9"
+
+[[keys.command]]
+key = "prefix+f"
+type = "pane"
+command = "herdr-sessionizer"
+description = "project picker"
+
+[[keys.command]]
+key = "f7"
+type = "shell"
+command = 'herdr tab focus "${HERDR_ACTIVE_WORKSPACE_ID}:1" >/dev/null'
+description = "tab 1"
+
+[[keys.command]]
+key = "f8"
+type = "shell"
+command = 'herdr tab focus "${HERDR_ACTIVE_WORKSPACE_ID}:2" >/dev/null'
+description = "tab 2"
+
+[[keys.command]]
+key = "f9"
+type = "shell"
+command = 'herdr tab focus "${HERDR_ACTIVE_WORKSPACE_ID}:3" >/dev/null'
+description = "tab 3"
+
+[[keys.command]]
+key = "f10"
+type = "shell"
+command = 'herdr tab focus "${HERDR_ACTIVE_WORKSPACE_ID}:4" >/dev/null'
+description = "tab 4"
+
+[[keys.command]]
+key = "ctrl+f7"
+type = "shell"
+command = "herdr workspace focus 1 >/dev/null"
+description = "workspace 1"
+
+[[keys.command]]
+key = "ctrl+f8"
+type = "shell"
+command = "herdr workspace focus 2 >/dev/null"
+description = "workspace 2"
+
+[[keys.command]]
+key = "ctrl+f9"
+type = "shell"
+command = "herdr workspace focus 3 >/dev/null"
+description = "workspace 3"
+
+[[keys.command]]
+key = "ctrl+f10"
+type = "shell"
+command = "herdr workspace focus 4 >/dev/null"
+description = "workspace 4"

@@ -15,6 +15,13 @@ stow -R tmux
 stow -R git
 stow -R lazygit
 stow -R opencode
+
+# Stow refuses to adopt an absolute symlink, even when it already points to
+# this package. Remove that legacy link so Stow can recreate and own it.
+if [[ -L "$HOME/.agents" ]] &&
+  [[ "$(readlink "$HOME/.agents")" == "$PWD/agents/.agents" ]]; then
+  rm "$HOME/.agents"
+fi
 stow -R agents
 mkdir -p "$HOME/.pi/agent"
 stow -R pi
