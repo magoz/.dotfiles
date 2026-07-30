@@ -11,6 +11,20 @@ rm -rf tmux/.config/tmux/plugins
 rm -f ~/.gitconfig ~/.zprofile
 
 # --------------------------------------
+# -------- TRUST THIRD-PARTY TAPS ------
+# --------------------------------------
+# Treat taps already used on this machine as explicitly trusted sources.
+brew trust --tap \
+  anomalyco/tap \
+  jnsahaj/lumen \
+  libsql/sqld \
+  ngrok/ngrok \
+  nikitabobko/tap \
+  oven-sh/bun \
+  stripe/stripe-cli \
+  tursodatabase/tap
+
+# --------------------------------------
 # ---------  INSTALL PACKAGES ----------
 # --------------------------------------
 echo "🍺 Installing basic config packages with Homebrew"
@@ -26,6 +40,7 @@ brew install \
   nikitabobko/tap/aerospace \
   stow \
   tmux \
+  herdr \
   zsh \
   eza \
   zoxide \
@@ -42,6 +57,7 @@ fnm default "$(fnm current)"
 
 # Borders
 brew tap FelixKratz/formulae
+brew trust --formula felixkratz/formulae/borders
 brew install borders
 
 # --------------------------------------
