@@ -1,7 +1,7 @@
 ## Install
 
 ```sh
-./install.sh
+./install
 ```
 
 After the install we need to configure Copilot.  

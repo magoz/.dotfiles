@@ -1,14 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# set current directory, in case the script is called from another directory.
-cd "$(dirname "$0")" || exit
+# Set current directory in case the script is called from elsewhere.
+cd "$(dirname "$0")"
 
 # --------------------------------------
 # ------ CLEANUP EXISTING CONF ---------
 # --------------------------------------
 rm -rf tmux/.config/tmux/plugins
-rm ~/.gitconfig
-rm ~/.zprofile
+rm -f ~/.gitconfig ~/.zprofile
 
 # --------------------------------------
 # ---------  INSTALL PACKAGES ----------
@@ -52,8 +52,8 @@ brew install borders
 # --------------------------------------
 # --------------  ZSH ------------------
 # --------------------------------------
-rm -f ~/.zcompdump
-compinit # zsh-completions
+# Force Zsh to rebuild completions with the stowed configuration on next launch.
+rm -f "$HOME/.zcompdump" "$HOME/.config/zsh/.zcompdump"*
 
 # --------------------------------------
 # -------------  NEOVIM ----------------
@@ -78,8 +78,12 @@ brew services restart borders
 # --------------------------------------
 # ------------- TMUX ----------------
 # --------------------------------------
-tmux source "$HOME/.config/tmux/tmux.conf"
-echo "✅ Sourced Tmux"
+if tmux list-sessions &>/dev/null; then
+  tmux source-file "$HOME/.config/tmux/tmux.conf"
+  echo "✅ Sourced Tmux"
+else
+  echo "ℹ️ No running Tmux server; config will load on first start"
+fi
 
 # --------------------------------------
 # ------  INSTALL DEV PACKAGES ---------
@@ -102,10 +106,17 @@ else
 fi
 
 export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
+export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
 
 # Pi coding agent
 echo "🥧 Installing Pi"
 npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
+# Install the pinned Pi packages declared by the stowed settings file.
+echo "📦 Installing Pi packages"
+while IFS= read -r package; do
+  pi install "$package"
+done < <(jq -r '.packages[] | if type == "string" then . else .source end' "$HOME/.pi/agent/settings.json")
 
 # OpenCode 2 beta
 echo "🤖 Installing OpenCode 2"

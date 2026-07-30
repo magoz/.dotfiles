@@ -1,14 +1,14 @@
 {
-  "lastChangelogVersion": "0.82.1",
+  "lastChangelogVersion": "0.83.0",
   "theme": "tokyonight-moon",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "high",
   "packages": [
-    "npm:pi-subagents",
-    "npm:pi-vimmode",
-    "npm:@juanibiapina/pi-tokyonight",
-    "npm:pi-workspace-history"
+    "npm:pi-subagents@0.37.2",
+    "npm:pi-vimmode@0.9.0",
+    "npm:@juanibiapina/pi-tokyonight@1.1.0",
+    "npm:pi-workspace-history@0.2.2"
   ],
   "piVimMode": {
     "ui": {
