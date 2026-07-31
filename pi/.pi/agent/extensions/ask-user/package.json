@@ -6,9 +6,6 @@
     "check": "tsc --noEmit -p .",
     "test": "node --experimental-strip-types --test index.test.ts"
   },
-  "dependencies": {
-    "effect": "^4.0.0-beta.99"
-  },
   "pi": {
     "extensions": ["./index.ts"]
   }
