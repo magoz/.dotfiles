@@ -1,0 +1,47 @@
+# Keep Herdr tab labels in sync with the foreground app.
+# Long-running commands use their executable name; an idle shell uses its cwd.
+
+[[ ${HERDR_ENV:-} == 1 && -n ${HERDR_PANE_ID:-} && -n ${HERDR_TAB_ID:-} ]] || return
+
+command -v herdr >/dev/null 2>&1 || return
+command -v jq >/dev/null 2>&1 || return
+
+autoload -Uz add-zsh-hook
+
+_herdr_tab_detect_foreground_app() {
+  emulate -L zsh
+
+  # Let the command take control of the pane before asking Herdr about it.
+  sleep 0.1
+
+  local app
+  app=$(
+    command herdr pane process-info --pane "$HERDR_PANE_ID" 2>/dev/null |
+      command jq -r '
+        .result.process_info as $process
+        | [
+            $process.foreground_processes[]?
+            | select(
+                .pid == $process.foreground_process_group_id and
+                .pid != $process.shell_pid
+              )
+            | (.argv0 // .name)
+          ][0] // empty
+      '
+  )
+
+  [[ -n $app ]] || return
+  command herdr tab rename "$HERDR_TAB_ID" "${app:t}" >/dev/null 2>&1
+}
+
+_herdr_tab_preexec() {
+  _herdr_tab_detect_foreground_app &!
+}
+
+_herdr_tab_precmd() {
+  emulate -L zsh
+  command herdr tab rename "$HERDR_TAB_ID" "${PWD:t}" >/dev/null 2>&1
+}
+
+add-zsh-hook preexec _herdr_tab_preexec
+add-zsh-hook precmd _herdr_tab_precmd

@@ -116,6 +116,7 @@ bindkey '^e' edit-command-line # use `ctrl + e` to edit current line in vim
 # ----- UTILS -------
 # ---------------------------------
 zsh_add_file "zsh-autocommands"
+zsh_add_file "zsh-herdr"
 zsh_add_file "zsh-vim-mode"
 zsh_add_file "zsh-aliases"
 
