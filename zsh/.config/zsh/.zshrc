@@ -1,148 +1,103 @@
-#!/bin/sh
+# Zsh configuration directory
+export ZDOTDIR="$HOME/.config/zsh"
 
-# Set zsh direcory
-export ZDOTDIR=$HOME/.config/zsh
+# Instant prompt is intentionally disabled. It switches the terminal to
+# noncanonical mode before ZLE is ready, which exposes early backspaces as ^?.
 
 # ---------------------------------
 # ------- EXPORTS & PATH ----------
 # ---------------------------------
-source "$ZDOTDIR/zsh-functions"
-zsh_add_file "zsh-exports"
+[[ ! -r "$ZDOTDIR/zsh-exports" ]] || source "$ZDOTDIR/zsh-exports"
 
 # ---------------------------------
-# -------- POWERLEVEL10K  ---------
+# -------- POWERLEVEL10K ----------
 # ---------------------------------
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.config/zsh/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+if [[ -r "$HOMEBREW_PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme" ]]; then
+  source "$HOMEBREW_PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme"
 fi
 
-# To customize prompt, run `p10k configure` or edit ~/.config/zsh/.p10k.zsh.
-[[ ! -f ~/.config/zsh/.p10k.zsh ]] || source ~/.config/zsh/.p10k.zsh
-source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
+# To customize the prompt, run `p10k configure` or edit this file.
+[[ ! -r "$ZDOTDIR/.p10k.zsh" ]] || source "$ZDOTDIR/.p10k.zsh"
 
 # ---------------------------------
 # ---------- HISTORY --------------
 # ---------------------------------
-# HISTFILE="$XDG_DATA_HOME"/zsh/history
-export HISTFILE=ZDOTDIR/.zsh_history       # History file
-export HISTFILESIZE=1000000000             # History file size
-export SAVEHIST=500000                     # Number of commands that are stored in the zsh history file
-export HISTSIZE=500000                     # Number of commands that are loaded into memory from the history file
-setopt append_history                      # zsh sessions will append their history list to the history file, rather than replace it.
-setopt inc_append_history                  # Ensure that commands are added to the history immediately
-setopt extended_history                    # Records the timestamp of each command in HISTFILE
-setopt hist_find_no_dups                   # Up and down arrows skip duplicates and show each command only once with (duplicate commands are still written to the history)
-setopt hist_ignore_space                   # ignore commands that start with space
-setopt hist_verify                         # show command with history expansion to user before running it
-setopt share_history                       # share command history data
+typeset -g HISTFILE="$ZDOTDIR/.zsh_history"
+typeset -g HISTSIZE=500000
+typeset -g SAVEHIST=500000
+setopt append_history
+setopt inc_append_history
+setopt extended_history
+setopt hist_find_no_dups
+setopt hist_ignore_space
+setopt hist_verify
+setopt share_history
 
 # ---------------------------------
 # ---------- OPTIONS --------------
 # ---------------------------------
-# More: https://linux.die.net/man/1/zshoptions 
+setopt no_beep
+setopt auto_cd
+setopt extended_glob
+setopt nomatch
+setopt interactive_comments
 
-# General 
-setopt no_beep                             # Prevent making sounds on erros
-setopt auto_cd                             # If a command is issued that can't be executed as a normal command, perform the cd command to that directory. 
-setopt extended_glob                       # Treat the '#', '~' and '^' characters as part of patterns for filename generation.
-setopt nomatch                             # If a pattern for filename generation has no matches, print an error.
-setopt menu_complete                       # On an ambiguous completion, instead of listing possibilities or beeping, insert the first match immediately.
-setopt interactive_comments                # Allow comments even in interactive shells.
-
-# Colors 
-autoload -Uz colors && colors              # color support
-zle_highlight=('paste:none')               # Stop pasted text being highlighted.
-
-#zsh-autosuggestions color
+# Colors
+autoload -Uz colors && colors
+zle_highlight=('paste:none')
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=244'
 
 # ---------------------------------
 # --------- COMPLETIONS -----------
 # ---------------------------------
-# Remove inferior completions that the git package provide.
-# This must be done before compinit is called.
-# That will force zsh to use it's own completion for git that is much better. More info:
-# See: https://github.com/Homebrew/homebrew-core/pull/59062#issuecomment-1084908889
-rm -f "$(brew --prefix)/share/zsh/site-functions/_git"
+# Configure every completion directory before initializing completion. Changing
+# fpath after compinit forces expensive .zcompdump rebuilds on every shell.
+typeset -U fpath
+fpath=(
+  "$ZDOTDIR/completion"
+  "$HOMEBREW_PREFIX/share/zsh/site-functions"
+  "$HOMEBREW_PREFIX/share/zsh-completions"
+  $fpath
+)
 
-# Homebrew completions
-# See: https://docs.brew.sh/Shell-Completion#configuring-completions-in-zsh
-if type brew &>/dev/null
-then
-  FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
-
-  autoload -Uz compinit
-  compinit 
-fi
-
-# Load and initialise completion system
-autoload -Uz compinit
-compinit
-
-FIGNORE=DS_Store # List of files to ignore in completion
-
-# # Completions colors
-# # https://github.com/finnurtorfa/zsh/blob/master/completion.zsh
-zstyle ':completion:*' list-colors '' # Color completions
-zstyle ':completion:*' menu select # Enable selected completion
-zstyle ":completion:*:default" list-colors ${(s.:.)LS_COLORS} "ma=48;5;153;1" # Color selected completion
+FIGNORE=DS_Store
+zstyle ':completion:*' list-colors ''
+zstyle ':completion:*' menu select
+zstyle ":completion:*:default" list-colors ${(s.:.)LS_COLORS} "ma=48;5;153;1"
 zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-]#)*=01;34=0=01'
-
-# Enable completions
-zmodload zsh/complist
-autoload -U compinit; compinit
-_comp_options+=(globdots) # Include hidden files
-
-# case insensitive (all), partial-word and substring completion
-# https://github.com/ohmyzsh/ohmyzsh/blob/master/lib/completion.zsh
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z-_}={A-Za-z_-}' 'r:|=*' 'l:|=* r:|=*'
 
-# Completion settings
-unsetopt menu_complete                     # Do not autoselect the first completion entry
-setopt auto_menu                           # Show completion menu on successive tab press
-setopt complete_in_word                    # Cursor stays where it is and completion is done from both ends.
-setopt always_to_end                       # If a completion is performed with the cursor within a word, and a full completion is inserted, the cursor is moved to the end of the word
+zmodload zsh/complist
+autoload -Uz compinit
+compinit
+_comp_options+=(globdots)
+
+unsetopt menu_complete
+setopt auto_menu
+setopt complete_in_word
+setopt always_to_end
 
 # ---------------------------------
 # ------- EDIT LINE IN VIM --------
 # ---------------------------------
-autoload edit-command-line; zle -N edit-command-line
-bindkey '^e' edit-command-line # use `ctrl + e` to edit current line in vim
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey '^e' edit-command-line
 
 # ---------------------------------
-# ----- UTILS -------
+# ------------ UTILS --------------
 # ---------------------------------
-zsh_add_file "zsh-autocommands"
-zsh_add_file "zsh-herdr"
-zsh_add_file "zsh-vim-mode"
-zsh_add_file "zsh-aliases"
+[[ ! -r "$ZDOTDIR/zsh-autocommands" ]] || source "$ZDOTDIR/zsh-autocommands"
+[[ ! -r "$ZDOTDIR/zsh-herdr" ]] || source "$ZDOTDIR/zsh-herdr"
+[[ ! -r "$ZDOTDIR/zsh-vim-mode" ]] || source "$ZDOTDIR/zsh-vim-mode"
+[[ ! -r "$ZDOTDIR/zsh-aliases" ]] || source "$ZDOTDIR/zsh-aliases"
 
 # ---------------------------------
-# ---------- PLUGINS  -------------
+# ---------- PLUGINS --------------
 # ---------------------------------
-# For more plugins: https://github.com/unixorn/awesome-zsh-plugins
-source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+[[ ! -r "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] || \
+  source "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
 
-# zsh-completions
-if type brew &>/dev/null; then
- FPATH=$(brew --prefix)/share/zsh-completions:$FPATH
-
- autoload -Uz compinit
- compinit
-fi
-
-
-# pnpm
-export PNPM_HOME="/Users/magoz/.local/share/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
-
-# bun completions
-[ -s "/private/tmp/bun-1.3.14/_bun" ] && source "/private/tmp/bun-1.3.14/_bun"
+# Syntax highlighting must be sourced last.
+[[ ! -r "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] || \
+  source "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"

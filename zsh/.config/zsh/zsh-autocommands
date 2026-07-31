@@ -1,10 +1,10 @@
 # starting directory on launch
 # cd ~/dev/core-projects/
 
-# Start / attach a new tmux session on launch
-if [ -z "$TMUX" ]
-then
-    tmux a || tmux new 
+# Start/attach tmux only in a regular terminal. Herdr is already a terminal
+# multiplexer, so starting tmux there would create an unnecessary nested session.
+if [[ -z ${TMUX:-} && ${HERDR_ENV:-} != 1 ]]; then
+  tmux new-session -A
 fi
 
 # ls after cd

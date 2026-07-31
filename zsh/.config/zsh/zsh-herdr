@@ -40,7 +40,8 @@ _herdr_tab_preexec() {
 
 _herdr_tab_precmd() {
   emulate -L zsh
-  command herdr tab rename "$HERDR_TAB_ID" "${PWD:t}" >/dev/null 2>&1
+  # Renaming is cosmetic and must not delay the next prompt.
+  command herdr tab rename "$HERDR_TAB_ID" "${PWD:t}" >/dev/null 2>&1 &!
 }
 
 add-zsh-hook preexec _herdr_tab_preexec
