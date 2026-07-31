@@ -6,7 +6,7 @@ name = "terminal"
 [ui]
 prompt_new_tab_name = false
 
-agent_panel_sort = "priority"
+agent_panel_sort = "spaces"
 [ui.toast]
 delivery = "herdr"
 
@@ -20,8 +20,10 @@ enabled = false
 prefix = "ctrl+t"
 reload_config = "prefix+r"
 resize_mode = "prefix+shift+r"
-previous_workspace = "prefix+k"
-next_workspace = "prefix+j"
+previous_workspace = ["prefix+k", "prefix+ctrl+k"]
+next_workspace = ["prefix+j", "prefix+ctrl+j"]
+previous_tab = ["prefix+p", "prefix+ctrl+p"]
+next_tab = ["prefix+n", "prefix+ctrl+n"]
 switch_tab = "prefix+1..9"
 switch_workspace = "prefix+shift+1..9"
 focus_agent = "prefix+alt+1..9"
