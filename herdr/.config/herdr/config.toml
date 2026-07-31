@@ -6,6 +6,16 @@ name = "terminal"
 [ui]
 prompt_new_tab_name = false
 
+agent_panel_sort = "priority"
+[ui.toast]
+delivery = "herdr"
+
+[ui.toast.herdr]
+position = "top-right"
+
+[ui.sound]
+enabled = false
+
 [keys]
 prefix = "ctrl+t"
 reload_config = "prefix+r"
@@ -14,6 +24,7 @@ previous_workspace = "prefix+k"
 next_workspace = "prefix+j"
 switch_tab = "prefix+1..9"
 switch_workspace = "prefix+shift+1..9"
+focus_agent = "prefix+alt+1..9"
 
 [[keys.command]]
 key = "prefix+f"
@@ -70,3 +81,6 @@ key = "ctrl+f10"
 type = "shell"
 command = "herdr workspace focus 4 >/dev/null"
 description = "workspace 4"
+
+[advanced]
+scrollback_limit_bytes = 52428800
