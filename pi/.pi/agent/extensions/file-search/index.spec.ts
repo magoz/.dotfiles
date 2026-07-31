@@ -1,8 +1,9 @@
 import { NodeServices } from "@effect/platform-node";
 import { assert, it } from "@effect/vitest";
+import { spawnSync } from "node:child_process";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { Effect, FileSystem } from "effect";
+import { Cause, Effect, Exit, FileSystem } from "effect";
 import { HttpClientRequest, HttpClientResponse } from "effect/unstable/http";
 import {
   buildFdArgs,
@@ -24,7 +25,53 @@ import {
 } from "./src/binaries.ts";
 import { formatCapturedOutput, formatOutput } from "./src/output.ts";
 import { executeSearchProcess } from "./src/process.ts";
-import { installNotifications, makeBinaryInitializers } from "./index.ts";
+import {
+  installNotifications,
+  makeBinaryInitializers,
+} from "./src/runtime.ts";
+
+// --- startup ---------------------------------------------------------------
+
+it("extension import does not load the Effect runtime", () => {
+  const loader =
+    "data:text/javascript," +
+    encodeURIComponent(`
+      export async function resolve(specifier, context, nextResolve) {
+        if (
+          specifier === "effect" ||
+          specifier.startsWith("effect/") ||
+          specifier === "@effect/platform-node" ||
+          specifier.startsWith("@effect/platform-node/")
+        ) {
+          throw new Error("Effect loaded during extension import: " + specifier)
+        }
+        return nextResolve(specifier, context)
+      }
+    `);
+  const extensionUrl = new URL("./index.ts", import.meta.url).href;
+  const script = `
+    const { default: register } = await import(${JSON.stringify(extensionUrl)})
+    const names = []
+    register({ registerTool(tool) { names.push(tool.name) } })
+    if (names.join(",") !== "fd,rg") {
+      throw new Error("unexpected registered tools: " + names.join(","))
+    }
+  `;
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--no-warnings",
+      "--experimental-loader",
+      loader,
+      "--input-type=module",
+      "--eval",
+      script,
+    ],
+    { encoding: "utf8" },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+});
 
 // --- argument construction -------------------------------------------------
 
@@ -299,6 +346,50 @@ it.effect("binary resolution: one failed tool does not disable the other", () =>
     assert.deepEqual(rg, { tool: "rg", command: "rg", source: "system" });
   }),
 );
+
+it("binary resolution: cancelling one waiter does not poison the cache", async () => {
+  let releaseProbe!: () => void;
+  let markProbeStarted!: () => void;
+  const probeStarted = new Promise<void>((resolve) => {
+    markProbeStarted = resolve;
+  });
+  const probeGate = new Promise<void>((resolve) => {
+    releaseProbe = resolve;
+  });
+  let probes = 0;
+  const env: BinaryEnv = {
+    probe: () =>
+      Effect.promise(async () => {
+        probes++;
+        markProbeStarted();
+        await probeGate;
+        return true;
+      }),
+    install: () => Effect.die("install should not run"),
+  };
+  const initializers = makeBinaryInitializers("/repo/bin", darwinArm, env);
+  const controller = new AbortController();
+
+  const cancelledPromise = Effect.runPromiseExit(initializers.fd, {
+    signal: controller.signal,
+  });
+  await probeStarted;
+  controller.abort();
+  const cancelled = await cancelledPromise;
+  assert.isTrue(Exit.isFailure(cancelled));
+  assert.isTrue(
+    Exit.isFailure(cancelled) && Cause.hasInterruptsOnly(cancelled.cause),
+  );
+
+  releaseProbe();
+  const retried = await Effect.runPromiseExit(initializers.fd);
+  assert.deepEqual(retried, Exit.succeed({
+    tool: "fd",
+    command: "fd",
+    source: "system",
+  }));
+  assert.equal(probes, 1);
+});
 
 it("release assets cover macOS and Linux on arm64 and x64 over HTTPS", () => {
   for (const os of ["darwin", "linux"] as const) {
