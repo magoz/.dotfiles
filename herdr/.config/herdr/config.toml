@@ -17,8 +17,10 @@ switch_workspace = "prefix+shift+1..9"
 
 [[keys.command]]
 key = "prefix+f"
-type = "pane"
-command = "herdr-sessionizer"
+type = "popup"
+command = "HERDR_ENV=1 herdr-sessionizer"
+width = "80%"
+height = "80%"
 description = "project picker"
 
 [[keys.command]]
