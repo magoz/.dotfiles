@@ -1,67 +1,64 @@
-#!/bin/bash
-
-# .env
-if [ -f "$HOME/.env" ]; then
-    source "$HOME/.env"
+# Load private environment variables when present.
+if [[ -r "$HOME/.env" ]]; then
+  source "$HOME/.env"
 else
-    echo "Warning: $HOME/.env file not found"
+  print -u2 "Warning: $HOME/.env file not found"
 fi
 
-# pnpm
-export PNPM_HOME="/Users/magoz/.local/share/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
+# Homebrew. These are the stable values emitted by `brew shellenv`; keeping
+# them static avoids spawning brew and path_helper for every interactive shell.
+export HOMEBREW_PREFIX="/opt/homebrew"
+export HOMEBREW_CELLAR="$HOMEBREW_PREFIX/Cellar"
+export HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX"
+case ":${MANPATH:-}:" in
+  *":$HOMEBREW_PREFIX/share/man:"*) ;;
+  *) export MANPATH="$HOMEBREW_PREFIX/share/man:${MANPATH:-}" ;;
 esac
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+case ":${INFOPATH:-}:" in
+  *":$HOMEBREW_PREFIX/share/info:"*) ;;
+  *) export INFOPATH="$HOMEBREW_PREFIX/share/info:${INFOPATH:-}" ;;
 esac
-# pnpm end
 
-# npm global packages (stable across fnm Node versions)
+# Package managers.
+export PNPM_HOME="$HOME/.local/share/pnpm"
 export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
-export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
 
-# Brew
-eval "$(/opt/homebrew/bin/brew shellenv)"
-export PATH="/opt/homebrew/bin:$PATH"
+# Android Studio.
+export ANDROID_HOME="$HOME/Library/Android/sdk"
 
-# fnm (node version manager)
-eval "$(fnm env --use-on-cd --version-file-strategy=recursive --shell zsh)"
+# Keep PATH entries unique while preserving the order below. This file is
+# sourced from a function, so declare the tied parameters globally.
+typeset -gU path PATH
+path=(
+  "$HOME/.local/bin"
+  "$HOME/.local/share/go/bin"
+  "$HOME/.rustup/toolchains/nightly-aarch64-apple-darwin/bin"
+  "$NPM_CONFIG_PREFIX/bin"
+  "$PNPM_HOME"
+  "$PNPM_HOME/bin"
+  "$HOMEBREW_PREFIX/bin"
+  "$HOMEBREW_PREFIX/sbin"
+  "$HOMEBREW_PREFIX/opt/postgresql@16/bin"
+  $path
+  "$ANDROID_HOME/emulator"
+  "$ANDROID_HOME/tools"
+  "$ANDROID_HOME/tools/bin"
+  "$ANDROID_HOME/platform-tools"
+  "./node_modules/.bin"
+)
+export PATH
 
-# User shell colors
+# fnm must be initialized after Homebrew is on PATH.
+if (( $+commands[fnm] )); then
+  eval "$(fnm env --use-on-cd --version-file-strategy=recursive --shell zsh)"
+fi
+
 export CLICOLOR=1
-
-# Environment variables set everywhere
 export EDITOR="nvim"
 export TERMINAL="iterm2"
 unset BROWSER
 
-# nnn
 export NNN_PLUG='v:imgview'
-
-# -------------------------------
-#         ANDROID STUDIO
-# -------------------------------
-export ANDROID_HOME=$HOME/Library/Android/sdk
-export PATH=$PATH:$ANDROID_HOME/emulator
-export PATH=$PATH:$ANDROID_HOME/tools
-export PATH=$PATH:$ANDROID_HOME/tools/bin
-export PATH=$PATH:$ANDROID_HOME/platform-tools
-
-# ---------------------------------------------
-#               ORIGINAL CONFIG
-# https://github.com/Mach-OS/Machfiles/blob/6373a1fd1e42ca2fd8babd95ef4acce9164c86c3/zsh/.config/zsh/zsh-exports
-#
-# ---------------------------------------------
-
-export PATH="$HOME/.local/bin":$PATH
 export MANPAGER='nvim +Man!'
 export MANWIDTH=999
-export PATH="$HOME/.rustup/toolchains/nightly-aarch64-apple-darwin/bin:$PATH"
-export PATH=$HOME/.local/share/go/bin:$PATH
-export GOPATH=$HOME/.local/share/go
-export PATH="$PATH:./node_modules/.bin"
-# export PATH="/usr/local/opt/postgresql@16/bin:$PATH" // intel mac
-export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"
+export GOPATH="$HOME/.local/share/go"

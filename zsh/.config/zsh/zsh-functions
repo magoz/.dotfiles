@@ -4,8 +4,10 @@
 #
 # ---------------------------------------------
 
-# Function to source files if they exist
+# Source an optional config file without hiding its errors.
 function zsh_add_file() {
-    [ -f "$ZDOTDIR/$1" ] && source "$ZDOTDIR/$1" >/dev/null 2>&1
+    local file="$ZDOTDIR/$1"
+    [[ -r "$file" ]] || return 0
+    source "$file"
 }
 
