@@ -56,6 +56,8 @@ fi
 export CLICOLOR=1
 export EDITOR="nvim"
 export TERMINAL="iterm2"
+# Check for Pi updates manually with `pi update`.
+export PI_SKIP_VERSION_CHECK=1
 unset BROWSER
 
 export NNN_PLUG='v:imgview'
