@@ -4,7 +4,9 @@ import {
   DEFAULT_MAX_LINES,
   truncateHead,
 } from "@earendil-works/pi-coding-agent";
-import { Effect, FileSystem, Stream } from "effect";
+import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
+import * as Stream from "effect/Stream";
 import { ChildProcess } from "effect/unstable/process";
 import type { CapturedOutput } from "./output.ts";
 

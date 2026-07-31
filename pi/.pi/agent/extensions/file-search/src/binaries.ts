@@ -1,5 +1,5 @@
 /**
- * Startup resolution of the fd and rg executables.
+ * Lazy resolution of the fd and rg executables.
  *
  * Resolution order (per tool, first usable wins):
  *   1. A normally installed system binary (`fd`/`fdfind`, `rg`) — used silently.
@@ -12,13 +12,19 @@
  * network. `liveBinaryEnv` is the real implementation.
  */
 
-import { NodeHttpClient, NodeServices } from "@effect/platform-node";
+import * as NodeHttpClient from "@effect/platform-node/NodeHttpClient";
+import * as NodeServices from "@effect/platform-node/NodeServices";
 import { execFile } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { Crypto, Data, Effect, Encoding, FileSystem, Stream } from "effect";
+import * as Crypto from "effect/Crypto";
+import * as Data from "effect/Data";
+import * as Effect from "effect/Effect";
+import * as Encoding from "effect/Encoding";
+import * as FileSystem from "effect/FileSystem";
+import * as Stream from "effect/Stream";
 import { FetchHttpClient, HttpClient } from "effect/unstable/http";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
@@ -225,7 +231,7 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Read a response incrementally while enforcing the startup memory bound. */
+/** Read a response incrementally while enforcing the download memory bound. */
 export function readBoundedResponse<E, R>(
   response: {
     readonly headers: Readonly<Record<string, string | undefined>>;
