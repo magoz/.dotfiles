@@ -16,7 +16,7 @@ else
         ~/dev/core-projects/open-source \
         ~/dev/core-projects/rust \
         ~/dev/ecosystem \
-        -mindepth 1 -maxdepth 1 -type d
+        -mindepth 1 -maxdepth 1 -type d 2>/dev/null || true
       find ~/.dotfiles \
         ~/dev/docs \
         ~/dev/core-projects/magoz.com \
@@ -29,7 +29,7 @@ else
         ~/dev/core-projects/intellect/intellect-ai \
         ~/dev/core-projects/intellect/2022/intellect-notes \
         ~/dev/core-projects/reality-score* \
-        -mindepth 0 -maxdepth 0 -type d
+        -mindepth 0 -maxdepth 0 -type d 2>/dev/null || true
     ) | fzf
   )
 fi
