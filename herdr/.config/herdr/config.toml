@@ -3,6 +3,9 @@ onboarding = false
 [theme]
 name = "terminal"
 
+[theme.custom]
+accent = "#44FFB1"
+
 [ui]
 prompt_new_tab_name = false
 
