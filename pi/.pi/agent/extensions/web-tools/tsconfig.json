@@ -28,7 +28,9 @@
     "./render.ts",
     "./tool-output.ts",
     "./webfetch.ts",
+    "./webfetch-definition.ts",
     "./websearch.ts",
+    "./websearch-definition.ts",
     "./providers/**/*.ts",
     "./test/**/*.ts"
   ]
