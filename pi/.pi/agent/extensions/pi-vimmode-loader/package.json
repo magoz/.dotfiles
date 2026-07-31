@@ -1,0 +1,12 @@
+{
+  "name": "pi-vimmode-loader",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit -p .",
+    "test": "node --experimental-strip-types --test index.test.ts"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}
