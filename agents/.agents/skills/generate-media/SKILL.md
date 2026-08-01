@@ -1,13 +1,15 @@
 ---
 name: generate-media
-description: Generate images, videos, and music using AI models (Imagen, Flux, Veo, Runway, Kling, Sora, Suno, ElevenLabs, etc.). Use when user asks to create, generate, edit, upscale, or produce any visual or audio media.
+description: Generate images, videos, music, and speech using AI models (Imagen, Flux, Veo, Runway, Kling, PixVerse, Suno, ElevenLabs, Gemini, etc.). Use when user asks to create, generate, edit, upscale, or produce any visual or audio media.
 ---
 
 # Generate Media
 
 Generate images, videos, music, and audio using AI. All generation is asynchronous — submit a task, poll for the result, download immediately.
 
-Powered by kie.ai — a unified API for 50+ models including Google Imagen, Flux, Veo, Runway, Kling, Sora, Suno, ElevenLabs, and more.
+Powered by kie.ai — a unified API for frequently updated image, video, music, and speech models.
+
+**Catalog last audited:** 2026-08-01 against the English entries in `https://docs.kie.ai/sitemap.xml`.
 
 ## Prerequisites
 
@@ -46,24 +48,27 @@ Choose based on what the user wants. When in doubt, use the **recommended defaul
 | Quick mockups, thumbnails, drafts | Google Imagen 4 Fast | `google/imagen4-fast` |
 | Print-ready hero images, billboards | Google Imagen 4 Ultra | `google/imagen4-ultra` |
 | Multi-image composition, 4K output | Nano Banana 2 | `nano-banana-2` |
-| Social media posts, style transfer (Ghibli etc) | GPT Image 1.5 | `gpt-image/1.5-text-to-image` |
+| Budget multi-reference generation (up to 10 images) | Nano Banana 2 Lite | `nano-banana-2-lite` |
+| Social media posts, style transfer | GPT Image 1.5 | `gpt-image/1.5-text-to-image` |
 | **Logos, posters, signage, packaging** | Ideogram 3.0 | `ideogram/v3-text-to-image` |
 | Brand assets, batch catalogs, automation | Flux 2 Pro | `flux-2/pro-text-to-image` |
+| Flexible 1K/2K generation | Flux 2 Flex | `flux-2/flex-text-to-image` |
 | Character sheets, consistent multi-scene | Ideogram Character | `ideogram/character` |
-| Memes, unrestricted people/portrait photos | Grok Imagine | `grok-imagine/text-to-image` |
-| K-beauty, Asian fashion, CJK marketing | Seedream 5.0 Lite | `seedream/5-lite-text-to-image` |
+| General portrait and image generation | Grok Imagine | `grok-imagine/text-to-image` |
+| High-quality photorealism, 1K/2K | Seedream 5.0 Pro | `seedream/5-pro-text-to-image` |
+| Fast CJK and multilingual creative work | Seedream 5.0 Lite | `seedream/5-lite-text-to-image` |
 | Chinese/multilingual marketing materials | Qwen | `qwen/text-to-image` |
-| Image gen + editing in one model | Wan 2.7 Image | `wan/2-7-image` |
+| Image generation and editing in one family | Wan 2.7 Image | `wan/2-7-image` |
 
 **How to pick:**
 
-- **Best all-round** → GPT Image 2. Near-perfect typography, world-knowledge realism, up to 4K, fast (~3s)
-- **Multi-image / restoration** → Nano Banana Pro or Nano Banana 2. Multi-image input, photo restoration, 4K
-- **Product photography** → Imagen 4. Fine-grained textures, clean photorealism
-- **Design** (logos, posters, packaging) → Ideogram 3.0. Best pure typography
-- **Style transfer** → GPT Image 1.5. Ghibli/Pixar style transfers
-- **Automation/batch** → Flux 2 Pro. Reference images + JSON prompts
-- **Unrestricted portraits** → Grok Imagine. Fewest restrictions
+- **Best all-round** → GPT Image 2; verify current resolution and speed options in its docs
+- **Multi-image / restoration** → Nano Banana Pro or Nano Banana 2; use Nano Banana 2 Lite for a lower tier with up to 10 references
+- **Product photography** → Imagen 4 for fine textures and clean photorealism
+- **Design** (logos, posters, packaging) → Ideogram 3.0 for typography-heavy work
+- **Flexible/batch workflows** → Flux 2 Pro or Flex; compare current inputs, resolution, and price in the fetched docs
+- **Photorealistic Seedream output** → Seedream 5 Pro; use Lite when speed or cost matters more
+- **Portrait alternative** → Grok Imagine; verify the current content-policy and image-input options before use
 
 #### Image Editing — "I want to modify an existing image"
 
@@ -74,9 +79,10 @@ Choose based on what the user wants. When in doubt, use the **recommended defaul
 | Outfit/object swaps, consistency | Flux Kontext Pro | Flux Kontext |
 | Complex edits, typography | Flux Kontext Max | Flux Kontext |
 | Inpainting, regional touch-ups | Seedream 4.5 Edit | Market (`seedream/4.5-edit`) |
+| High-quality reference-based transformation | Seedream 5 Pro I2I | Market (`seedream/5-pro-image-to-image`) |
 | Total style transformation | Flux 2 Pro I2I | Market (`flux-2/pro-image-to-image`) |
+| Flexible 1K/2K image-conditioned work | Flux 2 Flex I2I | Market (`flux-2/flex-image-to-image`) |
 | Background removal | Recraft | Market (`recraft/remove-background`) |
-| Reframe / change aspect ratio | Ideogram Reframe | Market (`ideogram/v3-reframe`) |
 | Non-English editing instructions | Qwen Edit | Market (`qwen/image-edit`) |
 | Photo restoration, colorization | Nano Banana Edit | Market (`google/nano-banana-edit`) |
 | Style transfer from image input | GPT Image 1.5 I2I | Market (`gpt-image/1.5-image-to-image`) |
@@ -93,38 +99,45 @@ Choose based on what the user wants. When in doubt, use the **recommended defaul
 
 | Use case | Model | API Family |
 |----------|-------|------------|
-| **Explainers, clips with voiceover/dialogue** | Veo 3.1 Fast | Veo (`veo3_fast`) |
-| Short films, ads with native audio | Veo 3.1 Quality | Veo (`veo3`) |
-| Budget video with audio | Veo 3.1 Lite | Veo (`veo3_lite`) |
+| **Explainers and clips with generated audio/dialogue** | Veo 3.1 Fast | Veo (`veo3_fast`) |
+| Short films and ads with generated audio | Veo 3.1 Quality | Veo (`veo3`) |
+| Budget Veo generation | Veo 3.1 Lite | Veo (`veo3_lite`) |
 | **Music videos, branded content, fashion** | Runway Gen-4 | Runway |
-| **Comedy/parody, social media, up to 15s** | Kling 3.0 | Market (`kling-3.0/video`) |
-| Animate product photos, reveal sequences | Kling 2.6 I2V | Market (`kling/image-to-video`) |
-| Cinematic trailers, artistic short films | Sora 2 Pro | Market (`sora-2-pro-text-to-video`) |
-| Character-consistent multi-shot | Sora 2 Characters Pro | Market (`sora2/sora-2-characters-pro`) |
-| TikTok/Reels, viral social media clips | Hailuo Standard | Market (`hailuo/02-text-to-video-standard`) |
-| General T2V, motion physics, long scenes | Wan 2.7 T2V | Market (`wan/2-7-text-to-video`) |
-| Animate still photos, portrait motion | Wan 2.7 I2V | Market (`wan/2-7-image-to-video`) |
-| Talking head videos, presentations | Kling AI Avatar | Market (`kling/ai-avatar-pro`) |
-| Fast promo videos, ads with audio | Bytedance Seedance 2 | Market (`bytedance/seedance-2`) |
+| **Multi-shot social clips, up to 15s** | Kling 3.0 | Market (`kling-3.0/video`) |
+| Faster 3-15s generation at 720p/1080p | Kling V3 Turbo | Market (`kling/v3-turbo-text-to-video`) |
+| Animate product photos, reveal sequences | Kling 2.6 I2V | Market (`kling-2.6/image-to-video`) |
+| Fast clips with first/last-frame or multimodal references and audio | Seedance 2 Mini | Market (`bytedance/seedance-2-mini`) |
+| Full Seedance 2 promo and ad workflows | Bytedance Seedance 2 | Market (`bytedance/seedance-2`) |
 | Budget fast promo, quick turnaround | Bytedance Seedance 2 Fast | Market (`bytedance/seedance-2-fast`) |
-| Quick video from text description | Grok Video | Market (`grok-imagine/text-to-video`) |
+| Image animation at up to 1080p | Hailuo 2.3 Pro | Market (`hailuo/2-3-image-to-video-pro`) |
+| General T2V and I2V | Wan 2.7 | Market (`wan/2-7-text-to-video`, `wan/2-7-image-to-video`) |
+| Character/object/voice consistency from mixed references | Wan 2.7 R2V | Market (`wan/2-7-r2v`) |
+| Named subject/background references with optional synchronized audio | PixVerse V6 Reference | Market (`pixverse-v6/reference-to-video`) |
+| General 4-15s T2V, I2V, and reference video | MiniMax H3 | Market (`minimax-h3/text-to-video`) |
+| Up to 9 visual references, 3-15s, 1080p | HappyHorse 1.1 Reference | Market (`happyhorse-1-1/reference-to-video`) |
+| Multimodal asset/character-conditioned video, up to 4K | Gemini Omni Video | Market (`gemini-omni-video`) |
+| Quick T2V/I2V with up to 7 references | Grok Imagine Video 1.5 Preview | Market (`grok-imagine-video-1-5-preview`) |
+| Talking heads and presentations | Kling AI Avatar | Market (`kling/ai-avatar-pro`) |
+| Audio-driven portrait animation | OmniHuman 1.5 | Market (`omnihuman-1-5`) |
 
 **How to pick:**
 
-- **With audio/dialogue** → Veo 3.1. Only model with native synchronized audio
-- **Comedy/parody** → Kling 3.0. Multi-shot, element references, up to 15s 1080p
-- **Music videos / brand films** → Runway Gen-4. Best character consistency
-- **Social/viral clips** → Hailuo or Seedance 2
-- **Character consistency** → Sora 2 Characters Pro. Same characters across shots
-- **Cinematic quality** → Sora 2 Pro or Veo 3.1 Quality
-- **Text-to-video (general)** → Wan 2.7 T2V. Good motion, long scenes
-- **Animate a photo** → Wan 2.7 I2V or Kling 2.6 I2V
+- **Generated audio/dialogue** → Compare Veo 3.1, Seedance 2 Mini, and PixVerse; audio support is no longer unique to Veo
+- **Fast 720p/1080p clips** → Kling V3 Turbo
+- **Music videos / brand films** → Runway Gen-4
+- **First/last-frame or mixed media control** → Seedance 2 Mini
+- **Character/object/voice references** → Wan 2.7 R2V, PixVerse V6 Reference, HappyHorse 1.1, or Gemini Omni; choose by accepted inputs and output limits
+- **General T2V** → Wan 2.7 or MiniMax H3
+- **Animate a photo** → Wan 2.7 I2V, Kling I2V, or Hailuo 2.3
+- **Drive a portrait from audio** → OmniHuman 1.5
 
 #### Video Editing — "I want to modify an existing video"
 
 | Use case | Model | API Family |
 |----------|-------|------------|
 | **Restyle footage, add visual effects** | Runway Aleph | Runway Aleph |
+| Extend an existing generated clip | Grok Imagine Extend | Market (`grok-imagine/extend`) |
+| Transfer or control motion from a reference video | Kling 3.0 Motion Control | Market (`kling-3.0/motion-control`) |
 | Upscale video to higher resolution | Topaz Video | Market (`topaz/video-upscale`) |
 | Restyle existing video, change aesthetic | Wan 2.6 V2V | Market (`wan/2-6-video-to-video`) |
 | Video editing with text instructions | Wan 2.7 Edit | Market (`wan/2-7-videoedit`) |
@@ -133,48 +146,50 @@ Choose based on what the user wants. When in doubt, use the **recommended defaul
 
 | Use case | Model | API Family |
 |----------|-------|------------|
-| **Full songs, jingles, background music** | Suno V5.5 | Suno |
-| Songs with specific vocal style | Suno V5 | Suno |
-| Sound effects, loops, foley | Suno Sounds | Suno |
+| **Full songs, jingles, background music** | Suno | Suno |
+| Sound effects and loops | Suno Sounds | Suno |
 | **Voiceovers, narration, podcasts** | ElevenLabs TTS | Market (`elevenlabs/text-to-speech-turbo-2-5`) |
-| Custom sound effects, foley | ElevenLabs SFX | Market (`elevenlabs/sound-effect-v2`) |
-| Video game dialogue, multi-character | ElevenLabs Dialogue | Market (`elevenlabs/text-to-dialogue-v3`) |
-| Transcription, subtitles | ElevenLabs STT | Market (`elevenlabs/speech-to-text`) |
+| Multi-character dialogue | ElevenLabs Dialogue | Market (`elevenlabs/text-to-dialogue-v3`) |
+| Multi-speaker dialogue with configurable voice, accent, style, and pace | Gemini 3.1 Flash TTS | Market (`google/gemini-3-1-flash-tts`) |
+| Quality-oriented Gemini speech generation | Gemini 2.5 Pro TTS | Market (`google/gemini-2-5-pro-tts`) |
 | Remove background noise, isolate vocals | ElevenLabs Isolation | Market (`elevenlabs/audio-isolation`) |
 
 **How to pick:**
 
-- **Music** → Suno V5.5 (latest, best quality). Supports mashups, persona voices, section replacement, MIDI
-- **Sound effects/loops** → Suno Sounds for musical loops. ElevenLabs SFX for non-musical
-- **Voice** → ElevenLabs TTS. Best realism and cloning fidelity
-- **SFX** → ElevenLabs SFX. Any sound from text, royalty-free
+- **Music** → Fetch the Suno generation docs and use a currently accepted model/version value; do not assume the latest version from this table
+- **Sound effects/loops** → Suno Sounds when its current endpoint supports the requested output
+- **Single-speaker voiceover** → ElevenLabs TTS
+- **Structured multi-speaker dialogue** → Gemini 3.1 Flash TTS or ElevenLabs Dialogue; compare voice controls and language support in the fetched docs
+- **Advanced Suno operations** → The current docs also expose cover, extend, add vocals/instrumental, lyrics, persona, mashup, WAV, stem-separation, MIDI, music-video, and voice workflows
 
 ### Step 2: Fetch Fresh API Documentation
 
 **MANDATORY.** Before making any API call, fetch the latest docs for your chosen model. kie.ai updates models and parameters frequently — hardcoded params go stale.
 
-Fetch the relevant doc page from `https://docs.kie.ai` using web fetch tools or `curl`:
+Fetch the relevant doc page from `https://docs.kie.ai` using web fetch tools or `curl`.
+
+When using `curl`, fetch `${DOC_URL}.md` or send `Accept: text/markdown`; the extensionless URL may return rendered HTML instead of readable OpenAPI YAML.
 
 #### For Market models (most models)
 
-Fetch the model's doc page:
+**Do not derive a documentation URL from a model ID.** Kie documentation routes are irregular and change independently of request model IDs. For example, `flux-2/flex-text-to-image` is documented under `/market/flux2/flex-text-to-image`, while `grok-imagine-video-1-5-preview` is under `/market/grok-imagine/1-5-preview`.
 
-```
-https://docs.kie.ai/market/{provider}/{model-slug}
-```
+1. Fetch `https://docs.kie.ai/sitemap.xml`.
+2. Ignore `/cn/` and `/cnmarket/` paths unless the user requests Chinese docs; prefer the canonical `/market/` entry.
+3. Search the English URLs for the provider/model name and operation (text-to-image, image-to-video, edit, extend, and so on).
+4. Fetch the exact matching page and read its OpenAPI specification.
+5. Copy the request `model` enum/default from the OpenAPI schema. Never infer it from the page URL or this skill's tables.
 
-The provider is the first segment of the model ID (e.g., `google` from `google/imagen4`). The model-slug is the rest with dots replaced by dashes and slashes replaced by dashes. Some model IDs don't contain a `/` (e.g., `nano-banana-pro`) — these don't follow this pattern. Use the sitemap fallback below to find their doc URL.
+Examples of current irregular mappings:
 
-Examples:
-
-| Model ID | Doc URL |
+| Request model ID | Doc URL |
 |----------|---------|
 | `google/imagen4` | `https://docs.kie.ai/market/google/imagen4` |
-| `ideogram/v3-text-to-image` | `https://docs.kie.ai/market/ideogram/v3-text-to-image` |
-| `kling-3.0/video` | `https://docs.kie.ai/market/kling/kling-3-0` |
-| `elevenlabs/text-to-speech-turbo-2-5` | `https://docs.kie.ai/market/elevenlabs/text-to-speech-turbo-2-5` |
+| `flux-2/flex-text-to-image` | `https://docs.kie.ai/market/flux2/flex-text-to-image` |
+| `grok-imagine-video-1-5-preview` | `https://docs.kie.ai/market/grok-imagine/1-5-preview` |
+| `nano-banana-2-lite` | `https://docs.kie.ai/market/google/nano-banana-2-lite` |
 
-Model doc pages return an **OpenAPI spec** with the exact request body schema, all parameters, and response format.
+Model doc pages return an **OpenAPI spec** with the exact request body schema, parameters, and response format.
 
 Also fetch the shared task detail endpoint docs for polling:
 
@@ -197,18 +212,26 @@ These have dedicated endpoints — fetch their specific docs:
 
 #### Discovering new models
 
-Check `https://kie.ai/changelog` for recently added models, parameter changes, and new features. Useful when the user asks for a model not listed in the tables above.
+The official sitemap is the primary current inventory:
+
+```
+https://docs.kie.ai/sitemap.xml
+```
+
+Search it every time rather than treating this skill's tables as exhaustive. Then fetch the exact English model page and use its OpenAPI `model` enum/default.
+
+Check `https://kie.ai/changelog` only as a secondary source for release notes and parameter changes; the page may be empty even when the docs inventory has changed.
 
 #### If you can't find a model's doc URL
 
-1. Check `https://kie.ai/{model-slug}` — playground pages often have param lists even before API docs are published (e.g., `https://kie.ai/nano-banana-pro`)
-2. Fetch `https://docs.kie.ai/sitemap.xml` — lists all available doc pages
-3. Search for the model name/ID in the URLs
-4. Ignore `/cn/` paths (Chinese translations) — use English paths
+1. Search the English entries in `https://docs.kie.ai/sitemap.xml` by provider, family, and operation—not just the exact model ID
+2. Check `https://kie.ai/{model-slug}`; playground pages may appear before API docs
+3. Search Kie's official site for the model name plus `site:docs.kie.ai`
+4. If no current official page or OpenAPI schema can be found, tell the user and do not guess the model ID or parameters
 
 #### If web fetch is blocked
 
-If `mcp_Webfetch` or `curl` to docs.kie.ai fails (e.g., rate limiting, network issues), use the `agent-browser` skill to browse the docs interactively.
+If the available web fetch tool or `curl` cannot retrieve docs.kie.ai (for example because of rate limiting or network issues), use the `agent-browser` skill to browse the docs interactively.
 
 ### Step 3: Generate Content
 
@@ -368,4 +391,4 @@ Uploaded files expire after **3 days**. Use the returned `fileUrl` as input to g
 - **Use `jq` to parse JSON** — install via `brew install jq` if needed
 - **Always fetch fresh docs** before API calls — models and params change frequently
 - **Full API docs:** https://docs.kie.ai
-- **Pricing:** https://kie.ai/pricing (typically 30-50% cheaper than official APIs)
+- **Pricing:** https://kie.ai/pricing — fetch current pricing before comparing models
