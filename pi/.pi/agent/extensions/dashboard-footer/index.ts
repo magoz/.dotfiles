@@ -11,6 +11,8 @@ const POLL_INTERVAL_MS = 3_000;
 const PR_REFRESH_INTERVAL_MS = 60_000;
 const LIVE_UPDATE_INTERVAL_MS = 200;
 const CHARS_PER_ESTIMATED_TOKEN = 4;
+// Extension statuses that would only add noise to the footer.
+const HIDDEN_STATUS_KEYS = new Set(["pi-vimmode", "mcp"]);
 
 // Terminal-controlled text such as paths and branch names must not be allowed
 // to inject escape sequences into the TUI.
@@ -31,6 +33,7 @@ function sanitize(text: string) {
 
 function formatTokens(tokens: number) {
   if (tokens < 1_000) return `${tokens}`;
+  if (tokens < 100_000) return `${(tokens / 1_000).toFixed(1)}k`;
   if (tokens < 1_000_000) return `${Math.round(tokens / 1_000)}k`;
   return `${(tokens / 1_000_000).toFixed(1)}m`;
 }
@@ -223,7 +226,11 @@ export default function dashboardFooter(pi: ExtensionAPI) {
             ? "?"
             : `${Math.round(usage.percent)}`;
           const contextWindow = usage?.contextWindow ?? model?.contextWindow;
-          const context = `${contextPercent}%/${contextWindow ? formatTokens(contextWindow) : "?"}`;
+          const contextTokens = usage?.tokens === null || usage?.tokens === undefined
+            ? "?"
+            : formatTokens(usage.tokens);
+          const context =
+            `${contextTokens}/${contextWindow ? formatTokens(contextWindow) : "?"} (${contextPercent}%)`;
           const cost = `$${sessionCost(ctx).toFixed(2)}`;
           const speed = tokensPerSecond === null ? "— tok/s" : `${Math.round(tokensPerSecond)} tok/s`;
           const modelLabel = model
@@ -249,7 +256,7 @@ export default function dashboardFooter(pi: ExtensionAPI) {
 
           const statuses = footerData.getExtensionStatuses();
           for (const [key, text] of Array.from(statuses.entries()).sort(([a], [b]) => a.localeCompare(b))) {
-            if (key === "pi-vimmode") continue;
+            if (HIDDEN_STATUS_KEYS.has(key)) continue;
             for (const line of text.split("\n")) {
               lines.push(truncateToWidth(line, width, theme.fg("dim", "...")));
             }
