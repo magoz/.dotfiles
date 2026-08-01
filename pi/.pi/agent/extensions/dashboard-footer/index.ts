@@ -11,6 +11,9 @@ const POLL_INTERVAL_MS = 3_000;
 const PR_REFRESH_INTERVAL_MS = 60_000;
 const LIVE_UPDATE_INTERVAL_MS = 200;
 const CHARS_PER_ESTIMATED_TOKEN = 4;
+// The footer polls git constantly; --no-optional-locks keeps it from taking
+// .git/index.lock and racing the user's own git commands in the same repo.
+const GIT_READONLY = ["--no-optional-locks"];
 // Extension statuses that would only add noise to the footer.
 const HIDDEN_STATUS_KEYS = new Set(["pi-vimmode", "mcp"]);
 
@@ -123,7 +126,7 @@ export default function dashboardFooter(pi: ExtensionAPI) {
     if (activeGitRefreshes.has(refreshGeneration)) return;
     activeGitRefreshes.add(refreshGeneration);
     try {
-      const repo = await pi.exec("git", ["rev-parse", "--is-inside-work-tree"], {
+      const repo = await pi.exec("git", [...GIT_READONLY, "rev-parse", "--is-inside-work-tree"], {
         cwd: ctx.cwd,
         timeout: 3_000,
       });
@@ -136,9 +139,9 @@ export default function dashboardFooter(pi: ExtensionAPI) {
       }
 
       const [branchResult, headResult, statusResult] = await Promise.all([
-        pi.exec("git", ["branch", "--show-current"], { cwd: ctx.cwd, timeout: 3_000 }),
-        pi.exec("git", ["rev-parse", "--short", "HEAD"], { cwd: ctx.cwd, timeout: 3_000 }),
-        pi.exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
+        pi.exec("git", [...GIT_READONLY, "branch", "--show-current"], { cwd: ctx.cwd, timeout: 3_000 }),
+        pi.exec("git", [...GIT_READONLY, "rev-parse", "--short", "HEAD"], { cwd: ctx.cwd, timeout: 3_000 }),
+        pi.exec("git", [...GIT_READONLY, "status", "--porcelain=v1", "--untracked-files=all"], {
           cwd: ctx.cwd,
           timeout: 3_000,
         }),
