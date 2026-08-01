@@ -7,7 +7,7 @@
   "compaction": {
     "auto": false,
   },
-  "providers": {
+  "provider": {
     "openai": {
       "models": {
         "gpt-5.5": { "limit": { "context": 400000, "input": 272000, "output": 128000 } },
@@ -74,8 +74,15 @@
       "*.envrc": "deny",
       "secrets/*": "deny",
     },
+    "skill": {
+      "*": "allow",
+      "figma-*": "deny",
+      "figma": "allow",
+    },
     "external_directory": {
       "/Users/magoz/dev/docs/*": "allow",
+      "/Users/magoz/.agents/*": "allow",
+      "/Users/magoz/.dotfiles/agents/*": "allow",
       "/Users/magoz/.dotfiles/opencode/*": "allow",
       "/Users/magoz/dev/core-projects/clients/init/*": "allow",
     },
