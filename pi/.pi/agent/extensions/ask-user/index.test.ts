@@ -58,11 +58,18 @@ test("import and registration do not load Effect", () => {
   assert.equal(result.status, 0, result.stderr);
 });
 
-function getRegisteredTool(): RegisteredTool {
+type EmittedEvent = { name: string; data: { active: boolean; label?: string } };
+
+function getRegisteredTool(emitted: EmittedEvent[] = []): RegisteredTool {
   let tool: RegisteredTool | undefined;
   askUser({
     registerTool(definition: RegisteredTool) {
       tool = definition;
+    },
+    events: {
+      emit(name: string, data: EmittedEvent["data"]) {
+        emitted.push({ name, data });
+      },
     },
   } as never);
   assert.ok(tool);
@@ -165,4 +172,90 @@ test("keeps j and k as text in custom-answer mode", async () => {
 
   assert.equal(result.details.answer, "jk");
   assert.equal(result.details.wasCustom, true);
+});
+
+test("broadcasts herdr:blocked while the question is open and clears it after", async () => {
+  const emitted: EmittedEvent[] = [];
+  const tool = getRegisteredTool(emitted);
+  await tool.execute(
+    "call-herdr",
+    {
+      question: "Choose one",
+      options: [{ label: "Alpha" }, { label: "Beta" }],
+    },
+    new AbortController().signal,
+    () => {},
+    {
+      mode: "tui",
+      ui: {
+        custom: async (factory: Function) =>
+          new Promise((resolve) => {
+            const component = factory(
+              { requestRender() {} },
+              theme,
+              {},
+              resolve,
+            );
+            assert.deepEqual(emitted, [
+              { name: "herdr:blocked", data: { active: true, label: "Choose one" } },
+            ]);
+            component.handleInput("1");
+          }),
+      },
+    },
+  );
+
+  assert.deepEqual(emitted, [
+    { name: "herdr:blocked", data: { active: true, label: "Choose one" } },
+    { name: "herdr:blocked", data: { active: false } },
+  ]);
+});
+
+test("clears herdr:blocked when the question is cancelled", async () => {
+  const emitted: EmittedEvent[] = [];
+  const tool = getRegisteredTool(emitted);
+  const controller = new AbortController();
+  await tool.execute(
+    "call-herdr-cancel",
+    {
+      question: "Choose one",
+      options: [{ label: "Alpha" }, { label: "Beta" }],
+    },
+    controller.signal,
+    () => {},
+    {
+      mode: "tui",
+      ui: {
+        custom: async (factory: Function) =>
+          new Promise((resolve) => {
+            factory({ requestRender() {} }, theme, {}, resolve);
+            controller.abort();
+          }),
+      },
+    },
+  );
+
+  assert.equal(emitted.at(-1)?.data.active, false);
+  assert.equal(
+    emitted.filter((e) => e.data.active).length,
+    emitted.filter((e) => !e.data.active).length,
+    "herdr:blocked emissions must be balanced",
+  );
+});
+
+test("does not broadcast herdr:blocked outside the TUI", async () => {
+  const emitted: EmittedEvent[] = [];
+  const tool = getRegisteredTool(emitted);
+  await tool.execute(
+    "call-headless",
+    {
+      question: "Choose one",
+      options: [{ label: "Alpha" }, { label: "Beta" }],
+    },
+    new AbortController().signal,
+    () => {},
+    { mode: "headless" },
+  );
+
+  assert.deepEqual(emitted, []);
 });

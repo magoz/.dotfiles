@@ -28,6 +28,16 @@ import {
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 5;
 
+/** Max width of the label handed to Herdr's blocked overlay. */
+const HERDR_LABEL_MAX = 80;
+
+function herdrLabel(question: string): string {
+  const flat = question.replace(/\s+/g, " ").trim();
+  return flat.length > HERDR_LABEL_MAX
+    ? `${flat.slice(0, HERDR_LABEL_MAX - 1)}…`
+    : flat;
+}
+
 const OptionSchema = Type.Object({
   label: Type.String({
     description: ASK_USER_PARAMETER_DESCRIPTIONS.optionLabel,
@@ -329,14 +339,36 @@ export default function askUser(pi: ExtensionAPI) {
         });
 
       const uiSignal = signal ?? new AbortController().signal;
+
+      // Tell Herdr (via its pi integration's sanctioned event) that this pane
+      // is waiting on a human, not still working. Must be balanced: every
+      // `active: true` needs exactly one `active: false`.
+      let blockedRaised = false;
+      const raiseBlocked = () => {
+        if (blockedRaised) return;
+        blockedRaised = true;
+        pi.events?.emit?.("herdr:blocked", {
+          active: true,
+          label: herdrLabel(params.question),
+        });
+      };
+      const clearBlocked = () => {
+        if (!blockedRaised) return;
+        blockedRaised = false;
+        pi.events?.emit?.("herdr:blocked", { active: false });
+      };
+
       let result: SelectionResult;
       try {
+        raiseBlocked();
         result = await showQuestion(uiSignal);
       } catch (error) {
         if (signal?.aborted) {
           return reply(buildAskUserResultMessage({ kind: "cancelled" }));
         }
         throw error instanceof Error ? error : new Error(String(error));
+      } finally {
+        clearBlocked();
       }
 
       if (signal?.aborted) {
