@@ -230,7 +230,7 @@ export default function dashboardFooter(pi: ExtensionAPI) {
             ? "?"
             : formatTokens(usage.tokens);
           const context =
-            `${contextTokens}/${contextWindow ? formatTokens(contextWindow) : "?"} (${contextPercent}%)`;
+            `${contextTokens} / ${contextWindow ? formatTokens(contextWindow) : "?"} (${contextPercent}%)`;
           const cost = `$${sessionCost(ctx).toFixed(2)}`;
           const speed = tokensPerSecond === null ? "— tok/s" : `${Math.round(tokensPerSecond)} tok/s`;
           const modelLabel = model
