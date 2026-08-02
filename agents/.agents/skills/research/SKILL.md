@@ -1,21 +1,23 @@
 ---
 name: research
-description: Investigate a question against high-trust primary sources and capture the findings as a Markdown file in the repo. Use when the user wants a topic researched, docs or API facts gathered, or reading legwork delegated to a background agent.
+description: Investigate a question against high-trust primary sources and synthesize cited findings. Use when the user wants a topic researched, docs or API facts gathered, or reading legwork delegated to background agents.
 ---
 
-Spin up **exactly one background agent** to do the research, so you keep working while it reads.
+Delegate the reading legwork through Pi's native subagent mechanism so research can proceed without consuming the main agent's context. **Do not launch a nested Pi CLI, terminal pane, or other process as a substitute for a subagent.** If native subagents are unavailable, research directly in the current session.
 
-## Recursion guard
+## Delegation strategy
 
-Before spawning, check `RESEARCH_SUBAGENT`:
+Choose the number of researchers based on the work rather than a fixed limit:
 
-- If `RESEARCH_SUBAGENT=1`, this pane is already the delegated researcher. **Do not spawn any agent or pane.** Perform the research and write the report directly.
-- Otherwise, create one background pane with `herdr pane split ... --env RESEARCH_SUBAGENT=1`, and explicitly tell that agent not to delegate or spawn subagents.
+- Use one focused researcher for a narrow question.
+- Fan out to multiple researchers when the question has genuinely independent tracks, source domains, or competing claims worth checking separately.
+- Give parallel researchers distinct scopes and ask them to return sources and findings, not to produce or edit the final deliverable.
+- Explicitly tell every researcher not to delegate or spawn further agents.
+- Replace or retry a failed researcher only when useful; do not duplicate work that another researcher is already doing.
 
-Never create a second research agent as a retry. If the delegated agent stalls or fails, stop/close it and complete the research in the original pane.
-
-The background agent's job:
+The parent agent remains the orchestrator and final synthesizer. It must:
 
 1. Investigate the question against **primary sources** — official docs, source code, specs, first-party APIs — not a secondary write-up of them. Follow every claim back to the source that owns it.
-2. Write the findings to a single Markdown file, citing each claim's source.
-3. Save it where the repo already keeps such notes; match the existing convention, and if there is none, put it somewhere sensible and say where.
+2. Reconcile the researchers' findings and uncertainties rather than concatenating their responses.
+3. Answer in chat by default, with citations for each material claim and clear uncertainty where evidence is incomplete.
+4. Create a durable research file only when the user requests one, the repository explicitly expects research artifacts, or another agreed workflow needs one. When saving, follow the repository's existing convention and report the path.

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "executor": {
+      "url": "https://executor.magoz.is/mcp",
+      "auth": "oauth",
+      "lifecycle": "lazy"
+    }
+  }
+}
