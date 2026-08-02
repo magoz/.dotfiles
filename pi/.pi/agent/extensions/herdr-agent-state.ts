@@ -203,6 +203,11 @@ export default function (pi) {
   let agentActive = false;
   let blockedCount = 0;
   let blockedMessage: string | undefined;
+  // LOCAL PATCH (upstream candidate): busy overlay so sibling hooks (e.g.
+  // pi-subagents async runs) can keep the pane semantically `working` while
+  // the root agent turn is over. Mirrors the `herdr:blocked` contract.
+  let busyCount = 0;
+  let busyMessage: string | undefined;
   let lastState: AgentState | undefined;
   let lastMessage: string | undefined;
   let rootSession = false;
@@ -213,6 +218,9 @@ export default function (pi) {
     }
     if (agentActive) {
       return { state: "working" as const, message: undefined };
+    }
+    if (busyCount > 0) {
+      return { state: "working" as const, message: busyMessage };
     }
     return { state: "idle" as const, message: undefined };
   }
@@ -226,6 +234,24 @@ export default function (pi) {
     lastMessage = next.message;
     queueState(next.state, next.message);
   }
+
+  pi.events.on("herdr:busy", (data) => {
+    if (!rootSession) {
+      return;
+    }
+    if (!data?.active) {
+      busyCount = Math.max(0, busyCount - 1);
+      if (busyCount === 0) {
+        busyMessage = undefined;
+      }
+      publishState();
+      return;
+    }
+
+    busyCount += 1;
+    busyMessage = data.label;
+    publishState();
+  });
 
   pi.events.on("herdr:blocked", (data) => {
     if (!rootSession) {

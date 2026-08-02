@@ -37,7 +37,10 @@ pi/.pi/node_modules/
 pi/.pi/agent/extensions/**/node_modules/
 
 
-# vim temp files
+# sandbox-db (deps are installed locally, not vendored)
+scripts/.local/share/sandbox-db/node_modules/
+
+# vim temp files
 *.swp
 *.swo
 *~
