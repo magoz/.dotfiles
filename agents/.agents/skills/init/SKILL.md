@@ -1,6 +1,7 @@
 ---
 name: init
 description: Initialize a new project by cloning magoz/init template, configuring tech stack, and cleaning unused services.
+disable-model-invocation: true
 ---
 
 # Project Initialization Skill
