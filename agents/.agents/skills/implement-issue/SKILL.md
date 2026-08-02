@@ -22,7 +22,8 @@ This first version:
 - requires the issue to carry `ready-to-implement`;
 - creates one regular branch and pull request;
 - uses one isolated Git worktree;
-- launches one implementation writer;
+- provisions that worktree with committed dependencies, the full Vercel Development environment, and one isolated sandbox database;
+- launches one implementation writer only after provisioning and schema bootstrap succeed;
 - stops after opening a draft pull request.
 
 It does not support issue decomposition or stacked pull requests yet.
@@ -34,7 +35,9 @@ Never:
 - implement an issue that lacks an authoritative `## Agent Brief`;
 - claim an issue with open blockers or another assignee;
 - use more than one writer for the worktree;
-- let the writer mutate GitHub or launch subagents;
+- let the writer mutate GitHub, launch subagents, or invoke infrastructure provisioning commands;
+- launch the writer before dependency installation, Vercel Development pull, sandbox database creation, and schema bootstrap complete;
+- copy an existing checkout's `.env.local`, expose the Neon management credential, or leave Vercel's shared Development database URL in the implementation worktree;
 - write implementation code from the parent coordinator;
 - overwrite, reset, clean, delete, or reuse an unrelated branch or worktree;
 - include unrelated local changes in the commit;
@@ -62,6 +65,8 @@ Successful output:
 
 - issue assigned as the execution claim;
 - one issue-derived branch in an isolated worktree;
+- one ignored mode-`0600` `.env.local` populated from Vercel Development with its database values replaced by an isolated sandbox lease;
+- repository schema bootstrapped on the blank sandbox database;
 - one locally validated implementation commit or coherent commit series;
 - one pushed draft pull request containing `Closes #<issue>`;
 - no review or merge action.
@@ -109,7 +114,12 @@ All of these must hold before the claim:
 - no existing branch, worktree, or open pull request already represents this issue;
 - the default branch reference can be fetched;
 - the source worktree has no uncommitted changes;
-- repository-required tools and dependencies are available;
+- repository-required tools are available;
+- `provision-env`, `sandbox-db`, the repository package manager, and Vercel CLI are installed;
+- Vercel CLI authentication succeeds and the source checkout has an unambiguous existing project link or explicit project identity;
+- `sandbox-db auth status` succeeds;
+- `.env.local` and `.vercel/` are untracked and git-ignored;
+- the repository exposes an explicit, safe command for creating its current schema on a blank PostgreSQL database;
 - the Agent Brief fits one fresh implementation context.
 
 Inspect native issue dependencies. If the API is unavailable, inspect any maintained fallback `Blocked by` convention. If blocker state cannot be established, stop rather than assuming the issue is unblocked.
@@ -164,7 +174,48 @@ Before creating either:
 
 If any artifact exists, stop and report possible prior or concurrent work. Do not adopt, overwrite, delete, or force-push it without an explicit recovery decision.
 
-### 6. Define the writer contract
+### 6. Provision the implementation environment
+
+Provisioning is a coordinator-owned gate. The writer must not start until it succeeds.
+
+Run the global provisioner against the fresh worktree, passing the known linked source checkout explicitly rather than relying on discovery:
+
+```bash
+provision-env \
+  --repo "<worktree>" \
+  --source "<source-checkout>" \
+  --database \
+  --label "issue-<issue-number>" \
+  --ttl 7d
+```
+
+This command must, in order:
+
+1. install the repository's committed dependency graph using its frozen lockfile;
+2. copy only Vercel project identity into the worktree;
+3. pull the complete Vercel Development environment directly into `.env.local`;
+4. enforce mode `0600` on `.env.local`;
+5. allocate a blank, expiring PostgreSQL branch through `sandbox-db`;
+6. replace Vercel's shared Development database value with the pooled sandbox URL and add the unpooled URL.
+
+Then run the repository's explicit schema bootstrap command, such as `pnpm db:push`, from the worktree. Use only a command established by repository guidance or unambiguous package scripts as safe for a blank disposable database. Do not guess, clone production data, run destructive commands against any shared database, or seed external-service data. Run a deterministic local seed only when the Agent Brief requires it and the repository explicitly provides one for isolated development databases.
+
+Verify before launching the writer:
+
+- dependency installation succeeded from the committed lockfile;
+- `.env.local` and `.vercel/project.json` remain ignored and untracked;
+- `.env.local` is mode `0600`;
+- `sandbox-db status --worktree "<worktree>"` reports a live `agent/` lease;
+- the schema bootstrap succeeded against that lease;
+- `git status --short` remains empty.
+
+Never print, inspect, summarize, or return environment values or database URLs. Safe metadata includes key names, env-file path, lease branch name/ID, and expiration.
+
+If provisioning fails, do not weaken package-manager policy or bypass repository safeguards. `provision-env` removes a newly pulled `.env.local` and releases any recorded database lease on failure. Preserve the created branch, worktree, and assignment; report the exact failed stage and recovery state. Do not launch the writer.
+
+The database lease belongs to the worktree lifecycle. Keep it through implementation and draft-PR review; this skill must not release it after opening the PR.
+
+### 7. Define the writer contract
 
 Launch exactly one mutation-capable implementation agent with its `cwd` set to the new worktree. Prefer async execution while keeping the parent as coordinator. Do not edit the worktree concurrently from the parent.
 
@@ -177,19 +228,22 @@ The writer receives:
 - the validation expectations from the brief;
 - required repository checks;
 - the worktree/branch boundary;
+- confirmation that dependencies, Development environment, sandbox database, and schema are already provisioned;
 - escalation and handoff requirements.
 
 Writer hard constraints:
 
 - do not mutate GitHub;
 - do not launch subagents;
+- do not run `provision-env`, `sandbox-db`, `vercel env`, or any infrastructure lifecycle command;
+- do not print, copy, inspect, or summarize `.env.local` values;
 - do not leave the assigned worktree;
 - do not decide unresolved product, domain, architecture, security, or scope questions;
 - do not touch unrelated files or pre-existing work;
 - use the repository's required package manager and patterns;
 - keep the change minimal and behavior-focused.
 
-### 7. Implement regression-first
+### 8. Implement regression-first
 
 The writer should:
 
@@ -207,7 +261,7 @@ If no correct regression seam exists, the writer must stop and report that archi
 
 If a required check fails because of unrelated existing work, report the exact command, failure, and evidence. Do not hide or suppress it.
 
-### 8. Require a writer handoff
+### 9. Require a writer handoff
 
 The writer returns:
 
@@ -223,7 +277,7 @@ The writer returns:
 
 A child-reported success is evidence, not final verification.
 
-### 9. Handle unresolved decisions
+### 10. Handle unresolved decisions
 
 If implementation exposes a genuine human-owned decision:
 
@@ -241,7 +295,7 @@ If implementation exposes a genuine human-owned decision:
 
 Do not open a pull request merely to hold unresolved speculative work.
 
-### 10. Coordinator verification
+### 11. Coordinator verification
 
 After the writer completes, the parent coordinator inspects the actual worktree and commit.
 
@@ -254,7 +308,8 @@ Verify:
 - required checks were actually run;
 - command failures and skipped validation are fully characterized;
 - no unapproved decision was made;
-- no secrets, generated credentials, environment files, or private artifacts are included.
+- no secrets, generated credentials, environment files, Vercel metadata, or private artifacts are included;
+- the sandbox lease is still live when database-backed verification or later review requires it.
 
 Rerun focused or required checks when evidence is incomplete or the risk warrants independent confirmation. Do not modify source code from the parent; return implementation defects to the same writer.
 
@@ -272,7 +327,7 @@ Remote preservation and merge readiness are different gates:
 - Baseline failures block ready-for-review and merge unless a later review workflow explicitly dispositions them; they do not block branch backup or the draft PR.
 - Never push when the diff is dirty, scope is wrong, secrets or unrelated artifacts are present, or the commit itself is unsafe.
 
-### 11. Push and open a draft pull request
+### 12. Push and open a draft pull request
 
 The parent coordinator:
 
@@ -309,12 +364,14 @@ Report skipped, unavailable, and baseline-failing checks honestly. Include the c
 
 Leave the pull request as draft. Do not launch review agents, mark it ready, merge it, close the issue, or remove the worktree as part of this skill.
 
-### 12. Report completion
+### 13. Report completion
 
 Return:
 
 - issue URL and assignment state;
 - branch and worktree path;
+- safe provisioning metadata: Vercel project name, sandbox branch name/ID, and lease expiration—never values or URLs;
+- schema bootstrap command and result;
 - commit SHA;
 - draft PR URL;
 - tests/checks with results;
@@ -325,8 +382,9 @@ Return:
 ## Failure and recovery
 
 - **Preflight failure before claim:** report and stop with no mutation.
-- **Setup failure after claim but before local artifacts:** remove assignment, report, and stop.
-- **Writer failure with local artifacts:** preserve worktree, branch, and assignment; report exact recovery state.
+- **Setup failure after claim but before branch/worktree creation:** remove assignment, report, and stop.
+- **Provisioning failure after branch/worktree creation:** rely on `provision-env` rollback for newly created secrets/database state, preserve branch, worktree, and assignment, and report exact recovery state; never launch the writer.
+- **Writer failure with local artifacts:** preserve worktree, branch, assignment, `.env.local`, and sandbox lease; report exact recovery state.
 - **Decision required:** transition as described above and preserve any non-empty worktree.
 - **Push or PR creation failure:** preserve branch, worktree, commit, and assignment; report the exact failed command and safe next action.
 - **Unexpected existing branch/worktree/PR:** stop; never overwrite or assume ownership.

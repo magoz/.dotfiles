@@ -212,6 +212,43 @@ Stack rules under consideration:
 - Stacks merge bottom-up.
 - Stack choice belongs to execution preparation, after issue decomposition and fresh repository inspection.
 
+### Stacked PR branch and worktree bases
+
+A regular issue branch starts from the freshly fetched remote default branch. An upper layer in a linear PR stack instead starts from the freshly fetched head of the pull request immediately below it.
+
+```text
+main
+└── branch-a
+    └── branch-b
+        └── branch-c
+```
+
+The corresponding pull-request bases are:
+
+```text
+PR A: branch-a → main
+PR B: branch-b → branch-a
+PR C: branch-c → branch-b
+```
+
+For example, the branch checked out in B's worktree is `branch-b`, but its starting commit is the remote head of A:
+
+```bash
+git fetch origin branch-a
+git worktree add -b branch-b ../repository-branch-b origin/branch-a
+```
+
+Stack invariants:
+
+- Resolve the lower PR explicitly and verify that it is open, belongs to the same repository, and is the intended dependency.
+- Fetch the lower branch and create the upper branch from its exact remote head; do not infer the base from a stale local checkout.
+- Set the upper PR's base to the lower PR branch, not the default branch.
+- A worktree owns the upper branch checkout; the lower worktree is evidence/source state, not a directory to mutate.
+- Each layer receives its own provisioned environment and sandbox database. Never share a mutable database across stack layers.
+- If a lower layer changes, rebase every affected upper branch in order and rerun impacted validation.
+- Merge bottom-up. After a lower PR merges, retarget or restack the next layer onto the default branch as appropriate.
+- The current `implement-issue` v1 does none of this: it always branches from the fetched remote default branch and opens a regular PR. Stack support requires an explicit parent-PR input and separate recovery semantics.
+
 GitHub's official stacked PR feature is in public preview. Afloat currently meets the Git/GitHub CLI prerequisites but does not have the `github/gh-stack` extension installed and has no checked-in CI workflow. Do not install or configure stacks until a naturally multi-layer pilot exists.
 
 ## Guarantees and agent roles
@@ -278,14 +315,19 @@ Initial v1 responsibilities:
 
 ### Issue decomposition
 
-Possible names: `slice-issue` or an adapted `to-tickets`.
+Name: `slice-issue`.
 
-Responsibilities may include:
+Initial v1 responsibilities:
 
-- decide whether decomposition is needed;
-- propose vertical child issues;
-- establish native sub-issue and dependency relationships;
-- identify—but not create—a possible PR stack.
+- require a clear authoritative parent Agent Brief and verify decomposition is necessary;
+- draft tracer-bullet vertical children that each fit one fresh writer context;
+- map every parent acceptance criterion across the children;
+- propose the complete child graph and require explicit human approval before mutation;
+- create children outside the implementation queue, then wire native sub-issue and dependency relationships;
+- publish one authoritative child Agent Brief and verify every relationship before applying `ready-to-implement`;
+- remove implementation state from the open parent so it remains the outcome contract rather than an execution queue item;
+- identify—but never create—a possible PR stack;
+- stop without assignment, implementation, branches, worktrees, or PRs.
 
 ### Issue implementation
 
@@ -450,12 +492,21 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 - Diagnosis depth is proportional to uncertainty, but readiness requires evidence.
 - Grilling is used when expected behavior or domain decisions are ambiguous, not for every bug.
 - Decomposition is optional and follows triage.
+- Slicing requires explicit approval of the complete child graph before any child is published.
 - Native sub-issues represent hierarchy; native dependencies represent blocking.
+- A successfully decomposed parent remains open as the outcome contract without an implementation-state label; complete children receive `ready-to-implement`, even when a native blocker temporarily keeps them off the executable frontier.
 - Stacked PRs are an optional linear delivery strategy, not the issue model.
 - Tests and deterministic checks enforce guarantees; reviewers contribute judgment.
 - Remote branch preservation is separate from merge readiness: push coherent inspected commits even when a full-suite baseline failure exists.
 - A proven pre-existing failure may be documented in a draft PR, but it blocks ready-for-review and merge until explicitly dispositioned.
 - Start manually and preserve one trusted GitHub coordinator.
+- Every `implement-issue` worktree receives the full Vercel Development environment plus an isolated sandbox database before the writer starts; Vercel Development is the local-runtime trust boundary.
+- Dependency installation always precedes secret provisioning and uses the committed frozen lockfile.
+- `provision-env` is a global checkout-oriented orchestrator: it installs dependencies, reuses Vercel project identity, pulls Development variables directly into an ignored mode-`0600` `.env.local`, and calls `sandbox-db`.
+- `sandbox-db` remains a separate global resource capability because it creates, renews, and releases real infrastructure; native `vercel env pull` only retrieves existing configuration.
+- Vercel's shared Development database value must always be replaced by the sandbox lease before the writer starts.
+- Repository schema bootstrap remains repository-owned and must use an explicit safe command against the blank sandbox database.
+- Sandbox leases survive implementation and draft-PR review; future completion explicitly releases them.
 - Matt Pocock's skills are inspiration; do not run `setup-matt-pocock-skills` or adopt its domain-doc hierarchy unchanged.
 - Avoid Projects, hooks, autonomous schedulers, and broad label taxonomies until the protocol demonstrates a need.
 
@@ -467,12 +518,11 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 4. When should a long investigation publish its issue: immediately, after first evidence, or according to a duration/complexity threshold?
 5. Should triage be one coordinator skill routing bounded agents, or several directly invoked skills?
 6. Which tracker mutations can eventually be delegated safely?
-7. When does a parent issue become ready, and when do only its children become ready?
-8. How should completion of all child issues close or resolve the parent?
-9. What precise evidence makes a UI bug ready to implement when native browser behavior is difficult to automate?
-10. How should `gh-stack` interact with the existing worktree-based writer isolation model?
-11. Which parts of project `conform`, `tidy`, and `learn` become CI, reviewer agents, or retained skills?
-12. Which workflow concepts should be global and which should remain project-specific?
+7. How should completion of all child issues close or resolve the parent?
+8. What precise evidence makes a UI bug ready to implement when native browser behavior is difficult to automate?
+9. How should `gh-stack` interact with the existing worktree-based writer isolation model?
+10. Which parts of project `conform`, `tidy`, and `learn` become CI, reviewer agents, or retained skills?
+11. Which workflow concepts should be global and which should remain project-specific?
 
 ## Inspiration
 
@@ -502,5 +552,12 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 - Ran both skills against Issue #4. The implementation pilot exposed an overly strict required-check gate that left a coherent commit local-only.
 - Separated remote preservation and draft-PR evidence from ready-for-review/merge gates; characterized baseline failures no longer block branch push or a draft PR.
 - Resumed the preserved Issue #4 delivery under the corrected policy: pushed commit `7d80afa` and opened draft PR #5 with the clean-base failure documented; review and merge remain blocked.
+- Built and verified the global Effect-based `sandbox-db` lifecycle against a dedicated blank Neon sandbox project, including Keychain authentication, create/reuse/status/renew/release/gc, mode-`0600` env overlays, and secret-free leases.
+- Built the global `provision-env` coordinator and piloted dependency install → direct Vercel Development pull → sandbox database → repository schema bootstrap on Afloat. Failure rollback removed `.env.local` and left no lease.
+- Piloted Speldosa: Vercel and sandbox provisioning succeeded, while a fresh frozen install correctly exposed four unclassified dependency build scripts and stopped before secrets. This is a repository bootstrap-policy failure, not a provisioning bypass target.
+- Selected full provisioning as the `implement-issue` policy: every writer worktree gets Vercel Development plus an isolated database, with repository schema bootstrap completed before writer launch.
+- Documented the future stacked-PR worktree model: each upper branch starts from the exact remote head below it, targets that lower branch, gets an independent environment/database, and rebases upward when lower layers change. Current `implement-issue` remains regular-PR-only.
+- Implemented approval-gated `slice-issue`, adapted from Matt Pocock's `to-tickets`: clear oversized parent Agent Brief → proposed vertical child graph → native sub-issues/dependencies → verified child briefs/readiness, with no implementation mutation.
+- Piloted `slice-issue` on Afloat Issue #8: after approval, published native children #9–#11 with authoritative briefs, wired #9 as the foundation blocking parallel siblings #10 and #11, exposed #9 as the initial frontier, and left #8 open without implementation state. No assignment, branch, worktree, or PR was created.
 - Added executable `report-issue` as a thin intake coordinator that deduplicates, creates a minimal case file, reuses `triage-issue`, and establishes an optional native blocker only after verification.
 - Piloted `report-issue` to create and triage Issue #6. The nested triage stage initially ended the wrapper before dependency creation; strengthened the continuation invariant and verified the native `#6 blocks #4` edge in both directions.

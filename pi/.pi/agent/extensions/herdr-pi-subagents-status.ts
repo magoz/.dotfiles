@@ -3,6 +3,13 @@
 // Surfaces pi-subagents async activity to Herdr while the orchestrator's turn
 // is over and the pane would otherwise show "idle"/"done".
 //
+// Upstream status: contributed as pi-subagents PR #730:
+// https://github.com/nicobailon/pi-subagents/pull/730
+//
+// This file is a temporary compatibility shim. Remove it after upgrading to
+// a pi-subagents release containing #730; leaving both enabled would duplicate
+// metadata and sibling-event reporting.
+//
 // Herdr's pi integration (herdr-agent-state.ts) is the sole lifecycle
 // authority for this pane, and herdr's docs say sibling hooks must use
 // display metadata, never `pane.report-agent`. So this extension:
@@ -15,6 +22,11 @@
 //   3. When a child reports needs_attention, emits the integration's
 //      sanctioned `herdr:blocked` event so the pane rolls up as blocked
 //      until the parent agent wakes or the run completes.
+//   4. While runs are active, emits `herdr:busy` (locally patched into
+//      herdr-agent-state.ts; proposed upstream) so the pane's semantic
+//      state is `working`, not just a relabeled idle. Precedence stays
+//      blocked > working > idle. If the local patch is absent the event is
+//      ignored and behavior degrades to the display-only labels above.
 //
 // Known limitation: after /reload or /resume the in-memory run map is empty,
 // so a label is not restored for runs started before the reload. The TTL
@@ -59,6 +71,8 @@ export default function (pi) {
   type Run = { agent?: string; pid?: number };
   const runs = new Map<string, Run>();
   const raisedAttention = new Set<string>();
+  let busyRaised = false;
+  let busyLabel: string | undefined;
 
   // Only the root interactive session may publish. Headless pi-subagents
   // children inherit HERDR_PANE_ID and load this same extension; they must
@@ -89,6 +103,26 @@ export default function (pi) {
     }
   }
 
+  function syncBusy() {
+    if (!rootSession) return;
+    if (runs.size > 0) {
+      const text = label();
+      if (busyRaised && busyLabel === text) return;
+      // Count-based receiver: lower before re-raising so the count stays at
+      // one while the label refreshes.
+      if (busyRaised) {
+        pi.events.emit("herdr:busy", { active: false });
+      }
+      busyRaised = true;
+      busyLabel = text;
+      pi.events.emit("herdr:busy", { active: true, label: text });
+    } else if (busyRaised) {
+      busyRaised = false;
+      busyLabel = undefined;
+      pi.events.emit("herdr:busy", { active: false });
+    }
+  }
+
   async function publishNow() {
     if (runs.size > 0) {
       const text = label();
@@ -99,6 +133,7 @@ export default function (pi) {
         "--agent", "pi",
         "--state-label", `idle=${text}`,
         "--state-label", `done=${text}`,
+        "--state-label", `working=${text}`,
         "--token", `summary=${text}`,
         "--ttl-ms", String(TTL_MS),
       ]);
@@ -137,6 +172,7 @@ export default function (pi) {
     if (runs.size > 0 && !refreshTimer) {
       refreshTimer = setInterval(() => {
         reconcile();
+        syncBusy();
         publish();
         syncTimer();
       }, REFRESH_MS);
@@ -158,6 +194,7 @@ export default function (pi) {
     const id = data?.id;
     if (typeof id !== "string" || id.length === 0) return;
     runs.set(id, { agent: data?.agent, pid: data?.pid });
+    syncBusy();
     publish();
     syncTimer();
   });
@@ -166,6 +203,7 @@ export default function (pi) {
     const id = data?.runId ?? data?.id;
     if (typeof id !== "string" || !runs.delete(id)) return;
     clearAttention();
+    syncBusy();
     publish();
     syncTimer();
   });
@@ -197,11 +235,12 @@ export default function (pi) {
   pi.on("session_shutdown", async () => {
     if (!rootSession) return;
     clearAttention();
+    runs.clear();
+    syncBusy();
     if (refreshTimer) {
       clearInterval(refreshTimer);
       refreshTimer = undefined;
     }
-    runs.clear();
     if (published) {
       published = false;
       await herdr([
