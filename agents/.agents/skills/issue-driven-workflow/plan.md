@@ -344,7 +344,23 @@ Initial v1 responsibilities:
 - push and open one draft regular PR;
 - stop before review or merge.
 
-Stack delivery, parallel review, accepted-fix loops, ready-for-review transitions, and merging remain later workflow pieces.
+### Pull request review
+
+Name: `review-pr`.
+
+Initial v1 responsibilities:
+
+- require a workflow-created regular draft PR, linked issue, authoritative Agent Brief, owned implementation worktree, and live sandbox lease;
+- pin the exact base/head diff and resolve repository guidance through root and nearest owner `AGENTS.md`, relevant patterns, and project-local workflow skills;
+- run parallel fresh-context read-only Spec, Standards, Correctness/Validation, and Knowledge reviews;
+- apply project `conform --check`, `tidy --check`, and `learn --check` semantics without allowing reviewers to edit;
+- independently disposition findings and send accepted code/docs fixes to exactly one continuing writer in the existing worktree;
+- repeat bounded review/fix rounds, then rerun focused and repository-required validation serially at a pinned base/head pair;
+- preserve characterized baseline failures as blockers unless explicitly dispositioned;
+- publish head-SHA-bound review evidence and mark the PR ready only when every gate passes;
+- stop before merge, issue closure, lease release, branch deletion, or worktree cleanup.
+
+`review-pr --check` performs the complete static audit, explicitly leaving command validation unattested, without infrastructure, worktree, or GitHub mutations. Stacked-PR review and merge/completion remain later workflow pieces.
 
 ## Compared with Matt Pocock's method
 
@@ -507,6 +523,10 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 - Vercel's shared Development database value must always be replaced by the sandbox lease before the writer starts.
 - Repository schema bootstrap remains repository-owned and must use an explicit safe command against the blank sandbox database.
 - Sandbox leases survive implementation and draft-PR review; future completion explicitly releases them.
+- Review is repository-hierarchy-aware: root guidance applies globally, nearest owner docs govern local detail, and only relevant maintained patterns are loaded.
+- Reviewers are parallel and read-only; accepted implementation, test, and required documentation fixes flow through one writer in the existing worktree.
+- Project `conform`, `tidy`, and `learn` contribute audit semantics: conformance checks code, tidy identifies documentation ownership/drift, and learn proposes only durable non-obvious knowledge. None may become a competing writer during the review wave.
+- A PR becomes ready only after Agent Brief, repository conformance, correctness, knowledge, local validation, and remote-check gates pass at the exact pushed head.
 - Matt Pocock's skills are inspiration; do not run `setup-matt-pocock-skills` or adopt its domain-doc hierarchy unchanged.
 - Avoid Projects, hooks, autonomous schedulers, and broad label taxonomies until the protocol demonstrates a need.
 
@@ -521,8 +541,7 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 7. How should completion of all child issues close or resolve the parent?
 8. What precise evidence makes a UI bug ready to implement when native browser behavior is difficult to automate?
 9. How should `gh-stack` interact with the existing worktree-based writer isolation model?
-10. Which parts of project `conform`, `tidy`, and `learn` become CI, reviewer agents, or retained skills?
-11. Which workflow concepts should be global and which should remain project-specific?
+10. Which workflow concepts should be global and which should remain project-specific?
 
 ## Inspiration
 
@@ -559,5 +578,7 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 - Documented the future stacked-PR worktree model: each upper branch starts from the exact remote head below it, targets that lower branch, gets an independent environment/database, and rebases upward when lower layers change. Current `implement-issue` remains regular-PR-only.
 - Implemented approval-gated `slice-issue`, adapted from Matt Pocock's `to-tickets`: clear oversized parent Agent Brief → proposed vertical child graph → native sub-issues/dependencies → verified child briefs/readiness, with no implementation mutation.
 - Piloted `slice-issue` on Afloat Issue #8: after approval, published native children #9–#11 with authoritative briefs, wired #9 as the foundation blocking parallel siblings #10 and #11, exposed #9 as the initial frontier, and left #8 open without implementation state. No assignment, branch, worktree, or PR was created.
+- Audited Afloat, Speldosa, and Duck repository knowledge models plus their `conform`, `tidy`, and `learn` workflows, then implemented `review-pr`: exact-head parallel read-only review against the Agent Brief and path-resolved repository guidance, one controlled fix writer, independent validation, durable-knowledge assessment, and a gated draft-to-ready transition.
+- Ran the first `review-pr --check` pilot on Afloat draft PR #12. It surfaced the clean-migration-history tax-column baseline blocker, required expense/MCP knowledge updates, and missing proof for final-reference cleanup racing with concurrent tag reuse. It also produced false positives about primary-key nullability and unchanged list ordering, confirming that the coordinator must independently disposition reviewer findings rather than forwarding them mechanically.
 - Added executable `report-issue` as a thin intake coordinator that deduplicates, creates a minimal case file, reuses `triage-issue`, and establishes an optional native blocker only after verification.
 - Piloted `report-issue` to create and triage Issue #6. The nested triage stage initially ended the wrapper before dependency creation; strengthened the continuation invariant and verified the native `#6 blocks #4` edge in both directions.
