@@ -77,28 +77,28 @@ command = 'herdr tab focus "${HERDR_ACTIVE_WORKSPACE_ID}:4" >/dev/null'
 description = "tab 4"
 
 [[keys.command]]
-key = "ctrl+f7"
+key = "f1"
 type = "shell"
 command = "herdr workspace focus 1 >/dev/null"
-description = "workspace 1"
+description = "space 1"
 
 [[keys.command]]
-key = "ctrl+f8"
+key = "f2"
 type = "shell"
 command = "herdr workspace focus 2 >/dev/null"
-description = "workspace 2"
+description = "space 2"
 
 [[keys.command]]
-key = "ctrl+f9"
+key = "f3"
 type = "shell"
 command = "herdr workspace focus 3 >/dev/null"
-description = "workspace 3"
+description = "space 3"
 
 [[keys.command]]
-key = "ctrl+f10"
+key = "f12"
 type = "shell"
 command = "herdr workspace focus 4 >/dev/null"
-description = "workspace 4"
+description = "space 4"
 
 [advanced]
 scrollback_limit_bytes = 52428800
