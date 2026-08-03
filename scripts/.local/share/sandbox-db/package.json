@@ -1,0 +1,20 @@
+{
+  "name": "sandbox-db",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Provision ephemeral blank PostgreSQL branches for local Git checkouts.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/cli": "^0.77.0",
+    "@effect/platform": "^0.97.1",
+    "@effect/platform-node": "^0.108.1",
+    "effect": "^3.22.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
+}

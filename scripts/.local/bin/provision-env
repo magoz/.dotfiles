@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+# Prepare one local Git checkout for development without creating the checkout itself.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: provision-env [options]
+
+Install committed dependencies, pull Vercel Development variables directly
+into .env.local, and optionally allocate an isolated PostgreSQL database.
+
+Options:
+  --repo PATH             Target Git checkout (default: current directory)
+  --source PATH           Linked checkout to copy .vercel/project.json from
+  --vercel-project NAME   Link explicitly to this existing Vercel project
+  --database              Allocate an isolated database with sandbox-db
+  --label NAME            Database label (default: current branch/directory)
+  --ttl DURATION          Database lifetime (default: 7d; maximum: 7d)
+  --skip-install          Do not install dependencies
+  --skip-vercel           Do not pull Vercel Development variables
+  -h, --help              Show this help
+
+The initial version refuses to overwrite an existing .env.local when Vercel
+pulling is enabled. Repository-specific schema bootstrap remains a separate step.
+EOF
+}
+
+repo="."
+source_checkout=""
+vercel_project=""
+with_database=false
+skip_install=false
+skip_vercel=false
+label=""
+ttl="7d"
+
+while (($# > 0)); do
+  case "$1" in
+    --repo)
+      [[ $# -ge 2 ]] || { echo "provision-env: --repo requires a path" >&2; exit 2; }
+      repo="$2"; shift 2 ;;
+    --source)
+      [[ $# -ge 2 ]] || { echo "provision-env: --source requires a path" >&2; exit 2; }
+      source_checkout="$2"; shift 2 ;;
+    --vercel-project)
+      [[ $# -ge 2 ]] || { echo "provision-env: --vercel-project requires a name" >&2; exit 2; }
+      vercel_project="$2"; shift 2 ;;
+    --database) with_database=true; shift ;;
+    --label)
+      [[ $# -ge 2 ]] || { echo "provision-env: --label requires a value" >&2; exit 2; }
+      label="$2"; shift 2 ;;
+    --ttl)
+      [[ $# -ge 2 ]] || { echo "provision-env: --ttl requires a duration" >&2; exit 2; }
+      ttl="$2"; shift 2 ;;
+    --skip-install) skip_install=true; shift ;;
+    --skip-vercel) skip_vercel=true; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "provision-env: unknown option: $1" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "provision-env: required command not found: $1" >&2
+    exit 127
+  }
+}
+
+need git
+[[ -d "$repo" ]] || { echo "provision-env: not a directory: $repo" >&2; exit 2; }
+repo=$(cd "$repo" && pwd -P)
+git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+  echo "provision-env: not a Git checkout: $repo" >&2
+  exit 2
+}
+repo=$(git -C "$repo" rev-parse --show-toplevel)
+env_file="$repo/.env.local"
+project_file="$repo/.vercel/project.json"
+
+# Secrets must never be written where Git could track them.
+if git -C "$repo" ls-files --error-unmatch -- .env.local >/dev/null 2>&1; then
+  echo "provision-env: refusing to write .env.local because it is tracked" >&2
+  exit 2
+fi
+if ! git -C "$repo" check-ignore -q -- .env.local; then
+  echo "provision-env: refusing to write .env.local because it is not git-ignored" >&2
+  exit 2
+fi
+
+if ! $skip_vercel && [[ -e "$env_file" ]]; then
+  echo "provision-env: refusing to overwrite existing $env_file" >&2
+  echo "provision-env: use --skip-vercel to preserve it; refresh semantics are not defined yet" >&2
+  exit 2
+fi
+
+created_env=false
+database_attempted=false
+completed=false
+rollback() {
+  status=$?
+  if [[ "$completed" != true && $status -ne 0 ]]; then
+    if [[ "$database_attempted" == true ]]; then
+      sandbox-db release --worktree "$repo" --json >/dev/null 2>&1 || true
+    fi
+    if [[ "$created_env" == true ]]; then
+      rm -f "$env_file"
+      echo "provision-env: rolled back .env.local after setup failure" >&2
+    fi
+  fi
+  exit "$status"
+}
+trap rollback EXIT
+
+install_dependencies() {
+  if [[ -f "$repo/pnpm-lock.yaml" ]]; then
+    need pnpm
+    echo "provision-env: installing dependencies with pnpm --frozen-lockfile"
+    pnpm --dir "$repo" install --frozen-lockfile
+  elif [[ -f "$repo/bun.lock" || -f "$repo/bun.lockb" ]]; then
+    need bun
+    echo "provision-env: installing dependencies with bun --frozen-lockfile"
+    (cd "$repo" && bun install --frozen-lockfile)
+  elif [[ -f "$repo/package-lock.json" ]]; then
+    need npm
+    echo "provision-env: installing dependencies with npm ci"
+    (cd "$repo" && npm ci)
+  elif [[ -f "$repo/yarn.lock" ]]; then
+    need yarn
+    local yarn_major
+    yarn_major=$(yarn --version | cut -d. -f1)
+    if [[ "$yarn_major" =~ ^[0-9]+$ ]] && ((yarn_major >= 2)); then
+      echo "provision-env: installing dependencies with yarn --immutable"
+      (cd "$repo" && yarn install --immutable)
+    else
+      echo "provision-env: installing dependencies with yarn --frozen-lockfile"
+      (cd "$repo" && yarn install --frozen-lockfile)
+    fi
+  else
+    echo "provision-env: no supported lockfile found in $repo" >&2
+    return 2
+  fi
+}
+
+copy_project_identity() {
+  local from="$1"
+  [[ -f "$from/.vercel/project.json" ]] || return 1
+
+  local target_remote source_remote
+  target_remote=$(git -C "$repo" remote get-url origin 2>/dev/null || true)
+  source_remote=$(git -C "$from" remote get-url origin 2>/dev/null || true)
+  if [[ -n "$target_remote" && -n "$source_remote" && "$target_remote" != "$source_remote" ]]; then
+    echo "provision-env: refusing Vercel identity from a different Git remote: $from" >&2
+    return 2
+  fi
+
+  if ! git -C "$repo" check-ignore -q -- .vercel/project.json; then
+    echo "provision-env: refusing to create .vercel/project.json because .vercel is not ignored" >&2
+    return 2
+  fi
+  install -d -m 700 "$repo/.vercel"
+  install -m 600 "$from/.vercel/project.json" "$project_file"
+  echo "provision-env: reused Vercel project identity from $from"
+}
+
+ensure_vercel_link() {
+  [[ -f "$project_file" ]] && return 0
+
+  if [[ -n "$source_checkout" ]]; then
+    source_checkout=$(cd "$source_checkout" && pwd -P)
+    copy_project_identity "$source_checkout" || {
+      echo "provision-env: source checkout is not linked to Vercel: $source_checkout" >&2
+      return 2
+    }
+    return
+  fi
+
+  if [[ -n "$vercel_project" ]]; then
+    if ! git -C "$repo" check-ignore -q -- .vercel/project.json; then
+      echo "provision-env: .vercel must be git-ignored before linking" >&2
+      return 2
+    fi
+    echo "provision-env: linking to Vercel project $vercel_project"
+    vercel link --cwd "$repo" --project "$vercel_project" --yes --no-color
+    return
+  fi
+
+  local candidate count=0
+  while IFS= read -r candidate; do
+    [[ "$candidate" == "$repo" ]] && continue
+    if [[ -f "$candidate/.vercel/project.json" ]]; then
+      source_checkout="$candidate"
+      ((count += 1))
+    fi
+  done < <(git -C "$repo" worktree list --porcelain | awk '/^worktree /{sub(/^worktree /, ""); print}')
+
+  if ((count == 1)); then
+    copy_project_identity "$source_checkout"
+    return
+  fi
+  if ((count > 1)); then
+    echo "provision-env: multiple linked sibling checkouts found; pass --source explicitly" >&2
+  else
+    echo "provision-env: no Vercel project link found" >&2
+    echo "provision-env: link this checkout, pass --source, or pass --vercel-project" >&2
+  fi
+  return 2
+}
+
+if ! $skip_install; then
+  install_dependencies
+fi
+
+if ! $skip_vercel; then
+  need vercel
+  ensure_vercel_link
+  echo "provision-env: pulling Vercel Development variables into .env.local"
+  vercel env pull "$env_file" --environment development --yes --cwd "$repo" --no-color
+  created_env=true
+  chmod 600 "$env_file"
+fi
+
+if $with_database; then
+  need sandbox-db
+  if sandbox-db status --worktree "$repo" --json >/dev/null 2>&1; then
+    if [[ ! -f "$env_file" ]] || ! grep -q '^DATABASE_URL=' "$env_file" || ! grep -q '^DATABASE_URL_UNPOOLED=' "$env_file"; then
+      echo "provision-env: a live database lease exists but its env keys are unavailable" >&2
+      echo "provision-env: release it explicitly before reprovisioning" >&2
+      exit 2
+    fi
+  fi
+
+  if [[ -z "$label" ]]; then
+    label=$(git -C "$repo" branch --show-current)
+    [[ -n "$label" ]] || label=$(basename "$repo")
+  fi
+  database_attempted=true
+  echo "provision-env: allocating isolated PostgreSQL"
+  sandbox-db create --worktree "$repo" --label "$label" --ttl "$ttl"
+fi
+
+completed=true
+trap - EXIT
+printf '\nprovision-env: ready\n'
+printf '  repo:       %s\n' "$repo"
+printf '  install:    %s\n' "$($skip_install && echo skipped || echo complete)"
+printf '  vercel env: %s\n' "$($skip_vercel && echo skipped || echo .env.local)"
+printf '  database:   %s\n' "$($with_database && echo ready || echo skipped)"

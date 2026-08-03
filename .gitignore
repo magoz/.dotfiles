@@ -1,6 +1,10 @@
 # misc
 .DS_Store
 
+# Python bytecode
+__pycache__/
+*.py[cod]
+
 # tmux
 tmux/.config/tmux/plugins
 
