@@ -1,0 +1,12 @@
+{
+  "shortcut": "alt+shift+c",
+  "models": {
+    "openai-codex/gpt-5.6-sol": {
+      "defaultProfile": "short",
+      "profiles": {
+        "short": 272000,
+        "full": 1050000
+      }
+    }
+  }
+}

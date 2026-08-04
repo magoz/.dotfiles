@@ -1,0 +1,45 @@
+{
+  "name": "pi-context-budget",
+  "version": "0.1.0",
+  "description": "Switch Pi context-window budgets without changing the upstream model ID.",
+  "license": "MIT",
+  "author": "Magoz (https://magoz.com)",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "context-window",
+    "compaction",
+    "openai-codex"
+  ],
+  "homepage": "https://github.com/magoz/.dotfiles/tree/main/pi/.pi/agent/extensions/context-budget#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/magoz/.dotfiles.git",
+    "directory": "pi/.pi/agent/extensions/context-budget"
+  },
+  "bugs": {
+    "url": "https://github.com/magoz/.dotfiles/issues"
+  },
+  "files": [
+    "index.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit -p .",
+    "test": "node --experimental-strip-types --test index.test.ts",
+    "prepublishOnly": "npm run check && npm test"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
