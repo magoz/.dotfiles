@@ -12,7 +12,8 @@
     },
     "npm:@juanibiapina/pi-tokyonight@1.1.0",
     "npm:@plannotator/pi-extension",
-    "npm:pi-mcp-adapter"
+    "npm:pi-mcp-adapter",
+    "npm:pi-context-budget@0.1.1"
   ],
   "piVimMode": {
     "ui": {
