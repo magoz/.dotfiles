@@ -11,6 +11,7 @@ tmux/.config/tmux/plugins
 # herdr runtime state
 herdr/.config/herdr/session.json
 herdr/.config/herdr/session-history.json
+herdr/.config/herdr/release-notes.json
 
 # nvim
 nvim/.config/nvim/plugin/packer_compiled.lua
