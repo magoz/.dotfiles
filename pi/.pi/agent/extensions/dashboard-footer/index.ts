@@ -15,7 +15,7 @@ const CHARS_PER_ESTIMATED_TOKEN = 4;
 // .git/index.lock and racing the user's own git commands in the same repo.
 const GIT_READONLY = ["--no-optional-locks"];
 // Extension statuses that would only add noise to the footer.
-const HIDDEN_STATUS_KEYS = new Set(["pi-vimmode", "mcp"]);
+const HIDDEN_STATUS_KEYS = new Set(["pi-vimmode", "mcp", "context-budget"]);
 
 // Terminal-controlled text such as paths and branch names must not be allowed
 // to inject escape sequences into the TUI.
