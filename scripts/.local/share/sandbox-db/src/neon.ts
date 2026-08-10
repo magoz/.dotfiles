@@ -112,7 +112,7 @@ export const describeProject = (config: NeonAccess) =>
     return body.project
   })
 
-/** The blank parent every sandbox branch is cut from. */
+/** Resolve the default parent when global auth does not name one explicitly. */
 export const findDefaultBranch = (config: NeonAccess) =>
   listBranches(config).pipe(
     Effect.flatMap((branches) => {

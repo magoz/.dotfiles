@@ -66,7 +66,7 @@ Successful output:
 - issue assigned as the execution claim;
 - one issue-derived branch in an isolated worktree;
 - one ignored mode-`0600` `.env.local` populated from Vercel Development with its database values replaced by an isolated sandbox lease;
-- repository schema bootstrapped on the blank sandbox database;
+- repository schema prepared on the isolated sandbox database, whether its configured parent is blank or a project baseline;
 - one locally validated implementation commit or coherent commit series;
 - one pushed draft pull request containing `Closes #<issue>`;
 - no review or merge action.
@@ -119,7 +119,7 @@ All of these must hold before the claim:
 - Vercel CLI authentication succeeds and the source checkout has an unambiguous existing project link or explicit project identity;
 - `sandbox-db auth status` succeeds;
 - `.env.local` and `.vercel/` are untracked and git-ignored;
-- the repository exposes an explicit, safe command for creating its current schema on a blank PostgreSQL database;
+- the repository exposes an explicit, safe command for preparing its current schema on the configured PostgreSQL sandbox parent;
 - the Agent Brief fits one fresh implementation context.
 
 Inspect native issue dependencies. If the API is unavailable, inspect any maintained fallback `Blocked by` convention. If blocker state cannot be established, stop rather than assuming the issue is unblocked.
@@ -195,10 +195,10 @@ This command must, in order:
 2. copy only Vercel project identity into the worktree;
 3. pull the complete Vercel Development environment directly into `.env.local`;
 4. enforce mode `0600` on `.env.local`;
-5. allocate a blank, expiring PostgreSQL branch through `sandbox-db`;
+5. allocate an expiring PostgreSQL branch through `sandbox-db`, cloning the Vercel-provided project baseline when the complete `SANDBOX_DB_NEON_API_KEY`, `SANDBOX_DB_NEON_PROJECT_ID`, and `SANDBOX_DB_PARENT_BRANCH_ID` profile is present and otherwise using the globally configured parent;
 6. replace Vercel's shared Development database value with the pooled sandbox URL and add the unpooled URL.
 
-Then run the repository's explicit schema bootstrap command, such as `pnpm db:push`, from the worktree. Use only a command established by repository guidance or unambiguous package scripts as safe for a blank disposable database. Do not guess, clone production data, run destructive commands against any shared database, or seed external-service data. Run a deterministic local seed only when the Agent Brief requires it and the repository explicitly provides one for isolated development databases.
+Then run the repository's explicit schema preparation command, such as `pnpm db:push`, from the worktree. Use only a command established by repository guidance or unambiguous package scripts as safe for the isolated disposable database and its configured parent state. Do not guess, point the baseline at production, run destructive commands against any shared database, or seed external-service data. Run a deterministic local seed only when the Agent Brief requires it and the repository explicitly provides one for isolated development databases.
 
 Verify before launching the writer:
 

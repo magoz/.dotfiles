@@ -22,6 +22,16 @@ Options:
 
 The initial version refuses to overwrite an existing .env.local when Vercel
 pulling is enabled. Repository-specific schema bootstrap remains a separate step.
+
+A Vercel Development environment may select project-local Neon authentication
+and a baseline branch with this complete profile:
+  SANDBOX_DB_NEON_API_KEY
+  SANDBOX_DB_NEON_PROJECT_ID
+  SANDBOX_DB_PARENT_BRANCH_ID
+The profile takes precedence over global sandbox-db authentication. Partial
+profiles are rejected; credentials and project settings are never mixed.
+
+Documentation: ~/.local/share/sandbox-db/README.md
 EOF
 }
 
