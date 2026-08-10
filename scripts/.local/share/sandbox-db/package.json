@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Provision ephemeral blank PostgreSQL branches for local Git checkouts.",
+  "description": "Provision ephemeral PostgreSQL branches for local Git checkouts.",
   "scripts": {
+    "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

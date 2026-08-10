@@ -2,13 +2,12 @@
 import { Command, Options, Prompt } from "@effect/cli"
 import { Path } from "@effect/platform"
 import { NodeContext, NodeHttpClient, NodeRuntime } from "@effect/platform-node"
-import { Console, Effect, Layer, Option, Redacted } from "effect"
+import { Console, Effect, Either, Layer, Option, Redacted } from "effect"
 import { createHash, randomBytes } from "node:crypto"
-import { loadConfig } from "./config"
+import { LOCAL_CONFIG_KEYS, loadConfig } from "./config"
 import {
   API_KEY_ENV,
   clearSecret,
-  readSecret,
   readSettings,
   settingsLocation,
   storeSecret,
@@ -65,6 +64,19 @@ const report = (json: boolean, payload: Record<string, string | number>) => {
   return Console.log(lines.join("\n"))
 }
 
+const localConfigKeys = new Set<string>(LOCAL_CONFIG_KEYS)
+
+const ensureLeaseProject = (config: { readonly projectId: string }, lease: Lease) =>
+  config.projectId === lease.projectId
+    ? Effect.void
+    : Effect.fail(
+        new PolicyError({
+          message:
+            `lease belongs to Neon project ${lease.projectId}, but the resolved profile selects ${config.projectId}\n` +
+            "restore the original worktree environment before managing this lease"
+        })
+      )
+
 // ---------------------------------------------------------------------------
 // shared options
 // ---------------------------------------------------------------------------
@@ -105,7 +117,7 @@ const authLogin = Command.make(
       Options.optional
     ),
     parentBranch: Options.text("parent-branch").pipe(
-      Options.withDescription("blank parent branch id (default: project default branch)"),
+      Options.withDescription("parent branch id (default: project default branch)"),
       Options.optional
     ),
     tokenStdin: Options.boolean("token-stdin").pipe(
@@ -136,6 +148,13 @@ const authLogin = Command.make(
       const parent = Option.isSome(parentBranch)
         ? parentBranch.value
         : (yield* findDefaultBranch({ apiKey, projectId: resolvedProject })).id
+      if (Option.isNone(yield* getBranch({ apiKey, projectId: resolvedProject }, parent))) {
+        return yield* Effect.fail(
+          new ConfigurationError({
+            message: `parent branch ${parent} does not exist in project ${resolvedProject}`
+          })
+        )
+      }
 
       const backend = yield* storeSecret(apiKey)
       yield* writeSettings({ projectId: project.id, parentBranch: parent })
@@ -151,40 +170,75 @@ const authLogin = Command.make(
     })
 )
 
-const authStatus = Command.make("status", { json: jsonOption }, ({ json }) =>
-  Effect.gen(function* () {
-    const secret = yield* readSecret
-    const settings = yield* readSettings
-    const location = yield* settingsLocation
+const authStatus = Command.make(
+  "status",
+  { json: jsonOption, worktree: worktreeOption },
+  ({ json, worktree }) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path
+      const workspace = Option.isSome(worktree)
+        ? Either.right(yield* resolveWorkspace(worktree))
+        : yield* Effect.either(resolveWorkspace(Option.none()))
+      const envFile = path.join(
+        Either.isRight(workspace) ? workspace.right.root : path.resolve(process.cwd()),
+        ".env.local"
+      )
+      const resolved = yield* Effect.either(loadConfig(envFile))
 
-    if (Option.isNone(secret)) {
+      if (Either.isLeft(resolved)) {
+        yield* report(json, {
+          status: "unauthenticated",
+          settings_file: envFile,
+          note: resolved.left.message
+        })
+        return yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+      }
+
+      const config = resolved.right
+      const verification = yield* Effect.either(
+        Effect.gen(function* () {
+          const project = yield* describeProject(config)
+          const parent = yield* getBranch(config, config.parentBranch)
+          if (Option.isNone(parent)) {
+            return yield* Effect.fail(
+              new ConfigurationError({
+                message:
+                  `parent branch ${config.parentBranch} does not exist in project ${config.projectId}`
+              })
+            )
+          }
+          return project
+        })
+      )
+
+      if (Either.isLeft(verification)) {
+        yield* report(json, {
+          status: "invalid",
+          backend: config.backend,
+          fingerprint: fingerprint(config.apiKey),
+          project: config.projectId,
+          parent_branch: `${config.parentBranch} (unverified)`,
+          settings_file:
+            config.backend === "worktree-env" ? envFile : yield* settingsLocation,
+          note: verification.left.message
+        })
+        return yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+      }
+
       yield* report(json, {
-        status: "unauthenticated",
-        settings_file: location,
-        note: `run: sandbox-db auth login (or set ${API_KEY_ENV})`
+        status: "authenticated",
+        backend: config.backend,
+        fingerprint: fingerprint(config.apiKey),
+        project: `${verification.right.name} (${verification.right.id})`,
+        parent_branch: config.parentBranch,
+        settings_file:
+          config.backend === "worktree-env" ? envFile : yield* settingsLocation
       })
-      return yield* Effect.sync(() => {
-        process.exitCode = 1
-      })
-    }
-
-    const projectId = Option.getOrElse(settings.projectId, () => "")
-    const verified = projectId.length > 0
-      ? yield* describeProject({ apiKey: secret.value.value, projectId }).pipe(
-          Effect.map((project) => `${project.name} (${project.id})`),
-          Effect.orElseSucceed(() => "unverified")
-        )
-      : "not configured"
-
-    yield* report(json, {
-      status: verified === "unverified" ? "invalid" : "authenticated",
-      backend: secret.value.backend,
-      fingerprint: fingerprint(secret.value.value),
-      project: verified,
-      parent_branch: Option.getOrElse(settings.parentBranch, () => "not configured"),
-      settings_file: location
     })
-  })
 )
 
 const authLogout = Command.make("logout", { json: jsonOption }, ({ json }) =>
@@ -193,7 +247,8 @@ const authLogout = Command.make("logout", { json: jsonOption }, ({ json }) =>
     return yield* report(json, {
       status: removed.length > 0 ? "cleared" : "nothing-stored",
       backends: removed.join(", ") || "none",
-      note: `an ${API_KEY_ENV} environment variable, if set, still applies`
+      note:
+        `an ${API_KEY_ENV} environment variable or complete worktree .env.local profile, if set, still applies`
     })
   })
 )
@@ -201,7 +256,7 @@ const authLogout = Command.make("logout", { json: jsonOption }, ({ json }) =>
 const auth = Command.make("auth", {}, () =>
   Console.log("sandbox-db auth: use login, status or logout")
 ).pipe(
-  Command.withDescription("Manage the stored Neon credential and sandbox settings."),
+  Command.withDescription("Manage global Neon auth and inspect resolved worktree auth."),
   Command.withSubcommands([authLogin, authStatus, authLogout])
 )
 
@@ -232,20 +287,41 @@ const create = Command.make(
   },
   ({ envFile, forceNew, json, keys, label, noWait, ttl, worktree }) =>
     Effect.gen(function* () {
-      const config = yield* loadConfig
       const path = yield* Path.Path
       const workspace = yield* resolveWorkspace(worktree)
       const envPath = path.resolve(workspace.root, envFile)
+      const config = yield* loadConfig(envPath)
 
       const envKeys = keys.split(",").map((key) => key.trim()).filter((key) => key.length > 0)
       if (envKeys.length === 0) {
         return yield* Effect.fail(new PolicyError({ message: "--keys must name at least one variable" }))
+      }
+      const invalid = envKeys.filter((key) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key))
+      if (invalid.length > 0) {
+        return yield* Effect.fail(
+          new PolicyError({ message: `--keys contains invalid environment names: ${invalid.join(", ")}` })
+        )
+      }
+      const duplicates = envKeys.filter((key, index) => envKeys.indexOf(key) !== index)
+      if (duplicates.length > 0) {
+        return yield* Effect.fail(
+          new PolicyError({ message: `--keys contains duplicates: ${[...new Set(duplicates)].join(", ")}` })
+        )
+      }
+      const reserved = envKeys.filter((key) => localConfigKeys.has(key))
+      if (reserved.length > 0) {
+        return yield* Effect.fail(
+          new PolicyError({
+            message: `--keys cannot overwrite sandbox configuration: ${reserved.join(", ")}`
+          })
+        )
       }
 
       yield* ensureIgnored(workspace.root, envPath)
       const ttlSeconds = yield* parseTtl(ttl)
 
       const existing = yield* readLease(workspace.root)
+      if (Option.isSome(existing)) yield* ensureLeaseProject(config, existing.value)
       if (Option.isSome(existing) && !forceNew) {
         const live = yield* getBranch(config, existing.value.branchId)
         if (Option.isSome(live)) {
@@ -302,6 +378,8 @@ const create = Command.make(
         expires_at: lease.expiresAt,
         env_file: lease.envFile,
         env_keys: envKeys.join(","),
+        config_source: config.backend,
+        parent_branch: config.parentBranch,
         note: "connection string written to env file; not printed"
       })
     })
@@ -316,7 +394,6 @@ const status = Command.make(
   { worktree: worktreeOption, json: jsonOption },
   ({ json, worktree }) =>
     Effect.gen(function* () {
-      const config = yield* loadConfig
       const workspace = yield* resolveWorkspace(worktree)
       const lease = yield* readLease(workspace.root)
 
@@ -327,6 +404,8 @@ const status = Command.make(
         })
       }
 
+      const config = yield* loadConfig(lease.value.envFile)
+      yield* ensureLeaseProject(config, lease.value)
       const branch = yield* getBranch(config, lease.value.branchId)
       yield* report(json, {
         status: Option.isSome(branch) ? "live" : "missing",
@@ -341,6 +420,8 @@ const status = Command.make(
           onSome: (value) => value.expires_at ?? lease.value.expiresAt
         }),
         repository: lease.value.repository,
+        parent_branch: lease.value.parentBranch,
+        config_source: config.backend,
         env_file: lease.value.envFile,
         worktree: lease.value.worktree
       })
@@ -358,7 +439,6 @@ const renew = Command.make(
   { worktree: worktreeOption, json: jsonOption, ttl: ttlOption("7d") },
   ({ json, ttl, worktree }) =>
     Effect.gen(function* () {
-      const config = yield* loadConfig
       const workspace = yield* resolveWorkspace(worktree)
       const lease = yield* readLease(workspace.root)
       if (Option.isNone(lease)) {
@@ -367,6 +447,8 @@ const renew = Command.make(
         )
       }
 
+      const config = yield* loadConfig(lease.value.envFile)
+      yield* ensureLeaseProject(config, lease.value)
       const ttlSeconds = yield* parseTtl(ttl)
       const branch = yield* setExpiration(config, lease.value.branchId, timestamp(ttlSeconds))
       const updated: Lease = {
@@ -395,12 +477,14 @@ const release = Command.make(
   },
   ({ json, keepEnv, worktree }) =>
     Effect.gen(function* () {
-      const config = yield* loadConfig
       const workspace = yield* resolveWorkspace(worktree)
       const lease = yield* readLease(workspace.root)
       if (Option.isNone(lease)) {
         return yield* report(json, { status: "none", worktree: workspace.root })
       }
+
+      const config = yield* loadConfig(lease.value.envFile)
+      yield* ensureLeaseProject(config, lease.value)
 
       // Deletion guardrails: only this tool's own, non-default branches.
       if (!lease.value.branchName.startsWith(BRANCH_PREFIX)) {
@@ -410,12 +494,6 @@ const release = Command.make(
           })
         )
       }
-      if (lease.value.projectId !== config.projectId) {
-        return yield* Effect.fail(
-          new PolicyError({ message: "refusing to delete: lease belongs to a different project" })
-        )
-      }
-
       const branch = yield* getBranch(config, lease.value.branchId)
       if (Option.isSome(branch)) {
         if (branch.value.default === true) {
@@ -470,14 +548,24 @@ const gc = Command.make(
   },
   ({ dryRun, json }) =>
     Effect.gen(function* () {
-      const config = yield* loadConfig
       const leases = yield* allLeases
       const stale: Array<string> = []
+      const inaccessible: Array<string> = []
       let live = 0
 
       for (const lease of leases) {
-        const branch = yield* getBranch(config, lease.branchId)
-        if (Option.isSome(branch)) {
+        const resolved = yield* Effect.either(loadConfig(lease.envFile))
+        if (Either.isLeft(resolved) || resolved.right.projectId !== lease.projectId) {
+          inaccessible.push(lease.branchName)
+          continue
+        }
+
+        const lookedUp = yield* Effect.either(getBranch(resolved.right, lease.branchId))
+        if (Either.isLeft(lookedUp)) {
+          inaccessible.push(lease.branchName)
+          continue
+        }
+        if (Option.isSome(lookedUp.right)) {
           live += 1
           continue
         }
@@ -485,12 +573,19 @@ const gc = Command.make(
         if (!dryRun) yield* removeLease(lease.worktree)
       }
 
-      return yield* report(json, {
-        status: dryRun ? "dry-run" : "pruned",
+      yield* report(json, {
+        status: inaccessible.length > 0 ? "partial" : dryRun ? "dry-run" : "pruned",
         live_leases: live,
         stale_leases: stale.length,
-        pruned: stale.join(", ") || "none"
+        inaccessible_leases: inaccessible.length,
+        pruned: stale.join(", ") || "none",
+        inaccessible: inaccessible.join(", ") || "none"
       })
+      if (inaccessible.length > 0) {
+        yield* Effect.sync(() => {
+          process.exitCode = 1
+        })
+      }
     })
 )
 
@@ -502,7 +597,8 @@ const root = Command.make("sandbox-db", {}, () =>
   Console.log("sandbox-db: run with --help to see available commands")
 ).pipe(
   Command.withDescription(
-    "Provision ephemeral blank PostgreSQL branches for agent worktrees."
+    "Provision ephemeral PostgreSQL branches for agent worktrees.\n\n" +
+    "Documentation: ~/.local/share/sandbox-db/README.md"
   ),
   Command.withSubcommands([auth, create, status, renew, release, list, gc])
 )

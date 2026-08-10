@@ -520,8 +520,9 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 - Dependency installation always precedes secret provisioning and uses the committed frozen lockfile.
 - `provision-env` is a global checkout-oriented orchestrator: it installs dependencies, reuses Vercel project identity, pulls Development variables directly into an ignored mode-`0600` `.env.local`, and calls `sandbox-db`.
 - `sandbox-db` remains a separate global resource capability because it creates, renews, and releases real infrastructure; native `vercel env pull` only retrieves existing configuration.
+- A complete Vercel Development profile (`SANDBOX_DB_NEON_API_KEY`, `SANDBOX_DB_NEON_PROJECT_ID`, and `SANDBOX_DB_PARENT_BRANCH_ID`) atomically selects project-scoped Neon authentication and the baseline branch for that repository; incomplete local profiles fail closed rather than mixing with global authentication.
 - Vercel's shared Development database value must always be replaced by the sandbox lease before the writer starts.
-- Repository schema bootstrap remains repository-owned and must use an explicit safe command against the blank sandbox database.
+- Repository schema preparation remains repository-owned and must use an explicit safe command against either the blank global sandbox parent or the configured project baseline clone.
 - Sandbox leases survive implementation and draft-PR review; future completion explicitly releases them.
 - Review is repository-hierarchy-aware: root guidance applies globally, nearest owner docs govern local detail, and only relevant maintained patterns are loaded.
 - Reviewers are parallel and read-only; accepted implementation, test, and required documentation fixes flow through one writer in the existing worktree.
@@ -571,7 +572,7 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 - Ran both skills against Issue #4. The implementation pilot exposed an overly strict required-check gate that left a coherent commit local-only.
 - Separated remote preservation and draft-PR evidence from ready-for-review/merge gates; characterized baseline failures no longer block branch push or a draft PR.
 - Resumed the preserved Issue #4 delivery under the corrected policy: pushed commit `7d80afa` and opened draft PR #5 with the clean-base failure documented; review and merge remain blocked.
-- Built and verified the global Effect-based `sandbox-db` lifecycle against a dedicated blank Neon sandbox project, including Keychain authentication, create/reuse/status/renew/release/gc, mode-`0600` env overlays, and secret-free leases.
+- Built and verified the global Effect-based `sandbox-db` lifecycle against a dedicated blank Neon sandbox project, including Keychain authentication, create/reuse/status/renew/release/gc, mode-`0600` env overlays, and secret-free leases; later added atomic project-scoped credentials and baseline-branch selection from Vercel Development for repositories spanning multiple Neon accounts.
 - Built the global `provision-env` coordinator and piloted dependency install → direct Vercel Development pull → sandbox database → repository schema bootstrap on Afloat. Failure rollback removed `.env.local` and left no lease.
 - Piloted Speldosa: Vercel and sandbox provisioning succeeded, while a fresh frozen install correctly exposed four unclassified dependency build scripts and stopped before secrets. This is a repository bootstrap-policy failure, not a provisioning bypass target.
 - Selected full provisioning as the `implement-issue` policy: every writer worktree gets Vercel Development plus an isolated database, with repository schema bootstrap completed before writer launch.

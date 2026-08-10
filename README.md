@@ -7,6 +7,10 @@
 After the install we need to configure Copilot.  
 Follow the instructions: <https://github.com/github/copilot.vim>
 
+## Development tooling
+
+- [`sandbox-db` and `provision-env`](scripts/.local/share/sandbox-db/README.md) — provision Vercel-backed local environments and expiring Neon database branches.
+
 ## TODO
 
 ### ZSH
