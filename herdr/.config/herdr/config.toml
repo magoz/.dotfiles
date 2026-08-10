@@ -44,6 +44,14 @@ next_tab = ["prefix+n", "prefix+ctrl+n"]
 switch_tab = "prefix+1..9"
 switch_workspace = "prefix+shift+1..9"
 
+# With agent_panel_sort = "priority", alt+1 jumps to the top-priority agent,
+# alt+2 to the next, etc. The terminal remaps Cmd+1..9 to Alt+1..9 (ghostty
+# config: cmd+digit_N=text:\x1bN; wezterm.lua: SendKey), so in practice
+# these fire on Cmd+N. Alt remap is needed because herdr doesn't request the
+# kitty keyboard protocol, so cmd/super can't reach it in any terminal.
+[keys.indexed]
+agents = "alt"
+
 [[keys.command]]
 key = "prefix+f"
 type = "popup"

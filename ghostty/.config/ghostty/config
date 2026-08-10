@@ -9,3 +9,21 @@ window-colorspace = display-p3
 
 keybind = cmd+t=unbind
 keybind = cmd+n=unbind
+
+# Cmd+1..9 -> send Alt+1..9 (ESC-prefixed digit) to the pane. herdr maps
+# alt+1..9 to agent-panel rows (keys.indexed.agents = "alt" in herdr's
+# config.toml), so with agent_panel_sort = "priority" Cmd+1 jumps to the
+# top-priority agent. Overrides Ghostty's default cmd+N goto_tab bindings.
+# Remap needed because herdr doesn't request the kitty keyboard protocol,
+# so cmd/super can't be transmitted to it natively.
+# Note: digit_N (physical key) is required to shadow Ghostty's default
+# super+digit_N=goto_tab:N bindings; logical names like cmd+one don't.
+keybind = cmd+digit_1=text:\x1b1
+keybind = cmd+digit_2=text:\x1b2
+keybind = cmd+digit_3=text:\x1b3
+keybind = cmd+digit_4=text:\x1b4
+keybind = cmd+digit_5=text:\x1b5
+keybind = cmd+digit_6=text:\x1b6
+keybind = cmd+digit_7=text:\x1b7
+keybind = cmd+digit_8=text:\x1b8
+keybind = cmd+digit_9=text:\x1b9
