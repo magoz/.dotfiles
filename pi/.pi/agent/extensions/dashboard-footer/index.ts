@@ -6,10 +6,13 @@ import type {
   ReadonlyFooterDataProvider,
 } from "@earendil-works/pi-coding-agent";
 import { getCapabilities, hyperlink, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { SubscriptionUsageTracker } from "./subscription-usage.ts";
 
 const POLL_INTERVAL_MS = 3_000;
 const PR_REFRESH_INTERVAL_MS = 60_000;
 const LIVE_UPDATE_INTERVAL_MS = 200;
+const SUBSCRIPTION_REFRESH_INTERVAL_MS = 2 * 60_000;
+const SUBSCRIPTION_TICK_INTERVAL_MS = 60_000;
 const CHARS_PER_ESTIMATED_TOKEN = 4;
 // The footer polls git constantly; --no-optional-locks keeps it from taking
 // .git/index.lock and racing the user's own git commands in the same repo.
@@ -94,7 +97,10 @@ interface GitState {
 export default function dashboardFooter(pi: ExtensionAPI) {
   let requestRender: (() => void) | undefined;
   let pollTimer: ReturnType<typeof setInterval> | undefined;
+  let subscriptionRefreshTimer: ReturnType<typeof setInterval> | undefined;
+  let subscriptionTickTimer: ReturnType<typeof setInterval> | undefined;
   let generation = 0;
+  const subscriptionUsage = new SubscriptionUsageTracker(() => requestRender?.());
   const activeGitRefreshes = new Set<number>();
   let queriedPrBranch: string | null = null;
   let lastPrQueryAt = 0;
@@ -214,6 +220,30 @@ export default function dashboardFooter(pi: ExtensionAPI) {
     }
   }
 
+  function stopSubscriptionUsage() {
+    if (subscriptionRefreshTimer) clearInterval(subscriptionRefreshTimer);
+    if (subscriptionTickTimer) clearInterval(subscriptionTickTimer);
+    subscriptionRefreshTimer = undefined;
+    subscriptionTickTimer = undefined;
+    subscriptionUsage.stop();
+  }
+
+  function startSubscriptionUsage(ctx: ExtensionContext) {
+    stopSubscriptionUsage();
+    if (ctx.mode !== "tui") return;
+    void subscriptionUsage.refresh(ctx);
+    subscriptionRefreshTimer = setInterval(
+      () => void subscriptionUsage.refresh(ctx),
+      SUBSCRIPTION_REFRESH_INTERVAL_MS,
+    );
+    subscriptionRefreshTimer.unref?.();
+    subscriptionTickTimer = setInterval(
+      () => requestRender?.(),
+      SUBSCRIPTION_TICK_INTERVAL_MS,
+    );
+    subscriptionTickTimer.unref?.();
+  }
+
   function install(ctx: ExtensionContext) {
     if (ctx.mode !== "tui") return;
 
@@ -236,6 +266,8 @@ export default function dashboardFooter(pi: ExtensionAPI) {
             `${contextTokens} / ${contextWindow ? formatTokens(contextWindow) : "?"} (${contextPercent}%)`;
           const cost = `$${sessionCost(ctx).toFixed(2)}`;
           const speed = tokensPerSecond === null ? "— tok/s" : `${Math.round(tokensPerSecond)} tok/s`;
+          const subscription = subscriptionUsage.getText();
+          const metrics = [context, cost, speed, subscription].filter(Boolean).join(" · ");
           const modelLabel = model
             ? `${sanitize(model.provider)}/${sanitize(model.id)} · ${model.reasoning ? pi.getThinkingLevel() : "off"}`
             : "no model";
@@ -254,7 +286,7 @@ export default function dashboardFooter(pi: ExtensionAPI) {
 
           const lines = [
             columns(theme.fg("text", modelLabel), theme.fg("muted", formatDirectory(ctx.cwd)), width),
-            columns(theme.fg("muted", `${context} · ${cost} · ${speed}`), theme.fg("muted", gitLabel), width),
+            columns(theme.fg("muted", metrics), theme.fg("muted", gitLabel), width),
           ];
 
           const statuses = footerData.getExtensionStatuses();
@@ -288,9 +320,13 @@ export default function dashboardFooter(pi: ExtensionAPI) {
     runStreamMs = 0;
     resetMessageTracking();
     install(ctx);
+    startSubscriptionUsage(ctx);
   });
 
-  pi.on("model_select", () => requestRender?.());
+  pi.on("model_select", (_event, ctx) => {
+    requestRender?.();
+    if (ctx.mode === "tui") void subscriptionUsage.refresh(ctx);
+  });
 
   pi.on("thinking_level_select", () => requestRender?.());
 
@@ -373,6 +409,7 @@ export default function dashboardFooter(pi: ExtensionAPI) {
     generation += 1;
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = undefined;
+    stopSubscriptionUsage();
     requestRender = undefined;
     if (ctx.mode === "tui") ctx.ui.setFooter(undefined);
   });

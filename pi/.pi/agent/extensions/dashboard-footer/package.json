@@ -1,0 +1,12 @@
+{
+  "name": "dashboard-footer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit -p .",
+    "test": "node --experimental-strip-types --test subscription-usage.test.ts"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}
