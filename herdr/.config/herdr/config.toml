@@ -8,6 +8,7 @@ accent = "#44FFB1"
 
 [ui]
 prompt_new_tab_name = false
+tab_bar_position = "bottom"
 
 agent_panel_sort = "priority"
 
