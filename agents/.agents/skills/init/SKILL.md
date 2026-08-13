@@ -2,6 +2,9 @@
 name: init
 description: Initialize a new project by cloning magoz/init template, configuring tech stack, and cleaning unused services.
 disable-model-invocation: true
+metadata:
+  opencode/slash: "true"
+  opencode/autoinvoke: "false"
 ---
 
 # Project Initialization Skill

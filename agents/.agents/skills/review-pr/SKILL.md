@@ -2,6 +2,9 @@
 name: review-pr
 description: Review one workflow-created draft GitHub pull request against its authoritative Agent Brief, repository owner guidance and patterns, deterministic validation, and durable-knowledge implications. Uses parallel read-only reviewers and at most one fix writer, and may mark a clean PR ready. Never merges or cleans up the worktree.
 disable-model-invocation: true
+metadata:
+  opencode/slash: "true"
+  opencode/autoinvoke: "false"
 ---
 
 # Review Pull Request

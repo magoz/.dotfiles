@@ -2,6 +2,9 @@
 name: triage-issue
 description: Triage one GitHub issue from a vague report into evidence and a next-action state. Investigates read-only, requests HITL only for missing information or genuine decisions, and may publish an authoritative Agent Brief with `ready-to-implement`. Never implements the issue.
 disable-model-invocation: true
+metadata:
+  opencode/slash: "true"
+  opencode/autoinvoke: "false"
 ---
 
 # Triage Issue

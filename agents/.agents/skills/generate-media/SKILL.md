@@ -1,6 +1,8 @@
 ---
 name: generate-media
 description: Generate images, videos, music, and speech using AI models (Imagen, Flux, Veo, Runway, Kling, PixVerse, Suno, ElevenLabs, Gemini, etc.). Use when user asks to create, generate, edit, upscale, or produce any visual or audio media.
+metadata:
+  opencode/slash: "true"
 ---
 
 # Generate Media
