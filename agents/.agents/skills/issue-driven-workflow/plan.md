@@ -283,7 +283,7 @@ Roles are conceptual; they are not yet final skill or agent definitions.
 | Validator | Run appropriate deterministic checks and report evidence | Read-only except test artifacts if explicitly permitted |
 | Knowledge reviewer | Propose durable tests/docs/ADR updates | Read-only proposal first |
 
-Until the protocol is proven, the parent Pi session remains the sole GitHub mutator and normal implementation uses one writer per worktree.
+Normal implementation uses one active coordinator and one writer per worktree. The source Pi may claim and launch an issue, but after the shared worktree handoff succeeds it shuts down; the fresh destination Pi becomes the sole coordinator and GitHub mutator for delivery.
 
 ## Workflow skills
 
@@ -338,8 +338,9 @@ Initial v1 responsibilities:
 - fetch the full issue thread and authoritative brief;
 - verify readiness, assignment, and blockers;
 - claim the issue as the first write;
-- create an issue-derived branch in an isolated worktree;
-- coordinate one regression-first writer;
+- invoke the shared `worktree` lifecycle to create and provision the issue-derived Herdr worktree;
+- hand off to a fresh destination Pi and shut down the source Pi;
+- coordinate one regression-first writer from the destination;
 - verify local evidence;
 - push and open one draft regular PR;
 - stop before review or merge.
@@ -515,10 +516,11 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 - Tests and deterministic checks enforce guarantees; reviewers contribute judgment.
 - Remote branch preservation is separate from merge readiness: push coherent inspected commits even when a full-suite baseline failure exists.
 - A proven pre-existing failure may be documented in a draft PR, but it blocks ready-for-review and merge until explicitly dispositioned.
-- Start manually and preserve one trusted GitHub coordinator.
+- Start manually and preserve one trusted active GitHub coordinator; successful worktree handoff transfers that role from the source Pi to the fresh destination Pi.
 - Every `implement-issue` worktree receives the full Vercel Development environment plus an isolated sandbox database before the writer starts; Vercel Development is the local-runtime trust boundary.
 - Dependency installation always precedes secret provisioning and uses the committed frozen lockfile.
-- `provision-env` is a global checkout-oriented orchestrator: it installs dependencies, reuses Vercel project identity, pulls Development variables directly into an ignored mode-`0600` `.env.local`, and calls `sandbox-db`.
+- `worktree` is the global Effect-based lifecycle orchestrator: every entry point uses it to create a grouped Herdr worktree, call `provision-env`, run explicit repository setup, start and verify one fresh Pi with an optional kickoff task as its initial message, and focus it.
+- `provision-env` remains a checkout-oriented orchestrator: it installs dependencies, reuses Vercel project identity, pulls Development variables directly into an ignored mode-`0600` `.env.local`, and calls `sandbox-db`.
 - `sandbox-db` remains a separate global resource capability because it creates, renews, and releases real infrastructure; native `vercel env pull` only retrieves existing configuration.
 - A complete Vercel Development profile (`SANDBOX_DB_NEON_API_KEY`, `SANDBOX_DB_NEON_PROJECT_ID`, and `SANDBOX_DB_PARENT_BRANCH_ID`) atomically selects project-scoped Neon authentication and the baseline branch for that repository; incomplete local profiles fail closed rather than mixing with global authentication.
 - Vercel's shared Development database value must always be replaced by the sandbox lease before the writer starts.
