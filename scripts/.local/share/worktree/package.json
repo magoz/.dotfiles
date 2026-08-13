@@ -1,0 +1,22 @@
+{
+  "name": "worktree",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Create a provisioned Herdr worktree and launch a fresh Pi session.",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/cli": "^0.77.0",
+    "@effect/platform": "^0.97.1",
+    "@effect/platform-node": "^0.108.1",
+    "effect": "^3.22.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.9",
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
+}

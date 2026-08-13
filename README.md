@@ -10,6 +10,7 @@ Follow the instructions: <https://github.com/github/copilot.vim>
 ## Development tooling
 
 - [`sandbox-db` and `provision-env`](scripts/.local/share/sandbox-db/README.md) — provision Vercel-backed local environments and expiring Neon database branches.
+- [`worktree`](scripts/.local/share/worktree/README.md) — create a provisioned Herdr worktree and hand off to a fresh Pi session.
 
 ## TODO
 

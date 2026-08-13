@@ -42,8 +42,9 @@ pi/.pi/node_modules/
 pi/.pi/agent/extensions/**/node_modules/
 
 
-# sandbox-db (deps are installed locally, not vendored)
+# local Effect CLIs (deps are installed locally, not vendored)
 scripts/.local/share/sandbox-db/node_modules/
+scripts/.local/share/worktree/node_modules/
 
 # vim temp files
 *.swp
