@@ -1,0 +1,12 @@
+{
+  "name": "opencode-vim-compat",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@leohenon/opencode-vim-plugin": "0.1.6",
+    "@opentui/core": "0.5.2",
+    "@opentui/keymap": "0.5.2",
+    "@opentui/solid": "0.5.2",
+    "solid-js": "1.9.12"
+  }
+}
