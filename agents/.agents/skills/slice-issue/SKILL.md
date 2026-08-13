@@ -2,6 +2,9 @@
 name: slice-issue
 description: Decompose one clear but oversized GitHub issue with an authoritative Agent Brief into approved, vertical, agent-sized child issues with native sub-issue and dependency relationships. Never implements the work.
 disable-model-invocation: true
+metadata:
+  opencode/slash: "true"
+  opencode/autoinvoke: "false"
 ---
 
 # Slice Issue

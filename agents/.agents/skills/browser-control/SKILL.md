@@ -1,6 +1,8 @@
 ---
 name: browser-control
 description: Drive the user's existing Chromium-family browser with deterministic Playwright. Use when asked to inspect, automate, test, or interact with a visible browser tab; continue an authenticated browser workflow; handle 2FA, passkeys, CAPTCHAs, or payment confirmation; record browser behavior; or capture an authenticated network flow.
+metadata:
+  opencode/slash: "true"
 ---
 
 # Browser Control

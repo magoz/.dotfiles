@@ -2,6 +2,9 @@
 name: report-issue
 description: Capture one observed problem as a minimal GitHub issue case file, avoid duplicates, optionally establish a native blocker relationship, and continue through the canonical triage-issue workflow. Never implements the reported issue.
 disable-model-invocation: true
+metadata:
+  opencode/slash: "true"
+  opencode/autoinvoke: "false"
 ---
 
 # Report Issue

@@ -1,6 +1,8 @@
 ---
 name: research
 description: Investigate a question against high-trust primary sources and synthesize cited findings. Use when the user wants a topic researched, docs or API facts gathered, or reading legwork delegated to background agents.
+metadata:
+  opencode/slash: "true"
 ---
 
 Delegate the reading legwork through Pi's native subagent mechanism so research can proceed without consuming the main agent's context. **Do not launch a nested Pi CLI, terminal pane, or other process as a substitute for a subagent.** If native subagents are unavailable, research directly in the current session.

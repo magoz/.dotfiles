@@ -2,6 +2,9 @@
 name: figma-import-image
 description: "Legacy fallback for importing a bitmap through the older capture/R2 workflow. Use only when Figma's supported upload_assets tool is demonstrably unavailable and the user accepts the workaround; never prefer it for normal URL, local-file, generated-image, or screenshot uploads."
 disable-model-invocation: true
+metadata:
+  opencode/slash: "true"
+  opencode/autoinvoke: "false"
 ---
 
 # figma-import-image

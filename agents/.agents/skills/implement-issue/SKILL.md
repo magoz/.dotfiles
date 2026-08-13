@@ -2,6 +2,9 @@
 name: implement-issue
 description: Implement one GitHub issue carrying `ready-to-implement`, using assignment as the claim, one isolated Git worktree, one writer agent, regression-first validation, and a draft pull request. Stops before review or merge.
 disable-model-invocation: true
+metadata:
+  opencode/slash: "true"
+  opencode/autoinvoke: "false"
 ---
 
 # Implement Issue

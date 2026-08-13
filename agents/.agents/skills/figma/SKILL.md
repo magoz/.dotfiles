@@ -2,6 +2,9 @@
 name: figma
 description: "Mandatory router for every Figma, FigJam, Slides, Code Connect, or Figma MCP task. Invoke before use_figma, create_new_file, get_design_context, generate_diagram, get_motion_context, generate_figma_design, or upload_assets. Routes canvas edits, design-to-code, libraries, diagrams, motion, SwiftUI, and image workflows to the required official instructions."
 disable-model-invocation: true
+metadata:
+  opencode/slash: "true"
+  opencode/autoinvoke: "false"
 ---
 
 # Figma workflow router
