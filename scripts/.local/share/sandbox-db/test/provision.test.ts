@@ -25,23 +25,38 @@ const processFailure = (command: string) =>
 const setup = async (
   failTestDatabase = false,
   existingDefault = false,
-  failTestPull = false
+  failTestPull = false,
+  targetLinked = true
 ) => {
   const repo = await mkdtemp(join(tmpdir(), "provision-env-"))
+  const primary = join(repo, "primary")
+  const sibling = join(repo, "sibling")
   await writeFile(join(repo, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n")
   await mkdir(join(repo, ".vercel"), { recursive: true })
-  await writeFile(join(repo, ".vercel", "project.json"), "{}\n")
+  if (targetLinked) await writeFile(join(repo, ".vercel", "project.json"), "{}\n")
+  const projectIdentity = '{"projectId":"primary","orgId":"team"}\n'
+  await mkdir(join(primary, ".vercel"), { recursive: true })
+  await writeFile(join(primary, ".vercel", "project.json"), projectIdentity)
+  await mkdir(join(sibling, ".vercel"), { recursive: true })
+  await writeFile(join(sibling, ".vercel", "project.json"), projectIdentity)
   const calls: Array<Call> = []
 
   const capture: ProvisionProcessService["capture"] = (command, args, options: RunOptions = {}) => {
     calls.push({ mode: "capture", command, args, cwd: options.cwd })
     if (command === "git") {
+      const gitCwd = args[1]!
       const gitArgs = args.slice(2)
       if (gitArgs[0] === "rev-parse" && gitArgs[1] === "--is-inside-work-tree") {
         return Effect.succeed({ stdout: "true\n", stderr: "" })
       }
       if (gitArgs[0] === "rev-parse" && gitArgs[1] === "--show-toplevel") {
-        return Effect.succeed({ stdout: `${repo}\n`, stderr: "" })
+        return Effect.succeed({ stdout: `${gitCwd}\n`, stderr: "" })
+      }
+      if (gitArgs[0] === "worktree" && gitArgs[1] === "list") {
+        return Effect.succeed({
+          stdout: `worktree ${primary}\nHEAD abc123\nbranch refs/heads/main\n\nworktree ${sibling}\nHEAD bcd234\nbranch refs/heads/sibling\n\nworktree ${repo}\nHEAD def456\nbranch refs/heads/feature\n`,
+          stderr: ""
+        })
       }
       if (gitArgs[0] === "ls-files") return Effect.fail(processFailure("git ls-files"))
       if (gitArgs[0] === "check-ignore") {
@@ -139,7 +154,7 @@ const setup = async (
     NodeContext.layer,
     Layer.succeed(ProvisionProcess, { capture, inherit })
   )
-  return { repo, calls, layer }
+  return { repo, primary, sibling, calls, layer }
 }
 
 const options = (repo: string) => ({
@@ -161,6 +176,25 @@ test("Vercel database URLs remain when sandbox allocation is not requested", () 
 
   expect(result.content).toBe(pulled)
   expect(result.databaseUrlsRemoved).toBe(0)
+})
+
+test("an unlinked worktree reuses the shared sibling Vercel identity", async () => {
+  const fixture = await setup(false, false, false, false)
+  try {
+    await Effect.runPromise(
+      provisionEnvironment({
+        ...options(fixture.repo),
+        database: false,
+        skipInstall: true
+      }).pipe(Effect.provide(fixture.layer))
+    )
+
+    expect(await readFile(join(fixture.repo, ".vercel", "project.json"), "utf8")).toBe(
+      '{"projectId":"primary","orgId":"team"}\n'
+    )
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
 })
 
 test("provisioning pulls both environments and creates independent database leases", async () => {

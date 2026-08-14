@@ -55,8 +55,13 @@ sandbox databases. It then publishes both environments as ignored, mode-`0600`
 files before calling `sandbox-db`:
 
 ```sh
-provision-env --repo /path/to/worktree --source /path/to/linked-checkout --database
+provision-env --repo /path/to/worktree --database
 ```
+
+An unlinked worktree automatically reuses the Vercel identity when its linked
+sibling checkouts all identify the same project. `--source
+/path/to/linked-checkout` remains available as an explicit override when sibling
+checkouts intentionally use different Vercel projects.
 
 The profile is atomic:
 
