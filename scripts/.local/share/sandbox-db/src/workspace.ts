@@ -86,7 +86,7 @@ export const ensureIgnored = (root: string, envFile: string) =>
     }
   })
 
-const writePrivately = (file: string, content: string) =>
+export const writePrivately = (file: string, content: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const temporary = `${file}.sandbox-db.tmp`
@@ -104,6 +104,15 @@ const readLines = (file: string) =>
     if (!exists) return [] as ReadonlyArray<string>
     const content = yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => ""))
     return content.split("\n")
+  })
+
+export const hasEnvKeys = (file: string, keys: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const exists = yield* fs.exists(file).pipe(Effect.orElseSucceed(() => false))
+    if (!exists) return false
+    const lines = yield* readLines(file)
+    return keys.every((key) => lines.some((line) => line.startsWith(`${key}=`)))
   })
 
 /** The only place redacted connection material is unwrapped. */

@@ -48,7 +48,7 @@ explicit user security decision.
 - a running Herdr server with the Pi integration installed;
 - `git`, `bun`, `herdr`, `pi`, `vercel`, `provision-env`, and `sandbox-db` in `PATH`;
 - a source Git checkout linked to Vercel, or exactly one linked sibling checkout;
-- ignored `.env.local` and `.vercel/` paths in the repository;
+- ignored `.env.local`, `.env.test`, and `.vercel/` paths in the repository;
 - the project-local sandbox database profile expected by `provision-env`, or valid global `sandbox-db` authentication.
 
 ## CLI reference
@@ -123,7 +123,7 @@ In order, `worktree create`:
 1. resolves the source Git checkout, primary repository, base ref, and sibling checkout path;
 2. calls `herdr worktree create --path ...`, which creates both the checkout and its grouped Herdr workspace;
 3. resolves the workspace's initial root pane;
-4. runs `provision-env --database` against the new checkout;
+4. runs `provision-env --database`, pulling Development and `test` Vercel variables and creating independent database leases for both;
 5. runs every explicit `--setup` command;
 6. starts a fresh named Pi session with the kickoff task as Pi's initial message;
 7. verifies the Pi session is ready with the startup task attached;
@@ -135,8 +135,8 @@ worktree.
 
 ## Failure and recovery
 
-`provision-env` owns rollback of a newly pulled `.env.local` and attempted
-database lease. After Herdr has created the checkout, this CLI preserves the
+`provision-env` owns rollback of newly pulled `.env.local` and `.env.test` files
+and database leases created by that invocation. After Herdr has created the checkout, this CLI preserves the
 worktree, branch, and workspace on later failure so the exact state can be
 inspected and resumed. It never force-removes a checkout or deletes a branch.
 

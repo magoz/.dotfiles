@@ -80,8 +80,8 @@ export const BranchListResponse = Schema.Struct({
   branches: Schema.Array(Branch)
 })
 
-/** Lease records are persisted outside the repository and hold no secrets. */
-export const Lease = Schema.Struct({
+/** Legacy single-lease records remain readable as the `default` lease. */
+const LegacyLease = Schema.Struct({
   version: Schema.Literal(1),
   projectId: Schema.String,
   parentBranch: Schema.String,
@@ -95,6 +95,38 @@ export const Lease = Schema.Struct({
   createdAt: Schema.String,
   expiresAt: Schema.String
 })
+export type LegacyLease = Schema.Schema.Type<typeof LegacyLease>
+
+/** Lease records are persisted outside the repository and hold no secrets. */
+export const Lease = Schema.Struct({
+  version: Schema.Literal(2),
+  leaseName: Schema.String,
+  projectId: Schema.String,
+  parentBranch: Schema.String,
+  branchId: Schema.String,
+  branchName: Schema.String,
+  worktree: Schema.String,
+  repository: Schema.String,
+  label: Schema.String,
+  configEnvFile: Schema.String,
+  envFile: Schema.String,
+  envKeys: Schema.Array(Schema.String),
+  createdAt: Schema.String,
+  expiresAt: Schema.String
+})
 export type Lease = Schema.Schema.Type<typeof Lease>
 
-export const LeaseFromJson = Schema.parseJson(Lease)
+export const LeaseRecord = Schema.Union(LegacyLease, Lease)
+export type LeaseRecord = Schema.Schema.Type<typeof LeaseRecord>
+
+export const LeaseFromJson = Schema.parseJson(LeaseRecord)
+
+export const normalizeLease = (lease: LeaseRecord): Lease =>
+  lease.version === 2
+    ? lease
+    : {
+        ...lease,
+        version: 2,
+        leaseName: "default",
+        configEnvFile: lease.envFile
+      }

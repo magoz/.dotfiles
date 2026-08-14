@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { Command, Options, Prompt } from "@effect/cli"
-import { Path } from "@effect/platform"
+import { FileSystem, Path } from "@effect/platform"
 import { NodeContext, NodeHttpClient, NodeRuntime } from "@effect/platform-node"
 import { Console, Effect, Either, Layer, Option, Redacted } from "effect"
 import { createHash, randomBytes } from "node:crypto"
@@ -24,7 +24,14 @@ import {
   setExpiration,
   waitUntilReady
 } from "./neon"
-import { ensureIgnored, removeEnvKeys, resolveWorkspace, writeEnvKeys } from "./workspace"
+import {
+  ensureIgnored,
+  hasEnvKeys,
+  removeEnvKeys,
+  resolveWorkspace,
+  writeEnvKeys,
+  writePrivately
+} from "./workspace"
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -66,16 +73,27 @@ const report = (json: boolean, payload: Record<string, string | number>) => {
 
 const localConfigKeys = new Set<string>(LOCAL_CONFIG_KEYS)
 
-const ensureLeaseProject = (config: { readonly projectId: string }, lease: Lease) =>
-  config.projectId === lease.projectId
-    ? Effect.void
-    : Effect.fail(
+const ensureLeaseProfile = (
+  config: { readonly projectId: string; readonly parentBranch: string },
+  lease: Lease
+) =>
+  config.projectId !== lease.projectId
+    ? Effect.fail(
         new PolicyError({
           message:
             `lease belongs to Neon project ${lease.projectId}, but the resolved profile selects ${config.projectId}\n` +
             "restore the original worktree environment before managing this lease"
         })
       )
+    : config.parentBranch !== lease.parentBranch
+      ? Effect.fail(
+          new PolicyError({
+            message:
+              `lease belongs to parent branch ${lease.parentBranch}, but the resolved profile selects ${config.parentBranch}\n` +
+              "release the existing lease before changing its parent branch"
+          })
+        )
+      : Effect.void
 
 // ---------------------------------------------------------------------------
 // shared options
@@ -93,6 +111,19 @@ const ttlOption = (fallback: string) =>
     Options.withDescription(`lifetime such as 12h or 7d (default ${fallback})`),
     Options.withDefault(fallback)
   )
+const leaseNameOption = Options.text("lease").pipe(
+  Options.withDescription("lease slot within the worktree (default: default)"),
+  Options.withDefault("default")
+)
+
+const validateLeaseName = (leaseName: string) =>
+  /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(leaseName)
+    ? Effect.succeed(leaseName)
+    : Effect.fail(
+        new PolicyError({
+          message: "--lease must be 1-64 letters, digits, dots, underscores, or hyphens"
+        })
+      )
 
 // ---------------------------------------------------------------------------
 // auth
@@ -274,7 +305,15 @@ const create = Command.make(
       Options.withDescription("short label, e.g. issue-4"),
       Options.optional
     ),
-    envFile: Options.text("env-file").pipe(Options.withDefault(".env.local")),
+    envFile: Options.text("env-file").pipe(
+      Options.withDescription("env file that receives database URLs"),
+      Options.withDefault(".env.local")
+    ),
+    configEnvFile: Options.text("config-env-file").pipe(
+      Options.withDescription("env file containing the sandbox database profile (default: --env-file)"),
+      Options.optional
+    ),
+    leaseName: leaseNameOption,
     keys: Options.text("keys").pipe(
       Options.withDefault("DATABASE_URL,DATABASE_URL_UNPOOLED")
     ),
@@ -285,12 +324,18 @@ const create = Command.make(
       Options.withDescription("do not wait for the branch to become ready")
     )
   },
-  ({ envFile, forceNew, json, keys, label, noWait, ttl, worktree }) =>
+  ({ configEnvFile, envFile, forceNew, json, keys, label, leaseName, noWait, ttl, worktree }) =>
     Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
       const path = yield* Path.Path
       const workspace = yield* resolveWorkspace(worktree)
+      const validatedLeaseName = yield* validateLeaseName(leaseName)
       const envPath = path.resolve(workspace.root, envFile)
-      const config = yield* loadConfig(envPath)
+      const configEnvPath = path.resolve(
+        workspace.root,
+        Option.getOrElse(configEnvFile, () => envFile)
+      )
+      const config = yield* loadConfig(configEnvPath)
 
       const envKeys = keys.split(",").map((key) => key.trim()).filter((key) => key.length > 0)
       if (envKeys.length === 0) {
@@ -320,16 +365,43 @@ const create = Command.make(
       yield* ensureIgnored(workspace.root, envPath)
       const ttlSeconds = yield* parseTtl(ttl)
 
-      const existing = yield* readLease(workspace.root)
-      if (Option.isSome(existing)) yield* ensureLeaseProject(config, existing.value)
+      const existing = yield* readLease(workspace.root, validatedLeaseName)
+      if (Option.isSome(existing)) yield* ensureLeaseProfile(config, existing.value)
       if (Option.isSome(existing) && !forceNew) {
         const live = yield* getBranch(config, existing.value.branchId)
         if (Option.isSome(live)) {
+          const sameKeys =
+            existing.value.envKeys.length === envKeys.length &&
+            existing.value.envKeys.every((key, index) => key === envKeys[index])
+          if (
+            existing.value.envFile !== envPath ||
+            existing.value.configEnvFile !== configEnvPath ||
+            !sameKeys
+          ) {
+            return yield* Effect.fail(
+              new PolicyError({
+                message:
+                  `live ${validatedLeaseName} lease targets different env paths or keys; ` +
+                  "release it before changing lease configuration"
+              })
+            )
+          }
+          if (!(yield* hasEnvKeys(existing.value.envFile, existing.value.envKeys))) {
+            return yield* Effect.fail(
+              new PolicyError({
+                message:
+                  `live ${validatedLeaseName} lease URLs are missing from ${existing.value.envFile}; ` +
+                  "release it before reprovisioning"
+              })
+            )
+          }
           return yield* report(json, {
             status: "reused",
+            lease: existing.value.leaseName,
             branch_name: existing.value.branchName,
             branch_id: existing.value.branchId,
             expires_at: live.value.expires_at ?? "none",
+            config_env_file: existing.value.configEnvFile,
             env_file: existing.value.envFile,
             note: "existing lease is still live; use renew to extend"
           })
@@ -341,19 +413,19 @@ const create = Command.make(
       const suffix = randomBytes(3).toString("hex")
       const branchName = `${BRANCH_PREFIX}${repositoryName}-${shortLabel}-${suffix}`
       const expiresAt = timestamp(ttlSeconds)
+      const envExisted = yield* fs.exists(envPath).pipe(Effect.orElseSucceed(() => false))
+      const previousEnv = envExisted
+        ? yield* fs.readFileString(envPath).pipe(
+            Effect.mapError(
+              (cause) => new PolicyError({ message: `cannot snapshot ${envPath}: ${cause}` })
+            )
+          )
+        : undefined
 
       const created = yield* createBranch(config, { name: branchName, expiresAt })
-
-      yield* writeEnvKeys(
-        envPath,
-        envKeys.map(
-          (key) =>
-            [key, key.toUpperCase().endsWith("UNPOOLED") ? created.direct : created.pooled] as const
-        )
-      )
-
       const lease: Lease = {
-        version: 1,
+        version: 2,
+        leaseName: validatedLeaseName,
         projectId: config.projectId,
         parentBranch: config.parentBranch,
         branchId: created.branch.id,
@@ -361,27 +433,67 @@ const create = Command.make(
         worktree: workspace.root,
         repository: workspace.repository,
         label: shortLabel,
+        configEnvFile: configEnvPath,
         envFile: envPath,
         envKeys,
         createdAt: timestamp(),
         expiresAt: created.branch.expires_at ?? expiresAt
       }
-      yield* writeLease(lease)
+      let envWritten = false
+      let leaseWritten = false
 
-      const state = noWait ? "not-checked" : yield* waitUntilReady(config, created.branch.id)
+      return yield* Effect.gen(function* () {
+        yield* writeEnvKeys(
+          envPath,
+          envKeys.map(
+            (key) =>
+              [
+                key,
+                key.toUpperCase().endsWith("UNPOOLED") ? created.direct : created.pooled
+              ] as const
+          )
+        )
+        envWritten = true
+        yield* writeLease(lease)
+        leaseWritten = true
 
-      return yield* report(json, {
-        status: "created",
-        branch_name: lease.branchName,
-        branch_id: lease.branchId,
-        state,
-        expires_at: lease.expiresAt,
-        env_file: lease.envFile,
-        env_keys: envKeys.join(","),
-        config_source: config.backend,
-        parent_branch: config.parentBranch,
-        note: "connection string written to env file; not printed"
-      })
+        const state = noWait ? "not-checked" : yield* waitUntilReady(config, created.branch.id)
+
+        return yield* report(json, {
+          status: "created",
+          lease: lease.leaseName,
+          branch_name: lease.branchName,
+          branch_id: lease.branchId,
+          state,
+          expires_at: lease.expiresAt,
+          env_file: lease.envFile,
+          env_keys: envKeys.join(","),
+          config_source: config.backend,
+          config_env_file: lease.configEnvFile,
+          parent_branch: config.parentBranch,
+          note: "connection string written to env file; not printed"
+        })
+      }).pipe(
+        Effect.onError(() =>
+          Effect.gen(function* () {
+            yield* deleteBranch(config, created.branch.id).pipe(Effect.catchAll(() => Effect.void))
+            if (envWritten) {
+              if (previousEnv !== undefined) {
+                yield* writePrivately(envPath, previousEnv).pipe(
+                  Effect.catchAll(() => Effect.void)
+                )
+              } else {
+                yield* fs.remove(envPath).pipe(Effect.catchAll(() => Effect.void))
+              }
+            }
+            if (leaseWritten) {
+              yield* removeLease(workspace.root, validatedLeaseName).pipe(
+                Effect.catchAll(() => Effect.void)
+              )
+            }
+          })
+        )
+      )
     })
 )
 
@@ -391,24 +503,26 @@ const create = Command.make(
 
 const status = Command.make(
   "status",
-  { worktree: worktreeOption, json: jsonOption },
-  ({ json, worktree }) =>
+  { worktree: worktreeOption, json: jsonOption, leaseName: leaseNameOption },
+  ({ json, leaseName, worktree }) =>
     Effect.gen(function* () {
       const workspace = yield* resolveWorkspace(worktree)
-      const lease = yield* readLease(workspace.root)
+      const validatedLeaseName = yield* validateLeaseName(leaseName)
+      const lease = yield* readLease(workspace.root, validatedLeaseName)
 
       if (Option.isNone(lease)) {
-        yield* report(json, { status: "none", worktree: workspace.root })
+        yield* report(json, { status: "none", lease: validatedLeaseName, worktree: workspace.root })
         return yield* Effect.sync(() => {
           process.exitCode = 1
         })
       }
 
-      const config = yield* loadConfig(lease.value.envFile)
-      yield* ensureLeaseProject(config, lease.value)
+      const config = yield* loadConfig(lease.value.configEnvFile)
+      yield* ensureLeaseProfile(config, lease.value)
       const branch = yield* getBranch(config, lease.value.branchId)
       yield* report(json, {
         status: Option.isSome(branch) ? "live" : "missing",
+        lease: lease.value.leaseName,
         branch_name: lease.value.branchName,
         branch_id: lease.value.branchId,
         state: Option.match(branch, {
@@ -422,6 +536,7 @@ const status = Command.make(
         repository: lease.value.repository,
         parent_branch: lease.value.parentBranch,
         config_source: config.backend,
+        config_env_file: lease.value.configEnvFile,
         env_file: lease.value.envFile,
         worktree: lease.value.worktree
       })
@@ -436,19 +551,22 @@ const status = Command.make(
 
 const renew = Command.make(
   "renew",
-  { worktree: worktreeOption, json: jsonOption, ttl: ttlOption("7d") },
-  ({ json, ttl, worktree }) =>
+  { worktree: worktreeOption, json: jsonOption, leaseName: leaseNameOption, ttl: ttlOption("7d") },
+  ({ json, leaseName, ttl, worktree }) =>
     Effect.gen(function* () {
       const workspace = yield* resolveWorkspace(worktree)
-      const lease = yield* readLease(workspace.root)
+      const validatedLeaseName = yield* validateLeaseName(leaseName)
+      const lease = yield* readLease(workspace.root, validatedLeaseName)
       if (Option.isNone(lease)) {
         return yield* Effect.fail(
-          new PolicyError({ message: `no lease recorded for ${workspace.root}` })
+          new PolicyError({
+            message: `no ${validatedLeaseName} lease recorded for ${workspace.root}`
+          })
         )
       }
 
-      const config = yield* loadConfig(lease.value.envFile)
-      yield* ensureLeaseProject(config, lease.value)
+      const config = yield* loadConfig(lease.value.configEnvFile)
+      yield* ensureLeaseProfile(config, lease.value)
       const ttlSeconds = yield* parseTtl(ttl)
       const branch = yield* setExpiration(config, lease.value.branchId, timestamp(ttlSeconds))
       const updated: Lease = {
@@ -459,6 +577,7 @@ const renew = Command.make(
 
       return yield* report(json, {
         status: "renewed",
+        lease: updated.leaseName,
         branch_name: updated.branchName,
         branch_id: updated.branchId,
         expires_at: updated.expiresAt
@@ -471,20 +590,26 @@ const release = Command.make(
   {
     worktree: worktreeOption,
     json: jsonOption,
+    leaseName: leaseNameOption,
     keepEnv: Options.boolean("keep-env").pipe(
       Options.withDescription("leave env keys in place")
     )
   },
-  ({ json, keepEnv, worktree }) =>
+  ({ json, keepEnv, leaseName, worktree }) =>
     Effect.gen(function* () {
       const workspace = yield* resolveWorkspace(worktree)
-      const lease = yield* readLease(workspace.root)
+      const validatedLeaseName = yield* validateLeaseName(leaseName)
+      const lease = yield* readLease(workspace.root, validatedLeaseName)
       if (Option.isNone(lease)) {
-        return yield* report(json, { status: "none", worktree: workspace.root })
+        return yield* report(json, {
+          status: "none",
+          lease: validatedLeaseName,
+          worktree: workspace.root
+        })
       }
 
-      const config = yield* loadConfig(lease.value.envFile)
-      yield* ensureLeaseProject(config, lease.value)
+      const config = yield* loadConfig(lease.value.configEnvFile)
+      yield* ensureLeaseProfile(config, lease.value)
 
       // Deletion guardrails: only this tool's own, non-default branches.
       if (!lease.value.branchName.startsWith(BRANCH_PREFIX)) {
@@ -512,10 +637,11 @@ const release = Command.make(
       if (!keepEnv) {
         yield* removeEnvKeys(lease.value.envFile, lease.value.envKeys)
       }
-      yield* removeLease(workspace.root)
+      yield* removeLease(workspace.root, lease.value.leaseName)
 
       return yield* report(json, {
         status: Option.isSome(branch) ? "released" : "already-gone",
+        lease: lease.value.leaseName,
         branch_name: lease.value.branchName,
         branch_id: lease.value.branchId,
         env_keys_removed: keepEnv ? "no" : "yes"
@@ -533,7 +659,12 @@ const list = Command.make("list", { json: jsonOption }, ({ json }) =>
     if (json) return yield* Console.log(JSON.stringify(leases, null, 2))
     if (leases.length === 0) return yield* Console.log("no leases")
     return yield* Console.log(
-      leases.map((lease) => `${lease.branchName}  ${lease.expiresAt}  ${lease.worktree}`).join("\n")
+      leases
+        .map(
+          (lease) =>
+            `${lease.leaseName}  ${lease.branchName}  ${lease.expiresAt}  ${lease.worktree}`
+        )
+        .join("\n")
     )
   })
 )
@@ -554,8 +685,12 @@ const gc = Command.make(
       let live = 0
 
       for (const lease of leases) {
-        const resolved = yield* Effect.either(loadConfig(lease.envFile))
-        if (Either.isLeft(resolved) || resolved.right.projectId !== lease.projectId) {
+        const resolved = yield* Effect.either(loadConfig(lease.configEnvFile))
+        if (
+          Either.isLeft(resolved) ||
+          resolved.right.projectId !== lease.projectId ||
+          resolved.right.parentBranch !== lease.parentBranch
+        ) {
           inaccessible.push(lease.branchName)
           continue
         }
@@ -570,7 +705,7 @@ const gc = Command.make(
           continue
         }
         stale.push(lease.branchName)
-        if (!dryRun) yield* removeLease(lease.worktree)
+        if (!dryRun) yield* removeLease(lease.worktree, lease.leaseName)
       }
 
       yield* report(json, {

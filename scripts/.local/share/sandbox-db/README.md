@@ -1,8 +1,8 @@
 # sandbox-db
 
 `sandbox-db` provisions short-lived Neon PostgreSQL branches for local Git
-worktrees. `provision-env` combines it with dependency installation and a Vercel
-Development environment pull.
+worktrees. `provision-env` combines it with dependency installation and pulls
+from Vercel's Development and `test` environments.
 
 A disposable branch can start from either:
 
@@ -16,7 +16,7 @@ disposable branch.
 ## Requirements
 
 - Bun and the package dependencies installed
-- Git worktree with an ignored `.env.local`
+- Git worktree with ignored `.env.local` and `.env.test` files
 - Neon API credential authorized for the selected project
 - Vercel CLI authentication and project linkage when using `provision-env`
 
@@ -43,8 +43,10 @@ Production unless those environments independently require them. The parent
 branch should be a non-production, sanitized development baseline suitable for
 local cloning.
 
-`provision-env` pulls the profile into the ignored, mode-`0600` `.env.local`
-before calling `sandbox-db`:
+Keep the profile in Development so both database leases resolve one atomic
+credential/project/parent tuple. Configure a readable custom Vercel environment
+named `test` for test-specific application variables. `provision-env` pulls both
+environments into ignored, mode-`0600` files before calling `sandbox-db`:
 
 ```sh
 provision-env --repo /path/to/worktree --source /path/to/linked-checkout --database
@@ -57,14 +59,18 @@ The profile is atomic:
 - if any variable is missing or empty, provisioning fails rather than combining
   credentials and settings from different accounts.
 
-After resolving the profile, `sandbox-db` creates an expiring branch with
-`SANDBOX_DB_PARENT_BRANCH_ID` as its Neon `parent_id`. It then replaces
-`DATABASE_URL` and `DATABASE_URL_UNPOOLED` in `.env.local` with the disposable
-branch URLs. The three `SANDBOX_DB_*` variables remain unchanged so later
-lifecycle commands can authenticate.
+After resolving the profile, `sandbox-db` creates two independently expiring
+branches with `SANDBOX_DB_PARENT_BRANCH_ID` as their Neon `parent_id`:
 
-Repository-owned schema preparation remains a separate step. Run only a command
-known to be safe for the isolated database and its baseline state.
+- the backward-compatible `default` lease writes `DATABASE_URL` and
+  `DATABASE_URL_UNPOOLED` to `.env.local`;
+- the `test` lease writes independent URLs to `.env.test` while still reading
+  its sandbox profile from `.env.local`.
+
+The three `SANDBOX_DB_*` variables remain unchanged so later lifecycle commands
+can authenticate. Repository-owned schema preparation remains a separate step.
+Run it once for each database when the baseline does not already contain the
+required schema, and only use commands known to be safe for isolated databases.
 
 ## Global fallback configuration
 
@@ -95,10 +101,21 @@ without printing the credential.
 
 ## Direct lifecycle usage
 
-Create or reuse a lease for the current worktree:
+Create or reuse the default lease for the current worktree:
 
 ```sh
-sandbox-db create --label issue-123 --ttl 7d
+sandbox-db create --label issue-123-development --ttl 7d
+```
+
+Create an independent named test lease whose profile comes from `.env.local`:
+
+```sh
+sandbox-db create \
+  --lease test \
+  --config-env-file .env.local \
+  --env-file .env.test \
+  --label issue-123-test \
+  --ttl 7d
 ```
 
 Target another worktree:
@@ -107,13 +124,16 @@ Target another worktree:
 sandbox-db create --worktree /path/to/worktree --label issue-123 --ttl 3d
 ```
 
-Inspect, renew, and release it:
+Inspect, renew, and release either slot:
 
 ```sh
-sandbox-db status --worktree /path/to/worktree
-sandbox-db renew --worktree /path/to/worktree --ttl 7d
-sandbox-db release --worktree /path/to/worktree
+sandbox-db status --worktree /path/to/worktree --lease test
+sandbox-db renew --worktree /path/to/worktree --lease test --ttl 7d
+sandbox-db release --worktree /path/to/worktree --lease test
 ```
+
+Omitting `--lease` continues to target the `default` slot and remains compatible
+with legacy single-lease records.
 
 List local lease records and prune records for branches that Neon has already
 removed:
@@ -128,11 +148,11 @@ Important lifecycle behavior:
 
 - branch names use the guarded `agent/` prefix;
 - TTL is mandatory and cannot exceed seven days;
-- `create` reuses a live lease by default;
+- `create` reuses a live lease in the same named slot by default;
 - release refuses default, protected, wrong-project, or non-`agent/` branches;
 - release removes the leased database URL keys unless `--keep-env` is passed;
 - leases contain identifiers and paths, never API keys or database URLs;
-- connection strings are written to `.env.local` but never printed;
+- connection strings are written to the selected ignored env file but never printed;
 - custom `--keys` must be valid environment names and cannot overwrite the
   `SANDBOX_DB_*` authentication profile.
 
@@ -152,23 +172,23 @@ In order, the coordinator:
 2. installs dependencies from the committed frozen lockfile;
 3. reuses or creates the Vercel project link;
 4. pulls Vercel Development variables into a new `.env.local`;
-5. sets `.env.local` to mode `0600`;
-6. calls `sandbox-db create` when `--database` is requested.
+5. pulls the Vercel `test` environment into a new `.env.test`;
+6. sets both files to mode `0600`;
+7. creates the `default` and `test` database leases when `--database` is requested.
 
-It refuses to overwrite an existing `.env.local`. Use `--skip-vercel` only when
-intentionally preserving an already prepared file. If setup fails after database
-allocation starts, it attempts to release the lease and removes the environment
-file it created.
+It refuses to overwrite either env file. Use `--skip-vercel` only when
+intentionally preserving both prepared files. If setup fails after database
+allocation starts, it releases only leases created by that invocation in
+reverse order, restores preserved env files, and removes only env files it created.
 
 ## Recovery and cleanup
 
-Project-local lifecycle operations resolve their credential from the lease's
-`.env.local`. If that file is deleted, moved, or no longer contains the original
-profile:
+Both project-local lease slots resolve their credential from `.env.local`. If
+that file is deleted, moved, or no longer contains the original profile:
 
 1. restore the worktree's Vercel link if needed;
 2. run `vercel env pull .env.local --environment development` in the worktree;
-3. retry `sandbox-db status`, `renew`, or `release`.
+3. retry `sandbox-db status`, `renew`, or `release` with the affected `--lease`.
 
 Do not substitute a profile from another Neon project. Project mismatches fail
 closed.
