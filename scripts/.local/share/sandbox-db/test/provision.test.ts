@@ -4,7 +4,7 @@ import { Effect, Layer } from "effect"
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { provisionEnvironment } from "../src/provision"
+import { provisionEnvironment, stripPulledEnvironment } from "../src/provision"
 import { ProvisionProcessError } from "../src/provision-domain"
 import {
   ProvisionProcess,
@@ -56,6 +56,8 @@ const setup = async (
         stdout: [
           " name               value       environments",
           " APP_SETTING        Encrypted   Development, test",
+          " DATABASE_URL       Encrypted   Development, test",
+          " DATABASE_URL_UNPOOLED Encrypted Development, test",
           " TURBO_CACHE        Encrypted   test",
           " VERCEL_API_TOKEN   Encrypted   Development, test"
         ].join("\n"),
@@ -102,6 +104,8 @@ const setup = async (
             file,
             [
               "# Created by Vercel CLI",
+              "DATABASE_URL=postgres://vercel-pooled",
+              "DATABASE_URL_UNPOOLED=postgres://vercel-direct",
               "SANDBOX_DB_NEON_API_KEY=key",
               "SANDBOX_DB_NEON_PROJECT_ID=project",
               "SANDBOX_DB_PARENT_BRANCH_ID=parent",
@@ -147,6 +151,18 @@ const options = (repo: string) => ({
   skipVercel: false
 })
 
+test("Vercel database URLs remain when sandbox allocation is not requested", () => {
+  const pulled = "DATABASE_URL=postgres://vercel-pooled\nDATABASE_URL_UNPOOLED=postgres://vercel-direct\n"
+  const result = stripPulledEnvironment(
+    pulled,
+    new Set(["DATABASE_URL", "DATABASE_URL_UNPOOLED"]),
+    false
+  )
+
+  expect(result.content).toBe(pulled)
+  expect(result.databaseUrlsRemoved).toBe(0)
+})
+
 test("provisioning pulls both environments and creates independent database leases", async () => {
   const fixture = await setup()
   try {
@@ -169,9 +185,11 @@ test("provisioning pulls both environments and creates independent database leas
     const localEnvironment = await readFile(join(fixture.repo, ".env.local"), "utf8")
     const testEnvironment = await readFile(join(fixture.repo, ".env.test"), "utf8")
     expect(localEnvironment).toContain("APP_SETTING=keep")
+    expect(localEnvironment).not.toContain("postgres://vercel-")
     expect(localEnvironment).toContain("VERCEL_API_TOKEN=explicit-app-value")
     expect(localEnvironment).not.toContain("VERCEL_OIDC_TOKEN")
     expect(testEnvironment).toContain("APP_SETTING=keep")
+    expect(testEnvironment).not.toContain("postgres://vercel-")
     expect(testEnvironment).toContain("VERCEL_API_TOKEN=explicit-app-value")
     expect(testEnvironment).not.toContain("VERCEL=1")
     expect(testEnvironment).not.toContain("VERCEL_GIT_")

@@ -49,8 +49,10 @@ named `test` for test-specific application variables. Vercel models custom
 environments as deployment targets, so their pulls can include generated Git,
 deployment, Turborepo, and Nx metadata. `provision-env` removes known
 deployment-only variables while preserving explicitly configured application
-variables, then publishes both environments as ignored, mode-`0600` files before
-calling `sandbox-db`:
+variables. When `--database` is requested, it also removes any Vercel-provided
+`DATABASE_URL` and `DATABASE_URL_UNPOOLED` values before allocating the isolated
+sandbox databases. It then publishes both environments as ignored, mode-`0600`
+files before calling `sandbox-db`:
 
 ```sh
 provision-env --repo /path/to/worktree --source /path/to/linked-checkout --database
@@ -178,8 +180,9 @@ In order, the coordinator:
 4. pulls Vercel Development variables into a staged `.env.local`;
 5. pulls the Vercel `test` environment into a staged `.env.test`;
 6. removes generated deployment-only metadata from both pulls;
-7. atomically publishes both files with mode `0600`;
-8. creates the `default` and `test` database leases when `--database` is requested.
+7. removes Vercel database URLs when isolated databases were requested;
+8. atomically publishes both files with mode `0600`;
+9. creates the `default` and `test` database leases when `--database` is requested.
 
 It refuses to overwrite either env file. Use `--skip-vercel` only when
 intentionally preserving both prepared files. If setup fails after database
