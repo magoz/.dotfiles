@@ -243,6 +243,32 @@ const copyProjectIdentity = (repo: string, source: string) =>
     yield* Console.log(`provision-env: reused Vercel project identity from ${from}`)
   })
 
+const readVercelIdentity = (projectFile: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const content = yield* fs.readFileString(projectFile).pipe(
+      mapFileError(`cannot read Vercel project identity from ${projectFile}`)
+    )
+    const parsed = yield* Effect.try({
+      try: () => JSON.parse(content) as unknown,
+      catch: (cause) =>
+        new ProvisionError({
+          message: `invalid Vercel project identity in ${projectFile}: ${cause}`
+        })
+    })
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !("projectId" in parsed) ||
+      typeof parsed.projectId !== "string" ||
+      !("orgId" in parsed) ||
+      typeof parsed.orgId !== "string"
+    ) {
+      return yield* fail(`invalid Vercel project identity in ${projectFile}`)
+    }
+    return `${parsed.orgId}:${parsed.projectId}`
+  })
+
 const ensureVercelLink = (
   repo: string,
   source: string | undefined,
@@ -285,9 +311,16 @@ const ensureVercelLink = (
       if (linked) candidates.push(candidate)
     }
 
-    if (candidates.length === 1) return yield* copyProjectIdentity(repo, candidates[0]!)
-    if (candidates.length > 1) {
-      return yield* fail("multiple linked sibling checkouts found; pass --source explicitly")
+    if (candidates.length > 0) {
+      const identities = yield* Effect.forEach(candidates, (candidate) =>
+        readVercelIdentity(path.join(candidate, ".vercel", "project.json"))
+      )
+      if (new Set(identities).size === 1) {
+        return yield* copyProjectIdentity(repo, candidates[0]!)
+      }
+      return yield* fail(
+        "linked sibling checkouts use different Vercel projects; pass --source explicitly"
+      )
     }
     return yield* fail(
       "no Vercel project link found; link this checkout, pass --source, or pass --vercel-project"
