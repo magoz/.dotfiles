@@ -100,6 +100,39 @@ provisioning fails, the source stays alive.
 `implement-issue-worktree` continuation skill, so issue-driven and local creation
 have the same session lifecycle.
 
+## Worktree manager
+
+In Pi's interactive TUI, `/worktrees` opens a repository-scoped dashboard that
+joins Git checkout state with Herdr workspaces, Pi agents, Vercel environment
+health, and the `default`/`test` sandbox database leases. It inspects env-file
+existence, ignore status, and permissions without reading or displaying values.
+
+Keybindings:
+
+```text
+↑↓/jk  select                     Enter  focus workspace
+ a     create through the handoff  o      open/focus in Herdr
+ p     start or focus Pi            m      prompt a selected Pi
+ n     renew both database leases   v      provision missing environment
+ f     fetch and prune origin       d      coordinated retirement
+ c     load path into Pi's editor   r      refresh
+ q/Esc close
+```
+
+Starting or focusing Pi closes the manager after Herdr focuses the destination.
+When multiple Pi agents share a workspace, the manager asks which pane to target.
+Provisioning delegates to `provision-env` in non-interactive, fail-closed mode.
+
+Retirement refuses the current or primary checkout, dirty Git state, and
+working, blocked, or unknown Pi agents. It rechecks Git status and both database
+lease slots, then runs `sandbox-db release` for each managed lease before Herdr
+removes the checkout. Each release deletes the provisioned Neon branch, removes
+its leased database URL keys, and removes the local lease record. Cleanup fails
+closed if a lease cannot be safely released. Retirement may optionally run safe
+`git branch -d`; it never force-removes a checkout or branch.
+Because database release and Herdr removal cannot be atomic, a failure reports
+all irreversible steps that completed so recovery remains explicit.
+
 ## Repository setup
 
 `provision-env` deliberately does not prepare a repository schema. Pass one or
