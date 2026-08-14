@@ -52,24 +52,31 @@ const deploymentMetadataKeys = new Set([
   "VERCEL_URL"
 ])
 
-export const stripDeploymentMetadata = (
+const databaseUrlKeys = new Set(["DATABASE_URL", "DATABASE_URL_UNPOOLED"])
+
+export const stripPulledEnvironment = (
   content: string,
-  explicitKeys: ReadonlySet<string>
+  explicitKeys: ReadonlySet<string>,
+  replaceDatabaseUrls: boolean
 ) => {
-  let removed = 0
+  let metadataRemoved = 0
+  let databaseUrlsRemoved = 0
   const lines = content.split("\n").filter((line) => {
     const key = /^([A-Za-z_][A-Za-z0-9_]*)=/.exec(line)?.[1]
-    if (
-      key === undefined ||
-      explicitKeys.has(key) ||
-      !deploymentMetadataKeys.has(key)
-    ) {
-      return true
+    if (key === undefined) return true
+    if (replaceDatabaseUrls && databaseUrlKeys.has(key)) {
+      databaseUrlsRemoved += 1
+      return false
     }
-    removed += 1
+    if (explicitKeys.has(key) || !deploymentMetadataKeys.has(key)) return true
+    metadataRemoved += 1
     return false
   })
-  return { content: lines.join("\n"), removed } as const
+  return {
+    content: lines.join("\n"),
+    databaseUrlsRemoved,
+    metadataRemoved
+  } as const
 }
 
 const listExplicitVercelKeys = (repo: string, environment: string) =>
@@ -94,24 +101,32 @@ const listExplicitVercelKeys = (repo: string, environment: string) =>
 const sanitizePulledEnvironment = (
   file: string,
   label: string,
-  explicitKeys: ReadonlySet<string>
+  explicitKeys: ReadonlySet<string>,
+  replaceDatabaseUrls: boolean
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const pulled = yield* fs.readFileString(file).pipe(
       mapFileError(`cannot inspect pulled ${label} environment`)
     )
-    const sanitized = stripDeploymentMetadata(pulled, explicitKeys)
-    if (sanitized.removed === 0) return
+    const sanitized = stripPulledEnvironment(pulled, explicitKeys, replaceDatabaseUrls)
+    if (sanitized.metadataRemoved === 0 && sanitized.databaseUrlsRemoved === 0) return
     yield* fs.writeFileString(file, sanitized.content).pipe(
       mapFileError(`cannot sanitize pulled ${label} environment`)
     )
     yield* fs.chmod(file, 0o600).pipe(
       mapFileError(`cannot protect sanitized ${label} environment`)
     )
-    yield* Console.log(
-      `provision-env: removed ${sanitized.removed} deployment-only variables from ${label}`
-    )
+    if (sanitized.metadataRemoved > 0) {
+      yield* Console.log(
+        `provision-env: removed ${sanitized.metadataRemoved} deployment-only variables from ${label}`
+      )
+    }
+    if (sanitized.databaseUrlsRemoved > 0) {
+      yield* Console.log(
+        `provision-env: removed ${sanitized.databaseUrlsRemoved} Vercel database variables from ${label}`
+      )
+    }
   })
 
 const gitOutput = (cwd: string, args: ReadonlyArray<string>) =>
@@ -483,7 +498,8 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
         yield* sanitizePulledEnvironment(
           localPullTemporary,
           "Development",
-          developmentExplicitKeys
+          developmentExplicitKeys,
+          options.database
         )
         yield* fs.chmod(localPullTemporary, 0o600).pipe(
           mapFileError("cannot protect pulled Development environment")
@@ -506,7 +522,8 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
         yield* sanitizePulledEnvironment(
           testPullTemporary,
           options.testEnvironment,
-          testExplicitKeys
+          testExplicitKeys,
+          options.database
         )
         yield* fs.chmod(testPullTemporary, 0o600).pipe(
           mapFileError("cannot protect pulled test environment")
