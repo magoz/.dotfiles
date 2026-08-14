@@ -1,9 +1,14 @@
 import type {
+  ExecOptions,
+  ExecResult,
   ExtensionAPI,
   ExtensionCommandContext,
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "typebox";
+import { WorktreeActionService } from "./manager-actions.ts";
+import { runWorktreeManager } from "./manager-command.ts";
+import { WorktreeManagerService, type ManagerCommandRunner } from "./manager-service.ts";
 
 const WorktreeInput = Type.Object({
   branch: Type.Optional(
@@ -150,9 +155,31 @@ async function runCommand(pi: ExtensionAPI, input: string, ctx: ExtensionCommand
 }
 
 export default function worktreeExtension(pi: ExtensionAPI): void {
+  const commandRunner: ManagerCommandRunner = {
+    run(command: string, args: ReadonlyArray<string>, options?: ExecOptions): Promise<ExecResult> {
+      return pi.exec(command, [...args], options);
+    },
+  };
+  const inventory = new WorktreeManagerService(commandRunner);
+  const actions = new WorktreeActionService(commandRunner);
+
   pi.registerCommand("worktree", {
     description: "Create a provisioned Herdr worktree; branch name is optional",
     handler: (input, ctx) => runCommand(pi, input, ctx),
+  });
+
+  pi.registerCommand("worktrees", {
+    description: "Manage Git, Herdr, Pi, environment, and database worktree state",
+    handler: async (_input, ctx) => {
+      await ctx.waitForIdle();
+      await runWorktreeManager(ctx, {
+        inventory,
+        actions,
+        requestCreate(task) {
+          pi.sendUserMessage(buildAgentRequest({ prompt: task }));
+        },
+      });
+    },
   });
 
   pi.registerTool({

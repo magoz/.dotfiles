@@ -69,8 +69,8 @@ describe("worktree extension", () => {
     let command: any;
     const sendUserMessage = vi.fn();
     register({
-      registerCommand(_name: string, value: unknown) {
-        command = value;
+      registerCommand(name: string, value: unknown) {
+        if (name === "worktree") command = value;
       },
       registerTool() {},
       sendUserMessage,
@@ -99,7 +99,7 @@ describe("worktree extension", () => {
       },
     } as never);
 
-    expect(commands).toEqual(["worktree"]);
+    expect(commands).toEqual(["worktree", "worktrees"]);
     expect(tools).toEqual(["create_worktree"]);
   });
 
