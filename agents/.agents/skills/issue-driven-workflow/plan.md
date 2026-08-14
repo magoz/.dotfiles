@@ -517,14 +517,14 @@ Pilot correction: coherent inspected commits should be pushed for remote preserv
 - Remote branch preservation is separate from merge readiness: push coherent inspected commits even when a full-suite baseline failure exists.
 - A proven pre-existing failure may be documented in a draft PR, but it blocks ready-for-review and merge until explicitly dispositioned.
 - Start manually and preserve one trusted active GitHub coordinator; successful worktree handoff transfers that role from the source Pi to the fresh destination Pi.
-- Every `implement-issue` worktree receives the full Vercel Development environment plus an isolated sandbox database before the writer starts; Vercel Development is the local-runtime trust boundary.
+- Every `implement-issue` worktree receives the full Vercel Development and `test` environments plus independent isolated sandbox databases before the writer starts; these readable Vercel environments are the local-runtime trust boundary.
 - Dependency installation always precedes secret provisioning and uses the committed frozen lockfile.
 - `worktree` is the global Effect-based lifecycle orchestrator: every entry point uses it to create a grouped Herdr worktree, call `provision-env`, run explicit repository setup, start and verify one fresh Pi with an optional kickoff task as its initial message, and focus it.
-- `provision-env` remains a checkout-oriented orchestrator: it installs dependencies, reuses Vercel project identity, pulls Development variables directly into an ignored mode-`0600` `.env.local`, and calls `sandbox-db`.
-- `sandbox-db` remains a separate global resource capability because it creates, renews, and releases real infrastructure; native `vercel env pull` only retrieves existing configuration.
+- `provision-env` remains a checkout-oriented Effect CLI: it installs dependencies, reuses Vercel project identity, pulls Development and `test` variables into ignored mode-`0600` `.env.local` and `.env.test` files, and calls `sandbox-db` for independent database leases.
+- `sandbox-db` remains a separate global resource capability because it creates, renews, and releases real infrastructure; named lease slots let one worktree own separate development and test branches, while native `vercel env pull` only retrieves existing configuration.
 - A complete Vercel Development profile (`SANDBOX_DB_NEON_API_KEY`, `SANDBOX_DB_NEON_PROJECT_ID`, and `SANDBOX_DB_PARENT_BRANCH_ID`) atomically selects project-scoped Neon authentication and the baseline branch for that repository; incomplete local profiles fail closed rather than mixing with global authentication.
-- Vercel's shared Development database value must always be replaced by the sandbox lease before the writer starts.
-- Repository schema preparation remains repository-owned and must use an explicit safe command against either the blank global sandbox parent or the configured project baseline clone.
+- Any Vercel-provided Development or test database value must be replaced by its matching sandbox lease before the writer starts.
+- Repository schema preparation remains repository-owned and must use explicit safe commands for both isolated databases when the configured parent does not already contain the required schema.
 - Sandbox leases survive implementation and draft-PR review; future completion explicitly releases them.
 - Review is repository-hierarchy-aware: root guidance applies globally, nearest owner docs govern local detail, and only relevant maintained patterns are loaded.
 - Reviewers are parallel and read-only; accepted implementation, test, and required documentation fixes flow through one writer in the existing worktree.
