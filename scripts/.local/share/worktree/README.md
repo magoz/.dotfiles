@@ -123,7 +123,7 @@ In order, `worktree create`:
 1. resolves the source Git checkout, primary repository, base ref, and sibling checkout path;
 2. calls `herdr worktree create --path ...`, which creates both the checkout and its grouped Herdr workspace;
 3. resolves the workspace's initial root pane;
-4. runs `provision-env --database`, pulling Development and `test` Vercel variables, removing deployment-only metadata and integration database URLs, and creating independent database leases for both;
+4. runs `provision-env --database --non-interactive`, failing safely on unexpected existing env files, pulling Development and `test` Vercel variables, removing deployment-only metadata and integration database URLs, and creating independent database leases for both;
 5. runs every explicit `--setup` command;
 6. starts a fresh named Pi session with the kickoff task as Pi's initial message;
 7. verifies the Pi session is ready with the startup task attached;

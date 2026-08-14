@@ -25,6 +25,7 @@ const runProvisioning = (
       "--source",
       source,
       "--database",
+      "--non-interactive",
       "--label",
       label,
       "--ttl",

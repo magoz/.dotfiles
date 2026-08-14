@@ -190,6 +190,8 @@ test("the lifecycle provisions before setup and starts one fresh Pi", async () =
     (call) => call.command === "herdr" && call.args[0] === "worktree" && call.args[1] === "create"
   )
   expect(createCall?.args).toContain("/repo-feat-feature")
+  const provisionCall = fake.calls.find((call) => call.command === "provision-env")
+  expect(provisionCall?.args).toContain("--non-interactive")
 
   const meaningful = fake.calls.filter(
     (call) => call.command === "provision-env" || call.command === shell || call.command === "herdr"
