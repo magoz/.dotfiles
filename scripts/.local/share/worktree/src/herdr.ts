@@ -5,6 +5,7 @@ import {
   PaneListResponse,
   WorktreeCreatedResponse,
   WorktreeError,
+  type ProcessError,
   type CreateOptions
 } from "./domain"
 import { Process } from "./process"
@@ -91,6 +92,36 @@ const verifyReadyAgent = (agentName: string, paneId: string) =>
     }
   })
 
+const isAgentStartTimeout = (error: ProcessError | WorktreeError) => {
+  if (error._tag !== "ProcessError") return false
+  for (const output of [error.stdout, error.stderr]) {
+    try {
+      const parsed = JSON.parse(output) as { readonly error?: { readonly code?: unknown } }
+      if (parsed.error?.code === "cli:agent:start:timeout") return true
+    } catch {
+      // Herdr command errors are expected to be JSON; unstructured errors fail closed.
+    }
+  }
+  return false
+}
+
+const verifyDetectedPi = (paneId: string) =>
+  Effect.gen(function* () {
+    const process = yield* Process
+    const response = yield* process.capture("herdr", ["agent", "get", paneId])
+    const decoded = yield* decodeJson(AgentInfoResponse, response.stdout, "agent get by pane")
+    const agent = decoded.result.agent
+    if (
+      agent.pane_id !== paneId ||
+      agent.agent !== "pi" ||
+      !["idle", "working"].includes(agent.agent_status ?? "")
+    ) {
+      return yield* Effect.fail(
+        new WorktreeError({ message: `Pi was not detected in pane ${paneId}` })
+      )
+    }
+  })
+
 export const startPi = (
   paneId: string,
   agentName: string,
@@ -99,35 +130,51 @@ export const startPi = (
 ) =>
   Effect.gen(function* () {
     const process = yield* Process
-    const piArgs = ["--name", sessionName]
-    if (prompt?.trim()) piArgs.push(prompt.trim())
-    const started = yield* process.capture("herdr", [
-      "agent",
-      "start",
-      agentName,
-      "--kind",
-      "pi",
-      "--pane",
-      paneId,
-      "--timeout",
-      "120000",
-      "--",
-      ...piArgs
-    ])
-    const decoded = yield* decodeJson(AgentStartedResponse, started.stdout, "agent start")
-    if (decoded.result.agent.pane_id !== paneId) {
-      return yield* Effect.fail(
-        new WorktreeError({ message: `Herdr started Pi in an unexpected pane` })
+    const launch = process
+      .capture("herdr", [
+        "agent",
+        "start",
+        agentName,
+        "--kind",
+        "pi",
+        "--pane",
+        paneId,
+        "--timeout",
+        "120000",
+        "--",
+        "--name",
+        sessionName
+      ])
+      .pipe(
+        Effect.flatMap((started) =>
+          decodeJson(AgentStartedResponse, started.stdout, "agent start")
+        ),
+        Effect.flatMap((decoded) =>
+          decoded.result.agent.pane_id === paneId
+            ? Effect.void
+            : Effect.fail(
+                new WorktreeError({ message: "Herdr started Pi in an unexpected pane" })
+              )
+        )
       )
-    }
-    yield* verifyReadyAgent(agentName, paneId)
-  }).pipe(
-    Effect.catchAll((startError) =>
-      verifyReadyAgent(agentName, paneId).pipe(
-        Effect.catchAll(() => Effect.fail(startError))
+
+    const recoveredFromTimeout = yield* launch.pipe(
+      Effect.as(false),
+      Effect.catchAll((startError) =>
+        isAgentStartTimeout(startError)
+          ? verifyDetectedPi(paneId).pipe(
+              Effect.as(true),
+              Effect.catchAll(() => Effect.fail(startError))
+            )
+          : Effect.fail(startError)
       )
     )
-  )
+    if (!recoveredFromTimeout) yield* verifyReadyAgent(agentName, paneId)
+
+    if (prompt?.trim()) {
+      yield* process.capture("herdr", ["agent", "prompt", paneId, prompt.trim()])
+    }
+  })
 
 export const focusWorkspace = (workspaceId: string) =>
   Effect.gen(function* () {

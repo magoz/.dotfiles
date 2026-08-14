@@ -91,9 +91,8 @@ export const createEnvironment = (options: CreateOptions) =>
       )
     )
 
-    // Pi receives the kickoff as its initial CLI message, so task processing
-    // starts as part of Pi startup instead of racing terminal input immediately
-    // after Herdr reports the agent ready.
+    // Herdr waits for the fresh Pi to become interactive before submitting the
+    // kickoff, avoiding false startup timeouts while Pi immediately begins work.
     const warnings: Array<string> = []
     const focused = yield* Effect.either(focusWorkspace(workspaceId))
     if (Either.isLeft(focused)) {
