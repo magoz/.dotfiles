@@ -80,6 +80,7 @@ echo "📦 Installing OpenCode dependencies"
 bun install --cwd "$PWD/opencode/.config/opencode"
 
 npm ci --prefix "$PWD/opencode/.config/opencode/plugins/opencode-anthropic-auth"
+npm ci --prefix "$PWD/opencode/.config/opencode/plugins/opencode-vim-compat"
 
 echo "📦 Installing Pi extension dependencies"
 # Extensions resolve from their real (stowed) source paths in this repo, so
