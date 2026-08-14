@@ -19,14 +19,17 @@ interface Call {
   readonly cwd?: string
 }
 
-const processFailure = (command: string) =>
-  new ProvisionProcessError({ command, exitCode: 1, stdout: "", stderr: "" })
+const processFailure = (command: string, stdout = "") =>
+  new ProvisionProcessError({ command, exitCode: 1, stdout, stderr: "" })
 
 const setup = async (
   failTestDatabase = false,
   existingDefault = false,
   failTestPull = false,
-  targetLinked = true
+  targetLinked = true,
+  failStatusVerification = false,
+  concurrentEnvChange = false,
+  failRelease = false
 ) => {
   const repo = await mkdtemp(join(tmpdir(), "provision-env-"))
   const primary = join(repo, "primary")
@@ -51,6 +54,9 @@ const setup = async (
       }
       if (gitArgs[0] === "rev-parse" && gitArgs[1] === "--show-toplevel") {
         return Effect.succeed({ stdout: `${gitCwd}\n`, stderr: "" })
+      }
+      if (gitArgs[0] === "rev-parse" && gitArgs[1] === "--git-path") {
+        return Effect.succeed({ stdout: `${repo}/.vercel/provision-env.lock\n`, stderr: "" })
       }
       if (gitArgs[0] === "worktree" && gitArgs[1] === "list") {
         return Effect.succeed({
@@ -80,12 +86,20 @@ const setup = async (
       })
     }
     if (command === "sandbox-db" && args[0] === "status") {
+      if (failStatusVerification) {
+        return Effect.fail(processFailure("sandbox-db status unavailable"))
+      }
       const leaseIndex = args.indexOf("--lease")
       const leaseName = args[leaseIndex + 1]
       if (existingDefault && leaseName === "default") {
         return Effect.succeed({ stdout: '{"status":"live"}\n', stderr: "" })
       }
-      return Effect.fail(processFailure("sandbox-db status"))
+      return Effect.fail(
+        processFailure(
+          "sandbox-db status",
+          JSON.stringify({ status: "none", lease: leaseName, worktree: repo })
+        )
+      )
     }
     if (command === "sandbox-db" && args[0] === "create") {
       const leaseIndex = args.indexOf("--lease")
@@ -93,17 +107,36 @@ const setup = async (
       if (failTestDatabase && leaseName === "test") {
         return Effect.fail(processFailure("sandbox-db create test"))
       }
-      return Effect.succeed({
-        stdout: JSON.stringify({
-          status: existingDefault && leaseName === "default" ? "reused" : "created",
-          branch_name: `agent/repo-${leaseName}`,
-          branch_id: `branch-${leaseName}`
-        }),
-        stderr: ""
+      const status = existingDefault && leaseName === "default" ? "reused" : "created"
+      return Effect.gen(function* () {
+        if (status === "created") {
+          const envIndex = args.indexOf("--env-file")
+          const envFile = join(repo, args[envIndex + 1]!)
+          const current = yield* Effect.promise(() =>
+            readFile(envFile, "utf8").catch(() => "")
+          )
+          yield* Effect.promise(() =>
+            writeFile(
+              envFile,
+              `${current.trimEnd()}\nDATABASE_URL=postgres://sandbox-${leaseName}\nDATABASE_URL_UNPOOLED=postgres://sandbox-${leaseName}-direct\n`,
+              { mode: 0o600 }
+            )
+          )
+        }
+        return {
+          stdout: JSON.stringify({
+            status,
+            branch_name: `agent/repo-${leaseName}`,
+            branch_id: `branch-${leaseName}`
+          }),
+          stderr: ""
+        }
       })
     }
     if (command === "sandbox-db" && args[0] === "release") {
-      return Effect.succeed({ stdout: "{}\n", stderr: "" })
+      return failRelease
+        ? Effect.fail(processFailure("sandbox-db release unavailable"))
+        : Effect.succeed({ stdout: "{}\n", stderr: "" })
     }
     return Effect.fail(processFailure(command))
   }
@@ -145,6 +178,11 @@ const setup = async (
         if (failTestPull && args.includes("test")) {
           return yield* Effect.fail(processFailure("vercel env pull test"))
         }
+        if (concurrentEnvChange && args.includes("test")) {
+          yield* Effect.promise(() =>
+            writeFile(join(repo, ".env.local"), "CONCURRENT_CHANGE=keep\n", { mode: 0o600 })
+          )
+        }
       })
     }
     return Effect.fail(processFailure(command))
@@ -163,7 +201,9 @@ const options = (repo: string) => ({
   testEnvironment: "test",
   ttl: "7d",
   skipInstall: false,
-  skipVercel: false
+  skipVercel: false,
+  nonInteractive: true,
+  envConflict: "error" as const
 })
 
 test("Vercel database URLs remain when sandbox allocation is not requested", () => {
@@ -238,6 +278,219 @@ test("provisioning pulls both environments and creates independent database leas
   }
 })
 
+test("a checkout lock rejects concurrent provisioning", async () => {
+  const fixture = await setup()
+  await mkdir(join(fixture.repo, ".vercel", "provision-env.lock"))
+
+  try {
+    await expect(
+      Effect.runPromise(
+        provisionEnvironment({
+          ...options(fixture.repo),
+          database: false,
+          skipInstall: true
+        }).pipe(Effect.provide(fixture.layer))
+      )
+    ).rejects.toThrow("another provision-env process")
+    expect(fixture.calls.filter((call) => call.mode === "inherit")).toHaveLength(0)
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("non-interactive env conflicts fail before making changes", async () => {
+  const fixture = await setup()
+  const localContent = "EXISTING_LOCAL=keep\n"
+  const testContent = "EXISTING_TEST=keep\n"
+  await writeFile(join(fixture.repo, ".env.local"), localContent, { mode: 0o600 })
+  await writeFile(join(fixture.repo, ".env.test"), testContent, { mode: 0o600 })
+
+  try {
+    await expect(
+      Effect.runPromise(
+        provisionEnvironment({
+          ...options(fixture.repo),
+          database: false,
+          nonInteractive: true,
+          envConflict: "ask"
+        }).pipe(Effect.provide(fixture.layer))
+      )
+    ).rejects.toThrow("prompting is unavailable")
+
+    expect(fixture.calls.filter((call) => call.mode === "inherit")).toHaveLength(0)
+    expect(await readFile(join(fixture.repo, ".env.local"), "utf8")).toBe(localContent)
+    expect(await readFile(join(fixture.repo, ".env.test"), "utf8")).toBe(testContent)
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("explicit env conflict policies preserve or overwrite both files", async () => {
+  const preserveFixture = await setup()
+  const overwriteFixture = await setup()
+  for (const fixture of [preserveFixture, overwriteFixture]) {
+    await writeFile(join(fixture.repo, ".env.local"), "EXISTING_LOCAL=keep\n", { mode: 0o600 })
+    await writeFile(join(fixture.repo, ".env.test"), "EXISTING_TEST=keep\n", { mode: 0o600 })
+  }
+
+  try {
+    await Effect.runPromise(
+      provisionEnvironment({
+        ...options(preserveFixture.repo),
+        database: false,
+        skipInstall: true,
+        envConflict: "preserve"
+      }).pipe(Effect.provide(preserveFixture.layer))
+    )
+    expect(await readFile(join(preserveFixture.repo, ".env.local"), "utf8")).toBe(
+      "EXISTING_LOCAL=keep\n"
+    )
+    expect(
+      preserveFixture.calls.filter((call) => call.mode === "inherit" && call.command === "vercel")
+    ).toHaveLength(0)
+
+    await Effect.runPromise(
+      provisionEnvironment({
+        ...options(overwriteFixture.repo),
+        database: false,
+        skipInstall: true,
+        envConflict: "overwrite"
+      }).pipe(Effect.provide(overwriteFixture.layer))
+    )
+    expect(await readFile(join(overwriteFixture.repo, ".env.local"), "utf8")).toContain(
+      "APP_SETTING=keep"
+    )
+    expect(await readFile(join(overwriteFixture.repo, ".env.local"), "utf8")).not.toContain(
+      "EXISTING_LOCAL"
+    )
+  } finally {
+    await rm(preserveFixture.repo, { recursive: true, force: true })
+    await rm(overwriteFixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("overwrite refuses to disconnect a live database lease", async () => {
+  const fixture = await setup(false, true)
+  await writeFile(join(fixture.repo, ".env.local"), "DATABASE_URL=postgres://sandbox\nDATABASE_URL_UNPOOLED=postgres://sandbox-direct\n", { mode: 0o600 })
+  await writeFile(join(fixture.repo, ".env.test"), "EXISTING_TEST=keep\n", { mode: 0o600 })
+
+  try {
+    await expect(
+      Effect.runPromise(
+        provisionEnvironment({
+          ...options(fixture.repo),
+          database: false,
+          skipInstall: true,
+          envConflict: "overwrite"
+        }).pipe(Effect.provide(fixture.layer))
+      )
+    ).rejects.toThrow("default database lease is live")
+
+    expect(
+      fixture.calls.filter((call) => call.mode === "inherit" && call.command === "vercel")
+    ).toHaveLength(0)
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("overwrite fails closed when lease status cannot be verified", async () => {
+  const fixture = await setup(false, false, false, true, true)
+  const localContent = "EXISTING_LOCAL=keep\n"
+  const testContent = "EXISTING_TEST=keep\n"
+  await writeFile(join(fixture.repo, ".env.local"), localContent, { mode: 0o600 })
+  await writeFile(join(fixture.repo, ".env.test"), testContent, { mode: 0o600 })
+
+  try {
+    await expect(
+      Effect.runPromise(
+        provisionEnvironment({
+          ...options(fixture.repo),
+          database: false,
+          skipInstall: true,
+          envConflict: "overwrite"
+        }).pipe(Effect.provide(fixture.layer))
+      )
+    ).rejects.toThrow("cannot verify default database lease")
+
+    expect(await readFile(join(fixture.repo, ".env.local"), "utf8")).toBe(localContent)
+    expect(await readFile(join(fixture.repo, ".env.test"), "utf8")).toBe(testContent)
+    expect(
+      fixture.calls.filter((call) => call.mode === "inherit" && call.command === "vercel")
+    ).toHaveLength(0)
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("a pre-database failure does not claim or remove missing env files", async () => {
+  const fixture = await setup(false, false, false, true, true)
+  try {
+    await expect(
+      Effect.runPromise(
+        provisionEnvironment({
+          ...options(fixture.repo),
+          skipInstall: true,
+          skipVercel: true
+        }).pipe(Effect.provide(fixture.layer))
+      )
+    ).rejects.toThrow("cannot verify default database lease")
+
+    await expect(stat(join(fixture.repo, ".env.local"))).rejects.toThrow()
+    await expect(stat(join(fixture.repo, ".env.test"))).rejects.toThrow()
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("rollback removes only the env file successfully created by a lease", async () => {
+  const fixture = await setup(true)
+  try {
+    await expect(
+      Effect.runPromise(
+        provisionEnvironment({
+          ...options(fixture.repo),
+          skipInstall: true,
+          skipVercel: true
+        }).pipe(Effect.provide(fixture.layer))
+      )
+    ).rejects.toThrow("sandbox-db create test")
+
+    await expect(stat(join(fixture.repo, ".env.local"))).rejects.toThrow()
+    await expect(stat(join(fixture.repo, ".env.test"))).rejects.toThrow()
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("overwrite refuses concurrent env changes without restoring a stale snapshot", async () => {
+  const fixture = await setup(false, false, false, true, false, true)
+  await writeFile(join(fixture.repo, ".env.local"), "EXISTING_LOCAL=old\n", { mode: 0o600 })
+  await writeFile(join(fixture.repo, ".env.test"), "EXISTING_TEST=keep\n", { mode: 0o600 })
+
+  try {
+    await expect(
+      Effect.runPromise(
+        provisionEnvironment({
+          ...options(fixture.repo),
+          database: false,
+          skipInstall: true,
+          envConflict: "overwrite"
+        }).pipe(Effect.provide(fixture.layer))
+      )
+    ).rejects.toThrow("changed while provisioning")
+
+    expect(await readFile(join(fixture.repo, ".env.local"), "utf8")).toBe(
+      "CONCURRENT_CHANGE=keep\n"
+    )
+    expect(await readFile(join(fixture.repo, ".env.test"), "utf8")).toBe(
+      "EXISTING_TEST=keep\n"
+    )
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
 test("a test database failure releases only the lease created by this run", async () => {
   const fixture = await setup(true)
   try {
@@ -253,6 +506,50 @@ test("a test database failure releases only the lease created by this run", asyn
     ])
     await expect(stat(join(fixture.repo, ".env.local"))).rejects.toThrow()
     await expect(stat(join(fixture.repo, ".env.test"))).rejects.toThrow()
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("a failed lease release keeps published env files and surfaces cleanup failure", async () => {
+  const fixture = await setup(true, false, false, true, false, false, true)
+  try {
+    await expect(
+      Effect.runPromise(provisionEnvironment(options(fixture.repo)).pipe(Effect.provide(fixture.layer)))
+    ).rejects.toThrow("sandbox-db release unavailable")
+
+    expect((await stat(join(fixture.repo, ".env.local"))).isFile()).toBe(true)
+    expect((await stat(join(fixture.repo, ".env.test"))).isFile()).toBe(true)
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("rollback restores existing env files modified by a newly created lease", async () => {
+  const fixture = await setup(true)
+  const localContent = [
+    "SANDBOX_DB_NEON_API_KEY=key",
+    "SANDBOX_DB_NEON_PROJECT_ID=project",
+    "SANDBOX_DB_PARENT_BRANCH_ID=parent",
+    "ORIGINAL_LOCAL=keep"
+  ].join("\n") + "\n"
+  const testContent = "ORIGINAL_TEST=keep\n"
+  await writeFile(join(fixture.repo, ".env.local"), localContent, { mode: 0o600 })
+  await writeFile(join(fixture.repo, ".env.test"), testContent, { mode: 0o600 })
+
+  try {
+    await expect(
+      Effect.runPromise(
+        provisionEnvironment({
+          ...options(fixture.repo),
+          skipInstall: true,
+          skipVercel: true
+        }).pipe(Effect.provide(fixture.layer))
+      )
+    ).rejects.toThrow("sandbox-db create test")
+
+    expect(await readFile(join(fixture.repo, ".env.local"), "utf8")).toBe(localContent)
+    expect(await readFile(join(fixture.repo, ".env.test"), "utf8")).toBe(testContent)
   } finally {
     await rm(fixture.repo, { recursive: true, force: true })
   }

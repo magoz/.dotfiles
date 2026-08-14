@@ -18,6 +18,8 @@ export class ProvisionProcessError extends Data.TaggedError("ProvisionProcessErr
   }
 }
 
+export type EnvConflictPolicy = "ask" | "error" | "overwrite" | "preserve"
+
 export interface ProvisionOptions {
   readonly repo: string
   readonly source?: string
@@ -28,4 +30,6 @@ export interface ProvisionOptions {
   readonly ttl: string
   readonly skipInstall: boolean
   readonly skipVercel: boolean
+  readonly nonInteractive: boolean
+  readonly envConflict: EnvConflictPolicy
 }

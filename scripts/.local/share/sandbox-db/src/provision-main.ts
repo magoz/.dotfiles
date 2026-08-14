@@ -38,6 +38,18 @@ const root = Command.make(
     ),
     skipVercel: Options.boolean("skip-vercel").pipe(
       Options.withDescription("do not pull either Vercel environment")
+    ),
+    nonInteractive: Options.boolean("non-interactive").pipe(
+      Options.withDescription("never prompt; unresolved env conflicts fail safely")
+    ),
+    envConflict: Options.choice("env-conflict", [
+      "ask",
+      "error",
+      "preserve",
+      "overwrite"
+    ]).pipe(
+      Options.withDescription("existing env policy (default: ask on a TTY)"),
+      Options.withDefault("ask")
     )
   },
   (options) =>
@@ -50,18 +62,20 @@ const root = Command.make(
       label: Option.getOrUndefined(options.label),
       ttl: options.ttl,
       skipInstall: options.skipInstall,
-      skipVercel: options.skipVercel
+      skipVercel: options.skipVercel,
+      nonInteractive: options.nonInteractive,
+      envConflict: options.envConflict
     })
 ).pipe(
   Command.withDescription(
     "Install dependencies, pull Vercel Development and test environments, and optionally provision two isolated databases.\n\n" +
-    "The command refuses to overwrite .env.local or .env.test. Both paths must be ignored.\n" +
+    "Existing env files prompt on a TTY and fail safely in non-interactive mode unless an explicit policy is provided. Both paths must be ignored.\n" +
     "Repository-specific schema bootstrap remains a separate step.\n\n" +
     "Documentation: ~/.local/share/sandbox-db/README.md"
   )
 )
 
-const cli = Command.run(root, { name: "provision-env", version: "2.0.0" })
+const cli = Command.run(root, { name: "provision-env", version: "2.1.0" })
 const MainLayer = Layer.mergeAll(NodeContext.layer, ProvisionProcessLive)
 
 Effect.suspend(() => cli(process.argv)).pipe(

@@ -1,6 +1,11 @@
+import { Prompt } from "@effect/cli"
 import { FileSystem, Path } from "@effect/platform"
-import { Console, Effect, Option, Schema } from "effect"
-import { ProvisionError, type ProvisionOptions } from "./provision-domain"
+import { Cause, Console, Effect, Either, Option, Schema } from "effect"
+import {
+  ProvisionError,
+  type EnvConflictPolicy,
+  type ProvisionOptions
+} from "./provision-domain"
 import { ProvisionProcess } from "./provision-process"
 
 interface RollbackState {
@@ -351,23 +356,88 @@ const hasDatabaseUrls = (file: string) =>
     return keys.has("DATABASE_URL") && keys.has("DATABASE_URL_UNPOOLED")
   })
 
+const LeaseStatusReport = Schema.parseJson(
+  Schema.Struct({
+    status: Schema.Union(
+      Schema.Literal("live"),
+      Schema.Literal("missing"),
+      Schema.Literal("none")
+    )
+  })
+)
+
 const leaseIsLive = (repo: string, leaseName: string) =>
   Effect.gen(function* () {
     const process = yield* ProvisionProcess
-    return yield* process
-      .capture("sandbox-db", ["status", "--worktree", repo, "--lease", leaseName, "--json"])
-      .pipe(
-        Effect.as(true),
-        Effect.catchAll(() => Effect.succeed(false))
+    const result = yield* Effect.either(
+      process.capture("sandbox-db", [
+        "status",
+        "--worktree",
+        repo,
+        "--lease",
+        leaseName,
+        "--json"
+      ])
+    )
+    const output = Either.isRight(result) ? result.right.stdout : result.left.stdout
+    if (output.trim().length === 0) {
+      const detail = Either.isLeft(result) ? result.left.message : "empty status response"
+      return yield* fail(`cannot verify ${leaseName} database lease: ${detail}`)
+    }
+    const report = yield* Schema.decodeUnknown(LeaseStatusReport)(output).pipe(
+      Effect.mapError(
+        (cause) =>
+          new ProvisionError({
+            message: `cannot verify ${leaseName} database lease: invalid status response: ${cause}`
+          })
       )
+    )
+    return report.status === "live"
+  })
+
+const ensureNoLiveLeases = (repo: string) =>
+  Effect.gen(function* () {
+    const liveLeases: Array<string> = []
+    if (yield* leaseIsLive(repo, "default")) liveLeases.push("default")
+    if (yield* leaseIsLive(repo, "test")) liveLeases.push("test")
+    if (liveLeases.length > 0) {
+      return yield* fail(
+        `cannot overwrite env files while ${liveLeases.join(" and ")} database lease${liveLeases.length === 1 ? " is" : "s are"} live; preserve the files or release the leases first`
+      )
+    }
+  })
+
+const ensureEnvUnchanged = (
+  file: string,
+  existed: boolean,
+  snapshot: string | undefined
+) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const exists = yield* fs.exists(file).pipe(Effect.orElseSucceed(() => false))
+    if (exists !== existed) {
+      return yield* fail(`${file} changed while provisioning; refusing to overwrite it`)
+    }
+    if (!exists) return
+    const current = yield* fs.readFileString(file).pipe(
+      mapFileError(`cannot revalidate ${file}`)
+    )
+    if (current !== snapshot) {
+      return yield* fail(`${file} changed while provisioning; refusing to overwrite it`)
+    }
   })
 
 const releaseLease = (repo: string, leaseName: string) =>
   Effect.gen(function* () {
     const process = yield* ProvisionProcess
-    yield* process
-      .capture("sandbox-db", ["release", "--worktree", repo, "--lease", leaseName, "--json"])
-      .pipe(Effect.catchAll(() => Effect.void))
+    yield* process.capture("sandbox-db", [
+      "release",
+      "--worktree",
+      repo,
+      "--lease",
+      leaseName,
+      "--json"
+    ])
   })
 
 const LeaseCreateReport = Schema.parseJson(
@@ -426,27 +496,100 @@ const rollback = (
     if (state.createdTestLease) yield* releaseLease(repo, "test")
     if (state.createdDefaultLease) yield* releaseLease(repo, "default")
 
-    if (state.testEnvSnapshot !== undefined) {
-      yield* writePrivately(testEnvFile, state.testEnvSnapshot).pipe(Effect.catchAll(() => Effect.void))
-      yield* Console.error("provision-env: restored .env.test after setup failure")
-    } else if (state.createdTestEnv) {
-      yield* fs.remove(testEnvFile).pipe(Effect.catchAll(() => Effect.void))
-      yield* Console.error("provision-env: rolled back .env.test after setup failure")
+    if (state.createdTestEnv) {
+      if (state.testEnvSnapshot !== undefined) {
+        yield* writePrivately(testEnvFile, state.testEnvSnapshot)
+        yield* Console.error("provision-env: restored .env.test after setup failure")
+      } else {
+        yield* fs.remove(testEnvFile).pipe(mapFileError("cannot roll back .env.test"))
+        yield* Console.error("provision-env: rolled back .env.test after setup failure")
+      }
     }
 
-    if (state.localEnvSnapshot !== undefined) {
-      yield* writePrivately(localEnvFile, state.localEnvSnapshot).pipe(Effect.catchAll(() => Effect.void))
-      yield* Console.error("provision-env: restored .env.local after setup failure")
-    } else if (state.createdLocalEnv) {
-      yield* fs.remove(localEnvFile).pipe(Effect.catchAll(() => Effect.void))
-      yield* Console.error("provision-env: rolled back .env.local after setup failure")
+    if (state.createdLocalEnv) {
+      if (state.localEnvSnapshot !== undefined) {
+        yield* writePrivately(localEnvFile, state.localEnvSnapshot)
+        yield* Console.error("provision-env: restored .env.local after setup failure")
+      } else {
+        yield* fs.remove(localEnvFile).pipe(mapFileError("cannot roll back .env.local"))
+        yield* Console.error("provision-env: rolled back .env.local after setup failure")
+      }
     }
 
     for (const temporary of [state.testPullTemporary, state.localPullTemporary]) {
       if (temporary !== undefined) {
-        yield* fs.remove(temporary).pipe(Effect.catchAll(() => Effect.void))
+        yield* fs.remove(temporary).pipe(
+          mapFileError(`cannot remove staged environment ${temporary}`)
+        )
       }
     }
+  })
+
+const resolveEnvConflict = (
+  policy: EnvConflictPolicy,
+  nonInteractive: boolean,
+  localExists: boolean,
+  testExists: boolean
+) =>
+  Effect.gen(function* () {
+    if (!localExists && !testExists) return "overwrite" as const
+    const existing = [localExists ? ".env.local" : undefined, testExists ? ".env.test" : undefined]
+      .filter((file): file is string => file !== undefined)
+      .join(" and ")
+    const bothExist = localExists && testExists
+    const existence = bothExist ? "already exist" : "already exists"
+
+    if (policy === "error") {
+      return yield* fail(
+        `${existing} ${existence}; use --env-conflict=preserve or --env-conflict=overwrite`
+      )
+    }
+    if (policy === "preserve") {
+      if (!bothExist) {
+        return yield* fail(
+          `cannot preserve a partial env pair (${existing}); use --env-conflict=overwrite or restore both files`
+        )
+      }
+      return "preserve" as const
+    }
+    if (policy === "overwrite") return "overwrite" as const
+
+    if (nonInteractive || process.stdin.isTTY !== true || process.stdout.isTTY !== true) {
+      return yield* fail(
+        `${existing} ${existence} and prompting is unavailable; pass --env-conflict=preserve or --env-conflict=overwrite explicitly`
+      )
+    }
+
+    return yield* Prompt.run(
+      Prompt.select({
+        message: `${existing} ${existence}. How should provision-env continue?`,
+        choices: [
+          {
+            title: "Preserve existing env files",
+            value: "preserve" as const,
+            description: "Skip both Vercel pulls and continue with the existing files",
+            disabled: !bothExist
+          },
+          {
+            title: "Overwrite from Vercel",
+            value: "overwrite" as const,
+            description: "Snapshot both files, pull fresh values, and restore them if setup fails"
+          },
+          {
+            title: "Cancel",
+            value: "cancel" as const,
+            description: "Exit without changing env files or database leases"
+          }
+        ]
+      })
+    ).pipe(
+      Effect.mapError(() => new ProvisionError({ message: "cancelled by user" })),
+      Effect.flatMap((decision) =>
+        decision === "cancel"
+          ? Effect.fail(new ProvisionError({ message: "cancelled by user" }))
+          : Effect.succeed(decision)
+      )
+    )
   })
 
 export const provisionEnvironment = (options: ProvisionOptions) =>
@@ -457,6 +600,16 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
     const repo = yield* resolveCheckout(options.repo)
     const localEnvFile = path.join(repo, ".env.local")
     const testEnvFile = path.join(repo, ".env.test")
+    const gitLockPath = yield* gitOutput(repo, ["rev-parse", "--git-path", "provision-env.lock"])
+    const lockDirectory = path.resolve(repo, gitLockPath)
+    yield* fs.makeDirectory(lockDirectory).pipe(
+      Effect.mapError(
+        () =>
+          new ProvisionError({
+            message: `another provision-env process is already using ${repo}; if none is running, remove stale lock ${lockDirectory}`
+          })
+      )
+    )
     const state: RollbackState = {
       createdLocalEnv: false,
       createdTestEnv: false,
@@ -464,25 +617,46 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
       createdTestLease: false
     }
 
-    return yield* Effect.gen(function* () {
+    const operation = Effect.gen(function* () {
       if (!options.skipVercel || options.database) {
         yield* ensureSecretPath(repo, ".env.local")
         yield* ensureSecretPath(repo, ".env.test")
       }
 
-      if (!options.skipVercel) {
-        for (const file of [localEnvFile, testEnvFile]) {
-          if (yield* fs.exists(file).pipe(Effect.orElseSucceed(() => false))) {
-            return yield* fail(
-              `refusing to overwrite existing ${file}; use --skip-vercel to preserve it`
-            )
-          }
-        }
+      const localEnvExists = yield* fs
+        .exists(localEnvFile)
+        .pipe(Effect.orElseSucceed(() => false))
+      const testEnvExists = yield* fs
+        .exists(testEnvFile)
+        .pipe(Effect.orElseSucceed(() => false))
+      const envDecision = options.skipVercel
+        ? "preserve"
+        : yield* resolveEnvConflict(
+            options.envConflict,
+            options.nonInteractive,
+            localEnvExists,
+            testEnvExists
+          )
+      const pullVercel = !options.skipVercel && envDecision === "overwrite"
+
+      if (pullVercel && (localEnvExists || testEnvExists)) {
+        yield* ensureNoLiveLeases(repo)
+      }
+
+      if (pullVercel && localEnvExists) {
+        state.localEnvSnapshot = yield* fs.readFileString(localEnvFile).pipe(
+          mapFileError("cannot snapshot existing .env.local")
+        )
+      }
+      if (pullVercel && testEnvExists) {
+        state.testEnvSnapshot = yield* fs.readFileString(testEnvFile).pipe(
+          mapFileError("cannot snapshot existing .env.test")
+        )
       }
 
       if (!options.skipInstall) yield* installDependencies(repo)
 
-      if (!options.skipVercel) {
+      if (pullVercel) {
         yield* ensureVercelLink(repo, options.source, options.vercelProject)
         const temporaryDirectory = path.join(repo, ".vercel")
         yield* fs.chmod(temporaryDirectory, 0o700).pipe(
@@ -562,6 +736,10 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           mapFileError("cannot protect pulled test environment")
         )
 
+        yield* ensureEnvUnchanged(localEnvFile, localEnvExists, state.localEnvSnapshot)
+        yield* ensureEnvUnchanged(testEnvFile, testEnvExists, state.testEnvSnapshot)
+        yield* ensureNoLiveLeases(repo)
+
         yield* Effect.uninterruptible(
           Effect.gen(function* () {
             yield* fs.rename(localPullTemporary, localEnvFile).pipe(
@@ -585,8 +763,6 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
             state.localEnvSnapshot = yield* fs.readFileString(localEnvFile).pipe(
               mapFileError("cannot snapshot .env.local")
             )
-          } else {
-            state.createdLocalEnv = true
           }
         }
         if (!state.createdTestEnv) {
@@ -595,8 +771,6 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
             state.testEnvSnapshot = yield* fs.readFileString(testEnvFile).pipe(
               mapFileError("cannot snapshot .env.test")
             )
-          } else {
-            state.createdTestEnv = true
           }
         }
 
@@ -638,6 +812,7 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           options.ttl
         )
         state.createdDefaultLease = defaultStatus === "created"
+        if (defaultStatus === "created") state.createdLocalEnv = true
 
         yield* Console.log("provision-env: allocating isolated test PostgreSQL")
         const testStatus = yield* createDatabaseLease(
@@ -648,6 +823,7 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           options.ttl
         )
         state.createdTestLease = testStatus === "created"
+        if (testStatus === "created") state.createdTestEnv = true
       }
 
       yield* Console.log("")
@@ -655,10 +831,51 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
       yield* Console.log(`  repo:       ${repo}`)
       yield* Console.log(`  install:    ${options.skipInstall ? "skipped" : "complete"}`)
       yield* Console.log(
-        `  vercel env: ${options.skipVercel ? "skipped" : ".env.local + .env.test"}`
+        `  vercel env: ${pullVercel ? ".env.local + .env.test" : options.skipVercel ? "skipped" : "preserved"}`
       )
       yield* Console.log(
         `  databases:  ${options.database ? "development + test ready" : "skipped"}`
       )
-    }).pipe(Effect.onError(() => rollback(repo, localEnvFile, testEnvFile, state)))
+    })
+
+    const withRollback = operation.pipe(
+      Effect.catchAllCause((operationCause) =>
+        rollback(repo, localEnvFile, testEnvFile, state).pipe(
+          Effect.matchCauseEffect({
+            onFailure: (rollbackCause) =>
+              Effect.fail(
+                new ProvisionError({
+                  message:
+                    `setup failed and rollback also failed:\n${Cause.pretty(operationCause)}\n` +
+                    `rollback failure:\n${Cause.pretty(rollbackCause)}`
+                })
+              ),
+            onSuccess: () => Effect.failCause(operationCause)
+          })
+        )
+      )
+    )
+    const releaseLock = fs
+      .remove(lockDirectory, { recursive: true })
+      .pipe(mapFileError(`cannot release provision lock ${lockDirectory}`))
+
+    return yield* withRollback.pipe(
+      Effect.matchCauseEffect({
+        onFailure: (operationCause) =>
+          releaseLock.pipe(
+            Effect.matchCauseEffect({
+              onFailure: (lockCause) =>
+                Effect.fail(
+                  new ProvisionError({
+                    message:
+                      `operation failed and provision lock cleanup also failed:\n${Cause.pretty(operationCause)}\n` +
+                      `lock cleanup failure:\n${Cause.pretty(lockCause)}`
+                  })
+                ),
+              onSuccess: () => Effect.failCause(operationCause)
+            })
+          ),
+        onSuccess: (value) => releaseLock.pipe(Effect.as(value))
+      })
+    )
   })

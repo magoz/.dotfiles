@@ -180,19 +180,33 @@ provision-env --database
 In order, the coordinator:
 
 1. validates the target Git checkout and ignored secret paths;
-2. installs dependencies from the committed frozen lockfile;
-3. reuses or creates the Vercel project link;
-4. pulls Vercel Development variables into a staged `.env.local`;
-5. pulls the Vercel `test` environment into a staged `.env.test`;
-6. removes generated deployment-only metadata from both pulls;
-7. removes Vercel database URLs when isolated databases were requested;
-8. atomically publishes both files with mode `0600`;
-9. creates the `default` and `test` database leases when `--database` is requested.
+2. resolves any existing env-file conflict before making changes;
+3. installs dependencies from the committed frozen lockfile;
+4. reuses or creates the Vercel project link;
+5. pulls Vercel Development variables into a staged `.env.local`;
+6. pulls the Vercel `test` environment into a staged `.env.test`;
+7. removes generated deployment-only metadata from both pulls;
+8. removes Vercel database URLs when isolated databases were requested;
+9. atomically publishes both files with mode `0600`;
+10. creates the `default` and `test` database leases when `--database` is requested.
 
-It refuses to overwrite either env file. Use `--skip-vercel` only when
-intentionally preserving both prepared files. If setup fails after database
-allocation starts, it releases only leases created by that invocation in
-reverse order, restores preserved env files, and removes only env files it created.
+On a TTY, the default `--env-conflict=ask` offers to preserve both files,
+overwrite both from Vercel, or cancel. Preserve is available only for a complete
+`.env.local`/`.env.test` pair. Overwrite snapshots existing files and restores
+them if any later step fails. It refuses to disconnect an existing live database
+lease; preserve the files or release the lease before overwriting. Lease status
+errors also fail closed rather than being treated as an absent lease.
+
+A worktree-scoped Git lock prevents concurrent `provision-env` runs. Immediately
+before publication, overwrite mode revalidates both original files and lease
+status so concurrent changes are preserved instead of replaced.
+
+Agents and scripts should pass `--non-interactive`. That mode fails safely on a
+conflict unless `--env-conflict=preserve` or `--env-conflict=overwrite` is also
+explicit. `--skip-vercel` remains the direct way to use an intentionally
+prepared pair without pulling. If setup fails after database allocation starts,
+it releases only leases created by that invocation in reverse order, restores
+preserved env files, and removes only env files it created.
 
 ## Recovery and cleanup
 
