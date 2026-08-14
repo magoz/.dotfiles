@@ -51,6 +51,17 @@ const setup = async (
         return Effect.succeed({ stdout: "feature/test-env\n", stderr: "" })
       }
     }
+    if (command === "vercel" && args[0] === "env" && args[1] === "list") {
+      return Effect.succeed({
+        stdout: [
+          " name               value       environments",
+          " APP_SETTING        Encrypted   Development, test",
+          " TURBO_CACHE        Encrypted   test",
+          " VERCEL_API_TOKEN   Encrypted   Development, test"
+        ].join("\n"),
+        stderr: ""
+      })
+    }
     if (command === "sandbox-db" && args[0] === "status") {
       const leaseIndex = args.indexOf("--lease")
       const leaseName = args[leaseIndex + 1]
@@ -90,9 +101,25 @@ const setup = async (
           writeFile(
             file,
             [
+              "# Created by Vercel CLI",
               "SANDBOX_DB_NEON_API_KEY=key",
               "SANDBOX_DB_NEON_PROJECT_ID=project",
-              "SANDBOX_DB_PARENT_BRANCH_ID=parent"
+              "SANDBOX_DB_PARENT_BRANCH_ID=parent",
+              "APP_SETTING=keep",
+              "VERCEL_API_TOKEN=explicit-app-value",
+              "VERCEL_OIDC_TOKEN=generated-oidc",
+              ...(args.includes("test")
+                ? [
+                    "NX_DAEMON=false",
+                    "TURBO_CACHE=remote:rw",
+                    "VERCEL=1",
+                    "VERCEL_ENV=preview",
+                    "VERCEL_GIT_COMMIT_AUTHOR_NAME=Test Author",
+                    "VERCEL_GIT_COMMIT_SHA=abc123",
+                    "VERCEL_TARGET_ENV=test",
+                    "VERCEL_URL=test.example.vercel.app"
+                  ]
+                : [])
             ].join("\n") + "\n"
           )
         )
@@ -139,6 +166,19 @@ test("provisioning pulls both environments and creates independent database leas
     expect(databaseCalls[0]?.args).toContain(".env.local")
     expect(databaseCalls[1]?.args).toContain("test")
     expect(databaseCalls[1]?.args).toContain(".env.test")
+    const localEnvironment = await readFile(join(fixture.repo, ".env.local"), "utf8")
+    const testEnvironment = await readFile(join(fixture.repo, ".env.test"), "utf8")
+    expect(localEnvironment).toContain("APP_SETTING=keep")
+    expect(localEnvironment).toContain("VERCEL_API_TOKEN=explicit-app-value")
+    expect(localEnvironment).not.toContain("VERCEL_OIDC_TOKEN")
+    expect(testEnvironment).toContain("APP_SETTING=keep")
+    expect(testEnvironment).toContain("VERCEL_API_TOKEN=explicit-app-value")
+    expect(testEnvironment).not.toContain("VERCEL=1")
+    expect(testEnvironment).not.toContain("VERCEL_GIT_")
+    expect(testEnvironment).not.toContain("VERCEL_ENV=")
+    expect(testEnvironment).not.toContain("VERCEL_URL=")
+    expect(testEnvironment).not.toContain("NX_DAEMON=")
+    expect(testEnvironment).toContain("TURBO_CACHE=remote:rw")
     expect((await stat(join(fixture.repo, ".env.local"))).mode & 0o777).toBe(0o600)
     expect((await stat(join(fixture.repo, ".env.test"))).mode & 0o777).toBe(0o600)
   } finally {

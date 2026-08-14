@@ -19,6 +19,101 @@ const fail = (message: string) => Effect.fail(new ProvisionError({ message }))
 const mapFileError = (message: string) =>
   Effect.mapError((cause: unknown) => new ProvisionError({ message: `${message}: ${cause}` }))
 
+const deploymentMetadataKeys = new Set([
+  "CI",
+  "NX_DAEMON",
+  "TURBO_CACHE",
+  "TURBO_DOWNLOAD_LOCAL_ENABLED",
+  "TURBO_REMOTE_ONLY",
+  "TURBO_RUN_SUMMARY",
+  "VERCEL",
+  "VERCEL_AUTOMATION_BYPASS_SECRET",
+  "VERCEL_BRANCH_URL",
+  "VERCEL_DEPLOYMENT_ID",
+  "VERCEL_ENV",
+  "VERCEL_GIT_COMMIT_AUTHOR_LOGIN",
+  "VERCEL_GIT_COMMIT_AUTHOR_NAME",
+  "VERCEL_GIT_COMMIT_MESSAGE",
+  "VERCEL_GIT_COMMIT_REF",
+  "VERCEL_GIT_COMMIT_SHA",
+  "VERCEL_GIT_PREVIOUS_SHA",
+  "VERCEL_GIT_PROVIDER",
+  "VERCEL_GIT_PULL_REQUEST_ID",
+  "VERCEL_GIT_REPO_ID",
+  "VERCEL_GIT_REPO_OWNER",
+  "VERCEL_GIT_REPO_SLUG",
+  "VERCEL_HASH_SALT",
+  "VERCEL_OIDC_TOKEN",
+  "VERCEL_PROJECT_ID",
+  "VERCEL_PROJECT_PRODUCTION_URL",
+  "VERCEL_REGION",
+  "VERCEL_SKEW_PROTECTION_ENABLED",
+  "VERCEL_TARGET_ENV",
+  "VERCEL_URL"
+])
+
+export const stripDeploymentMetadata = (
+  content: string,
+  explicitKeys: ReadonlySet<string>
+) => {
+  let removed = 0
+  const lines = content.split("\n").filter((line) => {
+    const key = /^([A-Za-z_][A-Za-z0-9_]*)=/.exec(line)?.[1]
+    if (
+      key === undefined ||
+      explicitKeys.has(key) ||
+      !deploymentMetadataKeys.has(key)
+    ) {
+      return true
+    }
+    removed += 1
+    return false
+  })
+  return { content: lines.join("\n"), removed } as const
+}
+
+const listExplicitVercelKeys = (repo: string, environment: string) =>
+  Effect.gen(function* () {
+    const process = yield* ProvisionProcess
+    const listed = yield* process.capture("vercel", [
+      "env",
+      "list",
+      environment,
+      "--cwd",
+      repo,
+      "--no-color"
+    ])
+    return new Set(
+      listed.stdout.split("\n").flatMap((line) => {
+        const key = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s+/.exec(line)?.[1]
+        return key === undefined ? [] : [key]
+      })
+    )
+  })
+
+const sanitizePulledEnvironment = (
+  file: string,
+  label: string,
+  explicitKeys: ReadonlySet<string>
+) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const pulled = yield* fs.readFileString(file).pipe(
+      mapFileError(`cannot inspect pulled ${label} environment`)
+    )
+    const sanitized = stripDeploymentMetadata(pulled, explicitKeys)
+    if (sanitized.removed === 0) return
+    yield* fs.writeFileString(file, sanitized.content).pipe(
+      mapFileError(`cannot sanitize pulled ${label} environment`)
+    )
+    yield* fs.chmod(file, 0o600).pipe(
+      mapFileError(`cannot protect sanitized ${label} environment`)
+    )
+    yield* Console.log(
+      `provision-env: removed ${sanitized.removed} deployment-only variables from ${label}`
+    )
+  })
+
 const gitOutput = (cwd: string, args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const process = yield* ProvisionProcess
@@ -345,28 +440,39 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
         yield* fs.chmod(temporaryDirectory, 0o700).pipe(
           mapFileError("cannot protect Vercel staging directory")
         )
-        state.localPullTemporary = path.join(temporaryDirectory, ".env.local.provision-env.tmp")
-        state.testPullTemporary = path.join(temporaryDirectory, ".env.test.provision-env.tmp")
-        yield* fs.remove(state.localPullTemporary).pipe(Effect.catchAll(() => Effect.void))
-        yield* fs.remove(state.testPullTemporary).pipe(Effect.catchAll(() => Effect.void))
-        yield* fs.writeFileString(state.localPullTemporary, "").pipe(
+        const localPullTemporary = path.join(
+          temporaryDirectory,
+          ".env.local.provision-env.tmp"
+        )
+        const testPullTemporary = path.join(
+          temporaryDirectory,
+          ".env.test.provision-env.tmp"
+        )
+        state.localPullTemporary = localPullTemporary
+        state.testPullTemporary = testPullTemporary
+        yield* fs.remove(localPullTemporary).pipe(Effect.catchAll(() => Effect.void))
+        yield* fs.remove(testPullTemporary).pipe(Effect.catchAll(() => Effect.void))
+        yield* fs.writeFileString(localPullTemporary, "").pipe(
           mapFileError("cannot create Development staging file")
         )
-        yield* fs.chmod(state.localPullTemporary, 0o600).pipe(
+        yield* fs.chmod(localPullTemporary, 0o600).pipe(
           mapFileError("cannot protect Development staging file")
         )
-        yield* fs.writeFileString(state.testPullTemporary, "").pipe(
+        yield* fs.writeFileString(testPullTemporary, "").pipe(
           mapFileError("cannot create test staging file")
         )
-        yield* fs.chmod(state.testPullTemporary, 0o600).pipe(
+        yield* fs.chmod(testPullTemporary, 0o600).pipe(
           mapFileError("cannot protect test staging file")
         )
+
+        const developmentExplicitKeys = yield* listExplicitVercelKeys(repo, "development")
+        const testExplicitKeys = yield* listExplicitVercelKeys(repo, options.testEnvironment)
 
         yield* Console.log("provision-env: pulling Vercel Development variables into .env.local")
         yield* process.inherit("vercel", [
           "env",
           "pull",
-          state.localPullTemporary,
+          localPullTemporary,
           "--environment",
           "development",
           "--yes",
@@ -374,14 +480,14 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           repo,
           "--no-color"
         ])
-        yield* fs.chmod(state.localPullTemporary, 0o600).pipe(
+        yield* sanitizePulledEnvironment(
+          localPullTemporary,
+          "Development",
+          developmentExplicitKeys
+        )
+        yield* fs.chmod(localPullTemporary, 0o600).pipe(
           mapFileError("cannot protect pulled Development environment")
         )
-        yield* fs.rename(state.localPullTemporary, localEnvFile).pipe(
-          mapFileError("cannot publish .env.local")
-        )
-        state.localPullTemporary = undefined
-        state.createdLocalEnv = true
 
         yield* Console.log(
           `provision-env: pulling Vercel ${options.testEnvironment} variables into .env.test`
@@ -389,7 +495,7 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
         yield* process.inherit("vercel", [
           "env",
           "pull",
-          state.testPullTemporary,
+          testPullTemporary,
           "--environment",
           options.testEnvironment,
           "--yes",
@@ -397,14 +503,29 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           repo,
           "--no-color"
         ])
-        yield* fs.chmod(state.testPullTemporary, 0o600).pipe(
+        yield* sanitizePulledEnvironment(
+          testPullTemporary,
+          options.testEnvironment,
+          testExplicitKeys
+        )
+        yield* fs.chmod(testPullTemporary, 0o600).pipe(
           mapFileError("cannot protect pulled test environment")
         )
-        yield* fs.rename(state.testPullTemporary, testEnvFile).pipe(
-          mapFileError("cannot publish .env.test")
+
+        yield* Effect.uninterruptible(
+          Effect.gen(function* () {
+            yield* fs.rename(localPullTemporary, localEnvFile).pipe(
+              mapFileError("cannot publish .env.local")
+            )
+            state.localPullTemporary = undefined
+            state.createdLocalEnv = true
+            yield* fs.rename(testPullTemporary, testEnvFile).pipe(
+              mapFileError("cannot publish .env.test")
+            )
+            state.testPullTemporary = undefined
+            state.createdTestEnv = true
+          })
         )
-        state.testPullTemporary = undefined
-        state.createdTestEnv = true
       }
 
       if (options.database) {
