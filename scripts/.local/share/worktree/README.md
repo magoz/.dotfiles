@@ -26,14 +26,14 @@ For an implementation-ready GitHub issue:
 ```
 
 Both flows create and provision a sibling checkout, open its grouped Herdr
-workspace, start a fresh Pi with the task as its initial message, focus it, and
-shut down the source Pi after successful handoff.
+workspace, start a fresh Pi, submit the task as its first prompt once Pi is
+ready, focus it, and shut down the source Pi after successful handoff.
 
 ### First-use project trust
 
 Every worktree is a new filesystem path, so Pi may pause at `Trust project folder?`
-before processing its initial task. This is expected; approving trust immediately
-continues the queued task.
+before becoming interactive. This is expected; after trust is approved, Herdr
+submits the queued kickoff task.
 
 - `Trust` remembers only that worktree path.
 - `Trust parent folder` avoids future prompts but, with sibling worktrees under
@@ -47,7 +47,7 @@ explicit user security decision.
 
 - a running Herdr server with the Pi integration installed;
 - `git`, `bun`, `herdr`, `pi`, `vercel`, `provision-env`, and `sandbox-db` in `PATH`;
-- a source Git checkout linked to Vercel, or exactly one linked sibling checkout;
+- a source Git checkout linked to Vercel, or sibling checkouts sharing one Vercel identity;
 - ignored `.env.local`, `.env.test`, and `.vercel/` paths in the repository;
 - the project-local sandbox database profile expected by `provision-env`, or valid global `sandbox-db` authentication.
 
@@ -125,9 +125,10 @@ In order, `worktree create`:
 3. resolves the workspace's initial root pane;
 4. runs `provision-env --database --non-interactive`, failing safely on unexpected existing env files, pulling Development and `test` Vercel variables, removing deployment-only metadata and integration database URLs, and creating independent database leases for both;
 5. runs every explicit `--setup` command;
-6. starts a fresh named Pi session with the kickoff task as Pi's initial message;
-7. verifies the Pi session is ready with the startup task attached;
-8. focuses the destination workspace.
+6. starts a fresh named Pi session without a task attached;
+7. verifies Pi is interactive in the destination pane;
+8. submits the kickoff task as the fresh session's first prompt;
+9. focuses the destination workspace.
 
 The CLI never moves or forks the caller's Pi session. A Pi adapter may shut down
 the caller only after this command succeeds, leaving one active Pi in the new
@@ -140,11 +141,14 @@ and database leases created by that invocation. After Herdr has created the chec
 worktree, branch, and workspace on later failure so the exact state can be
 inspected and resumed. It never force-removes a checkout or deletes a branch.
 
-The kickoff task is passed directly on Pi's launch argv, avoiding a race where
-terminal input sent immediately after startup could be lost. Once Pi is confirmed
-ready, handoff is considered successful. A later workspace-focus failure is reported
-as a warning while the command still exits successfully, allowing Pi adapters to
-shut down the source instead of leaving two active sessions.
+Herdr waits for Pi to become interactive before submitting the kickoff through
+`agent prompt`, avoiding both lost terminal input and false launch timeouts when
+Pi immediately enters a working state. Only Herdr's structured startup-timeout
+error is recoverable, and only when Pi is already detected as idle or working in
+the exact destination pane. Blocked startup—such as Pi's trust selector—never
+receives the kickoff as terminal input. A later workspace-focus failure is
+reported as a warning while the command still exits successfully, allowing Pi
+adapters to shut down the source instead of leaving two active sessions.
 
 ## Development
 

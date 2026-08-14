@@ -53,7 +53,9 @@ const AgentInfo = Schema.Struct({
   workspace_id: Schema.String,
   interactive_ready: Schema.optional(Schema.Boolean),
   launch_pending: Schema.optional(Schema.Boolean),
-  name: Schema.optional(Schema.Union(Schema.String, Schema.Null))
+  name: Schema.optional(Schema.Union(Schema.String, Schema.Null)),
+  agent: Schema.optional(Schema.String),
+  agent_status: Schema.optional(Schema.String)
 })
 
 export const AgentStartedResponse = Schema.Struct({

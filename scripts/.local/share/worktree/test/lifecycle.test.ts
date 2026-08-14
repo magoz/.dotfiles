@@ -13,7 +13,14 @@ interface Call {
   readonly cwd?: string
 }
 
-const createFake = (options: { failProvision?: boolean; failFocus?: boolean } = {}) => {
+const createFake = (
+  options: {
+    failProvision?: boolean
+    failFocus?: boolean
+    startErrorCode?: "cli:agent:start:timeout" | "agent_pane_busy"
+    detectedStatus?: "idle" | "working" | "blocked"
+  } = {}
+) => {
   const calls: Array<Call> = []
   const capture: ProcessService["capture"] = (command, args, runOptions = {}) => {
     calls.push({ mode: "capture", command, args, cwd: runOptions.cwd })
@@ -53,6 +60,18 @@ const createFake = (options: { failProvision?: boolean; failFocus?: boolean } = 
       })
     }
     if (command === "herdr" && args[0] === "agent" && args[1] === "start") {
+      if (options.startErrorCode !== undefined) {
+        return Effect.fail(
+          new ProcessError({
+            command: "herdr agent start",
+            exitCode: 1,
+            stdout: JSON.stringify({
+              error: { code: options.startErrorCode, message: "agent start failed" }
+            }),
+            stderr: ""
+          })
+        )
+      }
       return Effect.succeed({
         stdout: JSON.stringify({
           result: {
@@ -64,6 +83,32 @@ const createFake = (options: { failProvision?: boolean; failFocus?: boolean } = 
       })
     }
     if (command === "herdr" && args[0] === "agent" && args[1] === "get") {
+      if (options.startErrorCode !== undefined && args[2] !== "wA:p1") {
+        return Effect.fail(
+          new ProcessError({
+            command: "herdr agent get",
+            exitCode: 1,
+            stdout: "",
+            stderr: "agent alias not found"
+          })
+        )
+      }
+      if (options.startErrorCode !== undefined) {
+        return Effect.succeed({
+          stdout: JSON.stringify({
+            result: {
+              type: "agent_info",
+              agent: {
+                pane_id: "wA:p1",
+                workspace_id: "wA",
+                agent: "pi",
+                agent_status: options.detectedStatus ?? "working"
+              }
+            }
+          }),
+          stderr: ""
+        })
+      }
       return Effect.succeed({
         stdout: JSON.stringify({
           result: {
@@ -203,6 +248,7 @@ test("the lifecycle provisions before setup and starts one fresh Pi", async () =
     ["inherit", shell, "-lc", "pnpm db:push"],
     ["capture", "herdr", "agent", "start"],
     ["capture", "herdr", "agent", "get"],
+    ["capture", "herdr", "agent", "prompt"],
     ["capture", "herdr", "workspace", "focus"]
   ])
 
@@ -211,7 +257,94 @@ test("the lifecycle provisions before setup and starts one fresh Pi", async () =
   )
   expect(start?.args).toContain("pi")
   expect(start?.args).toContain("--name")
-  expect(start?.args.at(-1)).toBe("Implement the feature")
+  expect(start?.args.at(-1)).toBe("feature")
+  expect(start?.args).not.toContain("Implement the feature")
+
+  const prompt = fake.calls.find(
+    (call) => call.command === "herdr" && call.args[0] === "agent" && call.args[1] === "prompt"
+  )
+  expect(prompt?.args).toEqual([
+    "agent",
+    "prompt",
+    "wA:p1",
+    "Implement the feature"
+  ])
+})
+
+test("a start timeout is recovered when Pi is detected in the destination pane", async () => {
+  const fake = createFake({ startErrorCode: "cli:agent:start:timeout" })
+  const created = await Effect.runPromise(
+    createEnvironment({
+      repo: "/repo",
+      branch: "feat/feature",
+      base: "origin/main",
+      ttl: "7d",
+      prompt: "Implement the feature",
+      setupCommands: []
+    }).pipe(Effect.provide(fake.layer))
+  )
+
+  expect(created.paneId).toBe("wA:p1")
+  expect(
+    fake.calls.some(
+      (call) =>
+        call.command === "herdr" &&
+        call.args[0] === "agent" &&
+        call.args[1] === "prompt" &&
+        call.args[2] === "wA:p1"
+    )
+  ).toBe(true)
+})
+
+test("non-timeout launch failures are not recovered from pane detection", async () => {
+  const fake = createFake({ startErrorCode: "agent_pane_busy" })
+
+  await expect(
+    Effect.runPromise(
+      createEnvironment({
+        repo: "/repo",
+        branch: "feat/feature",
+        base: "origin/main",
+        ttl: "7d",
+        prompt: "Implement the feature",
+        setupCommands: []
+      }).pipe(Effect.provide(fake.layer))
+    )
+  ).rejects.toThrow("agent start failed")
+
+  expect(
+    fake.calls.some(
+      (call) =>
+        call.command === "herdr" && call.args[0] === "agent" && call.args[1] === "prompt"
+    )
+  ).toBe(false)
+})
+
+test("blocked Pi startup does not receive the kickoff prompt", async () => {
+  const fake = createFake({
+    startErrorCode: "cli:agent:start:timeout",
+    detectedStatus: "blocked"
+  })
+
+  await expect(
+    Effect.runPromise(
+      createEnvironment({
+        repo: "/repo",
+        branch: "feat/feature",
+        base: "origin/main",
+        ttl: "7d",
+        prompt: "Implement the feature",
+        setupCommands: []
+      }).pipe(Effect.provide(fake.layer))
+    )
+  ).rejects.toThrow("agent start failed")
+
+  expect(
+    fake.calls.some(
+      (call) =>
+        call.command === "herdr" && call.args[0] === "agent" && call.args[1] === "prompt"
+    )
+  ).toBe(false)
 })
 
 test("a focus failure is a warning after the destination Pi is ready", async () => {
