@@ -35,6 +35,7 @@ brew install \
   fnm \
   jq \
   wezterm \
+  ghostty \
   font-meslo-lg-nerd-font \
   neovim \
   nikitabobko/tap/aerospace \
