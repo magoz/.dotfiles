@@ -80,6 +80,20 @@ export const BranchListResponse = Schema.Struct({
   branches: Schema.Array(Branch)
 })
 
+export const Database = Schema.Struct({
+  name: Schema.String,
+  owner_name: Schema.String
+})
+export type Database = Schema.Schema.Type<typeof Database>
+
+export const DatabaseListResponse = Schema.Struct({
+  databases: Schema.Array(Database)
+})
+
+export const ConnectionUriResponse = Schema.Struct({
+  uri: Schema.Redacted(Schema.String)
+})
+
 /** Legacy single-lease records remain readable as the `default` lease. */
 const LegacyLease = Schema.Struct({
   version: Schema.Literal(1),
@@ -111,6 +125,8 @@ export const Lease = Schema.Struct({
   configEnvFile: Schema.String,
   envFile: Schema.String,
   envKeys: Schema.Array(Schema.String),
+  databaseName: Schema.optional(Schema.String),
+  roleName: Schema.optional(Schema.String),
   createdAt: Schema.String,
   expiresAt: Schema.String
 })

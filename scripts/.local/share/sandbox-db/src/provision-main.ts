@@ -48,8 +48,8 @@ const root = Command.make(
       "preserve",
       "overwrite"
     ]).pipe(
-      Options.withDescription("existing env policy (default: ask on a TTY)"),
-      Options.withDefault("ask")
+      Options.withDescription("existing env policy (default: refresh from Vercel)"),
+      Options.withDefault("overwrite")
     )
   },
   (options) =>
@@ -69,7 +69,7 @@ const root = Command.make(
 ).pipe(
   Command.withDescription(
     "Install dependencies, pull Vercel Development and test environments, and optionally provision two isolated databases.\n\n" +
-    "Existing env files prompt on a TTY and fail safely in non-interactive mode unless an explicit policy is provided. Both paths must be ignored.\n" +
+    "Existing env files refresh from Vercel by default; use --env-conflict to preserve, reject, or prompt instead. Both paths must be ignored.\n" +
     "Repository-specific schema bootstrap remains a separate step.\n\n" +
     "Documentation: ~/.local/share/sandbox-db/README.md"
   )

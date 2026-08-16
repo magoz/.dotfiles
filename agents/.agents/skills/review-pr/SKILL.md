@@ -1,6 +1,6 @@
 ---
 name: review-pr
-description: Review one workflow-created draft GitHub pull request against its authoritative Agent Brief, repository owner guidance and patterns, deterministic validation, and durable-knowledge implications. Uses parallel read-only reviewers and at most one fix writer, and may mark a clean PR ready. Never merges or cleans up the worktree.
+description: Review or restack one workflow-created regular or trusted stacked GitHub pull request against its Agent Brief and repository rules. Uses parallel read-only reviewers and at most one fix writer; may attest a stacked draft as stack-ready or mark a default-based PR ready.
 disable-model-invocation: true
 metadata:
   opencode/slash: "true"
@@ -9,9 +9,10 @@ metadata:
 
 # Review Pull Request
 
-Turn one workflow-created draft pull request into either:
+Turn one workflow-created pull request into one of:
 
-- a reviewed, validated pull request that is ready for human/merge review; or
+- a reviewed, validated default-based PR ready for human/merge review;
+- a reviewed, validated stacked draft with an exact `stack-ready` implementation-base attestation; or
 - a durable, evidence-backed blocked draft with an exact recovery path.
 
 Explicit invocation:
@@ -19,9 +20,12 @@ Explicit invocation:
 ```text
 /skill:review-pr <pull-request-number-or-url>
 /skill:review-pr <pull-request-number-or-url> --check
+/skill:review-pr <pull-request-number-or-url> --restack
 ```
 
 `--check` performs the complete static audit and reports findings plus unverified validation gates. It does not renew infrastructure, run project validation commands, launch a fix writer, commit, push, comment, change labels, or change draft state.
+
+`--restack` is a controlled transition after a trusted lower PR moves or merges. It verifies lineage, updates the upper branch without rewriting history, retargets only when safe, invalidates prior attestations, and then performs the full review against the new fixed tuple.
 
 ## Initial scope
 
@@ -36,17 +40,20 @@ This first version:
 - synthesizes findings before allowing one fix writer to mutate the existing worktree;
 - allows at most three review/fix rounds;
 - independently reruns required validation;
-- pushes accepted fixes without force and marks the PR ready only when every gate passes;
-- keeps the issue assigned, worktree provisioned, and sandbox lease alive.
+- pushes accepted fixes without force and grants `ready` or `stack-ready` only when every applicable gate passes;
+- keeps the issue assigned, worktree provisioned, and sandbox lease alive;
+- supports same-repository trusted stacks created by `implement-issue --stack-on`, including fan-out from one lower PR;
+- grants exact-head `stack-ready` attestations to passing non-default-based drafts and ordinary `ready` only to passing default-based PRs;
+- restacks one PR at a time after lower movement or merge without force-pushing.
 
-It does not support stacked pull requests yet. It never merges, closes issues, releases infrastructure, deletes environment files, removes worktrees, deletes branches, or performs release work.
+It never merges pull requests, closes issues, releases infrastructure, deletes environment files, removes worktrees, deletes branches, or performs release work.
 
 ## Hard boundaries
 
 Never:
 
 - review from the PR title/body alone or treat implementation-agent claims as proof;
-- proceed without a fixed base SHA, head SHA, complete diff, linked issue, and authoritative Agent Brief;
+- proceed without a fixed target identity/target-tip/effective-diff-base/head tuple, complete diff, linked issue, and authoritative Agent Brief;
 - silently reinterpret a stale brief or make a product, domain, architecture, security, privacy, or scope decision;
 - let a reviewer edit code/docs, stage, commit, push, mutate GitHub, run infrastructure commands, or launch subagents;
 - let more than one fix writer mutate the implementation worktree;
@@ -58,9 +65,11 @@ Never:
 - weaken tests, types, lint, authentication, authorization, validation, migrations, telemetry, or safety guards to pass review;
 - accept a manual database/schema repair as successful migration validation;
 - hide skipped, unavailable, flaky, pending, or baseline-failing checks;
-- force-push, rewrite unrelated commits, reset/clean the worktree, or discard artifacts;
+- force-push, rebase published stack history, rewrite unrelated commits, reset/clean the worktree, or discard artifacts;
+- flatten, retarget, or follow a moving stack base without the explicit verified `--restack` protocol;
+- synthesize a multi-head join or treat unreviewed lower work as a valid base;
 - submit a self-approval GitHub review;
-- mark the PR ready while any blocker, required fix, unresolved decision, uncharacterized failure, pending required check, or undispositioned baseline failure remains;
+- grant `ready` or `stack-ready` while any review blocker, required fix, unresolved decision, uncharacterized failure, pending applicable required check, or undispositioned baseline failure remains;
 - merge, unassign, close the issue, release the lease, remove `.env.local`, or remove the worktree.
 
 The parent Pi session remains the sole GitHub and infrastructure mutator. Review agents are read-only. One fix writer owns all accepted project/source mutations in the existing implementation worktree.
@@ -118,14 +127,14 @@ Input:
 
 Successful full-mode output:
 
-- fixed base/head evidence and linked authoritative issue contract;
+- fixed target identity, target-tip, effective diff-base, and head evidence plus the linked authoritative issue contract;
 - complete review coverage across Spec, Standards, Correctness/Validation, and Knowledge;
 - every finding independently dispositioned;
 - accepted fixes committed in the existing implementation worktree and pushed without force;
 - required local validation independently rerun at the final pushed head;
 - every configured required check successful, with the absence of configured required checks distinguished from missing evidence;
-- one provenance-marked PR review summary tied to the exact final head SHA;
-- draft state changed to ready;
+- one provenance-marked PR review summary tied to the exact final review tuple;
+- a default-based PR changed from draft to ready, or a non-default-based PR kept draft with an exact `stack-ready` attestation;
 - issue remains open and assigned;
 - implementation worktree, ignored environment, and live sandbox lease remain intact;
 - no merge or cleanup action.
@@ -138,11 +147,16 @@ Successful full-mode output:
 - Confirm the current directory is a local clone of that PR's repository; otherwise stop and request the correct path.
 - Fetch PR metadata, title, body, author, state, draft state, base/head refs and SHAs, commits, changed files, comments, reviews, requested reviewers, linked issues, and check rollup.
 - Confirm the target is an open pull request.
-- Confirm the PR is still draft for full mode. `--check` may inspect either draft or ready PRs.
-- Confirm the base is the repository's default branch. A non-default base may be a stack and is unsupported in v1; stop rather than flattening or retargeting it.
+- Confirm the PR is still draft for full mode unless it is an already-ready default-based PR being checked. `--check` may inspect draft, stack-ready, or ready PRs.
+- Classify the base:
+  - **default-based:** base ref is the repository default branch;
+  - **trusted stacked:** non-default same-repository base with an intact `implement-issue:stack` block, an exact approved `slice-issue:delivery-topology:v1` edge/digest requiring merge-commit ancestry, a workflow-owned lower PR/issue/worktree, a positive single current `review-pr:status:v2` record, and repository merge-commit support. In ordinary review/check mode the lower PR must be OPEN, clean, writer-free, and mutation-inactive. In explicit `--restack`, preflight may instead admit a MERGED lower PR only when its exact trusted head is preserved as an ancestor of its pinned current target tip; this exception exists solely to reach the merged-lower transition in section 12.
+- Stop on any other non-default base rather than flattening, adopting, or retargeting it.
 - Require exactly one intended closing issue through `Closes #<number>` or GitHub's closing reference.
-- Read that issue's body, complete comment thread, labels, assignees, native blockers, parent, sub-issues, and linked PRs.
-- Verify this is the delivery line created by `implement-issue`: expected issue assignee, issue-derived branch, dedicated owned worktree, default-branch PR base, ignored provisioning artifacts, and recorded live sandbox lease must agree.
+- Read that issue's body, complete comment thread, labels, assignees, native blockers, parent, sub-issues, linked PRs, and authoritative topology. For a stack, recursively read the lower lineage only as far as needed to prove all open blockers are represented.
+- Verify this is the delivery line created by `implement-issue`: expected issue assignee, issue-derived branch, dedicated owned worktree, ignored provisioning artifacts, recorded live sandbox lease, and default or stack base identity must agree.
+- For a stack, pin and verify topology comment ID, expected author, created/updated timestamps, canonical JSON digest, merge strategy, raw base branch, lower PR identity, and complete review lineage.
+- When `--restack` is present, perform only contract/ownership/prohibited-artifact preflight here, then go directly to section 12. Do not review or validate the obsolete tuple before restacking. After the restack transition, restart at section 1 with no inherited positive evidence.
 
 If those artifacts belong to a manually created or differently orchestrated PR, stop for an explicit adoption decision. Adoption must name the worktree, branch, assignee, environment/lease ownership, and recovery policy; invocation alone is not silent adoption.
 
@@ -158,22 +172,34 @@ Verify:
 - the issue remains open and assigned to the expected implementation owner;
 - the PR closing reference points to that issue;
 - no unresolved `needs-info` or `needs-decision` state exists;
-- the issue's native blockers have not changed in a way that invalidates delivery;
-- the PR title/body and diff still describe the same outcome.
+- for a decomposed child, the parent remains open but unassigned with no implementation workflow-state label, branch, worktree, or PR;
+- in default mode every native blocker is closed; when topology still names a former `stack_on` predecessor, its PR is MERGED and the exact trusted reviewed head is an ancestor of the pinned default target tip—closed-but-unmerged is invalid;
+- in stack mode every open blocker is present in the exact reviewed lower ancestor lineage, every other blocker is closed, and the direct `stack_on` edge matches the authoritative topology;
+- the PR title/body, stack block when present, and diff still describe the same outcome.
 
-For a decomposed child, also read the parent outcome brief and decomposition comment. Review the child's declared parent coverage and compatibility with landed/lower dependencies, but do not require sibling behavior that is explicitly out of scope.
+For a decomposed child, also read the parent outcome brief and decomposition comment. Validate the newest topology against the normative v1 schema using RFC 8785 JCS SHA-256, exact comment identity/author/timestamps, complete current child set, native edges, combined-graph acyclicity, launch mode, stack edge, parallel group, and merge strategy. Review the child's declared parent coverage and compatibility with landed/lower dependencies, but do not require sibling behavior that is explicitly out of scope.
 
 If contract authority is ambiguous or a new human-owned decision is required, keep the PR draft and route back to an explicitly requested `triage-issue` re-triage rather than reviewing an invented contract. Re-triage must be told that assignment and implementation artifacts intentionally remain active.
 
 ### 3. Pin the review and implementation worktree
 
-Fetch the remote base and head without resetting any checkout. Record:
+Fetch the remote target ref and head without resetting any checkout. Record the immutable review tuple:
 
-- base SHA;
-- head SHA;
-- merge-base SHA;
-- the review command `git diff <base>...<head>`;
-- `git log <base>..<head>`.
+```text
+target identity (repository + ref + lower PR when stacked)
+target-tip SHA
+effective diff-base SHA
+head SHA
+```
+
+The effective diff base is the merge-base of the pinned target tip and head. For an unmodified stacked branch it must equal the attested lower head. Review only this delivery with:
+
+```text
+git diff <effective-diff-base-sha>..<head-sha>
+git log <effective-diff-base-sha>..<head-sha>
+```
+
+Pin target tip separately: any target movement, even when the effective merge-base happens to remain unchanged, invalidates the attestation and aborts mutation.
 
 Before any model reads the complete diff:
 
@@ -188,7 +214,7 @@ Find the local worktree that owns the PR head branch. Require:
 - the branch is checked out in exactly one intended implementation worktree;
 - local `HEAD` equals the remote PR head before the first review wave;
 - the worktree is clean;
-- commits above the base belong to this delivery;
+- commits above the effective diff base belong to this delivery;
 - the pre-diff prohibited-path and redacted secret-scan gates passed;
 - no environment, Vercel metadata, generated private report, or unrelated file appears in the changed-file inventory;
 - `.env.local` and `.vercel/project.json` remain ignored and untracked when present;
@@ -208,8 +234,9 @@ sandbox-db renew --worktree "<worktree>" --ttl 7d
 
 The coordinator personally constructs a bounded packet from primary evidence:
 
-- exact base, head, and merge-base SHAs;
-- complete changed-file list and diff command;
+- exact target identity, target-tip, effective diff-base, and head SHAs;
+- trusted stack lineage and topology evidence when applicable;
+- complete changed-file list and fixed diff command;
 - commit list;
 - authoritative child Agent Brief and relevant parent coverage;
 - PR body and existing review/check evidence;
@@ -300,7 +327,7 @@ In `--check` mode, stop after reporting this disposition and every independently
 
 ### 7. Run the controlled fix loop
 
-When blockers or required fixes are inside the approved scope, identify and launch exactly one fix writer in the existing implementation worktree. That same writer owns every project/source mutation across all rounds. If it cannot continue, stop for explicit recovery rather than silently substituting another writer. The writer receives:
+When blockers or required fixes are inside the approved scope, first transition the single PR status record to `invalidated` with a new sequence, the current tuple, a deterministic fix-operation ID, and the accepted-finding reason; read it back and verify no positive status remains admissible. Then identify the sole fix writer for the existing implementation worktree: reuse the restack writer when `--restack` already established one, otherwise launch exactly one. That same writer owns every project/source mutation across all rounds. If it cannot continue, stop for explicit recovery rather than silently substituting another writer. The writer receives:
 
 - exact accepted findings and rejected/deferred items;
 - authoritative brief and non-goals;
@@ -323,7 +350,7 @@ Fix-writer hard constraints:
 
 After the writer returns, the coordinator verifies the actual commit and worktree, then pushes without force. Never push a dirty, secret-bearing, unrelated, or unreviewed diff.
 
-Refresh the head SHA and rerun fresh, focused read-only reviews for affected axes. Repeat only while fixes worth doing now remain, up to three total review waves. If blockers remain after the third wave, keep the PR draft and report the exact unresolved state.
+Refresh and repin the complete target-tip/effective-diff-base/head tuple, then rerun fresh, focused read-only reviews for affected axes. Repeat only while fixes worth doing now remain, up to three total review waves. If blockers remain after the third wave, keep the PR draft and report the exact unresolved state.
 
 ### 8. Independently validate the final head
 
@@ -353,15 +380,27 @@ For database/schema changes:
 
 Run database-backed commands one at a time against the isolated lease.
 
-### 9. Characterize failures against the clean base
+### Prospective merge validation
+
+Before any positive attestation:
+
+- re-fetch the pinned target/head tuple and require GitHub `mergeable` to be `MERGEABLE` with an acceptable `mergeStateStatus` rather than `CONFLICTING`, `DIRTY`, `UNKNOWN`, or blocked by an unexplained policy state;
+- construct the deterministic prospective merge of the pinned target-tip and head in a disposable exact validation worktree without rewriting either delivery branch;
+- record the resulting merge tree/commit identity and run the brief's integration-sensitive required checks against that exact merge result;
+- use a separate isolated sandbox when database-backed validation is required; never share the implementation lease concurrently;
+- discard/release only the exact disposable validation resources after confirming they are clean and contain no unique artifacts.
+
+If the target moves, mergeability changes, or the prospective merge cannot be built and validated, invalidate the tuple and restart. Head-only test success is insufficient evidence of integration with the pinned target.
+
+### 9. Characterize failures against the fixed effective base
 
 Classify every failure:
 
 - **Introduced/affected by the PR:** return to the fix writer.
 - **Uncharacterized:** investigate or stop; never call it unrelated.
-- **Proven pre-existing:** reproduce the identical command and failure on the freshly fetched clean base.
+- **Proven pre-existing:** reproduce the identical command and failure on the exact pinned effective base (default-branch base for regular PRs, reviewed lower head for stacked PRs).
 
-When clean-base reproduction needs secrets or a database, use a separate exact temporary validation worktree and isolated sandbox rather than mutating the primary checkout or sharing the implementation database. Provision it through the normal coordinator-owned workflow, capture only safe evidence, and release/remove only those exact temporary resources after confirming the validation worktree is disposable and clean.
+When fixed-base reproduction needs secrets or a database, use a separate exact temporary validation worktree and isolated sandbox rather than mutating the primary checkout or sharing the implementation database. Provision it through the normal coordinator-owned workflow, capture only safe evidence, and release/remove only those exact temporary resources after confirming the validation worktree is disposable and clean.
 
 A workaround applied only to the implementation sandbox does not characterize a baseline and does not make validation pass.
 
@@ -373,33 +412,54 @@ For a genuine human-owned decision:
 
 - preserve the branch, worktree, commits, environment, lease, and assignment;
 - keep the PR draft;
-- post one concise provenance-marked review summary with established evidence and one decision question;
+- transition the single PR status record to `blocked` for the current tuple and verify no positive status remains;
+- update that provenance-marked review summary with established evidence and one decision question;
 - apply `needs-decision` and remove `ready-to-implement` from the issue;
 - ask one question with a recommendation and essential trade-off.
 
-After the maintainer answers, intentionally resume `triage-issue` as a re-triage of the assigned issue. Record the answer, publish or confirm the authoritative brief, clear `needs-decision`, and restore the correct executable state while preserving assignment/artifacts. Resume review only after re-reading that state and pinning a new base/head pair.
+After the maintainer answers, intentionally resume `triage-issue` as a re-triage of the assigned issue. Record the answer, publish or confirm the authoritative brief, clear `needs-decision`, and restore the correct executable state while preserving assignment/artifacts. Resume review only after re-reading that state and pinning a new complete review tuple.
 
 For technical blockers, failed validation, exhausted review rounds, baseline blockers, or unavailable required evidence:
 
 - preserve all implementation artifacts and the live lease;
 - keep the PR draft;
-- post one provenance-marked summary tied to the reviewed head SHA;
+- transition the single PR status record to `blocked` for the fixed tuple and verify it;
+- when a restack journal is active, mark that journal terminal `blocked`, clear the status record's operation field in a new verified sequence, and verify both records agree;
+- update its provenance-marked review summary tied to the complete tuple;
 - list accepted fixes already pushed, remaining blockers, exact failed commands/checks, and recovery action;
 - do not relabel the issue as a human decision unless one truly exists.
 
-Every review comment carries a deterministic hidden marker:
+Each workflow PR owns exactly one mutable coordinator-authored status comment marked:
 
 ```markdown
-<!-- review-pr:<status>:<full-head-sha> -->
+<!-- review-pr:status:v2 -->
 ```
 
-Before posting, search existing comments for the exact marker. Update/reuse the coordinator-authored matching comment or skip creation; never duplicate it after a timeout or retry.
+The comment contains one RFC 8785 JCS canonical JSON object with exactly these keys and types:
 
-Review comment shape:
+```json
+{"version":2,"sequence":1,"status":"blocked","pr":123,"repo":"owner/name","target_ref":"main","lower_pr":null,"target_tip":"<40-hex-sha>","diff_base":"<40-hex-sha>","head":"<40-hex-sha>","operation":null,"reason":"concise status reason"}
+```
 
-```markdown
-<!-- review-pr:blocked:<full-head-sha> -->
+- `sequence` is a positive integer incremented by exactly one on every status transition;
+- `status` is `blocked`, `invalidated`, `stack-ready`, or `ready`;
+- `pr` is the PR being attested; `lower_pr` is its base PR number for a stack and null for default-based review;
+- `operation` is the active restack/fix operation ID or null;
+- repository/ref/SHAs describe the current fixed tuple, even for blocked/invalidated status.
+
+Find the status comment by exact marker and expected authenticated workflow-owner author. If none exists, create it once. If more than one exists, the author differs, or its JSON/schema/sequence is invalid, stop for explicit recovery. To transition status, re-read the exact comment ID, author, `updatedAt`, and body; increment sequence; replace only the agent-owned JSON/review sections; update that same comment; then read it back and verify. Never append a second status event or fall back to older positive evidence.
+
+Consumers accept only this single current record and only when PR number, repository, target ref, lower PR, target-tip, diff-base, head, draft state, checks, clean writer-free worktree, and absence of an active mutation journal all agree. `blocked` and `invalidated` are never admissible.
+
+Status comment shape:
+
+````markdown
+<!-- review-pr:status:v2 -->
 > *Generated by an AI agent during pull request review.*
+
+```json
+{"version":2,"sequence":1,"status":"blocked","pr":123,"repo":"owner/name","target_ref":"main","lower_pr":null,"target_tip":"<full-sha>","diff_base":"<full-sha>","head":"<full-sha>","operation":null,"reason":"exact blocker"}
+```
 
 ## Agent Review
 
@@ -420,9 +480,9 @@ Review comment shape:
 
 ### Blocking items
 - exact blocker and recovery action
-```
+````
 
-### 11. Mark a passing PR ready
+### 11. Attest a passing fixed tuple
 
 All of these must hold at the final pushed head:
 
@@ -431,42 +491,88 @@ All of these must hold at the final pushed head:
 - repository conformance review is clean;
 - required knowledge/contract documentation is accurate;
 - focused and repository-required local validation passed without manual environment/schema repair;
-- every required check that runs on draft PRs completed successfully;
-- checks claimed to require ready state are proven by repository workflow/branch policy rather than assumption;
+- every required check available to the current draft/base state completed successfully;
 - no undispositioned baseline failure remains;
-- final diff is scoped, clean, secret-free, and reviewed;
+- final fixed-base diff is scoped, clean, secret-free, and reviewed;
 - local head equals remote PR head;
 - issue remains open with the exact expected assignee set and no competing delivery branch/PR;
 - sandbox lease remains live;
 - PR evidence accurately reports final validation and residual risk.
 
-Immediately before each GitHub mutation, re-fetch PR metadata and require both base SHA and head SHA to equal the pinned validated pair. Any movement aborts the transition and restarts affected review/validation.
+Immediately before each GitHub mutation, re-run the complete readiness predicate: PR tuple/state/checks/mergeability, issue state/assignment/labels/brief/blockers, topology comment identity/digest/edge, branch/worktree/lease ownership, absence of competing delivery, and validation evidence. Any movement or policy drift aborts the transition and invalidates prior evidence.
 
 When PR evidence needs updating, use only this delimited coordinator-owned block:
 
 ```markdown
 <!-- review-pr:evidence:start -->
-...final validation evidence...
+...final tuple and validation evidence...
 <!-- review-pr:evidence:end -->
 ```
 
 Re-read the current body immediately before editing. Replace only that block, or append it when absent. Preserve all other text byte-for-byte and abort if concurrent changes make the owned edit ambiguous.
 
-Post or update the idempotent final `## Agent Review` comment with the four axes, finding disposition, commands/results, remote checks, and safe lease metadata. Revalidate the pinned base/head pair again, then mark the PR ready:
+Prepare the idempotent final `## Agent Review` evidence with the four axes, finding disposition, commands/results, remote checks, safe lease metadata, and the canonical v2 tuple. Do not publish a positive marker until the state-specific postconditions below pass.
+
+#### Default-based PR
+
+Revalidate the tuple, then mark the PR ready:
 
 ```bash
-gh pr ready <pr-number-or-url>
+gh pr ready <pull-request-number-or-url>
 ```
 
-If repository policy has required checks that provably trigger only after ready, wait for those checks. On failure, immediately convert the PR back to draft with `gh pr ready --undo`, publish the idempotent blocked evidence, and stop. A successful full-mode result requires those post-ready checks to pass; pending checks are not success.
+If repository policy has required checks that provably trigger only after ready, wait for them. Re-run the complete readiness predicate after the transition. On **any** failed postcondition—including check failure, tuple movement, issue/topology/assignment drift, competing delivery, mergeability change, or missing evidence—immediately convert the PR back to draft with `gh pr ready --undo`, transition the single status record to `blocked`, verify both rollback and record, and stop. Only if every postcondition passes may the PR remain non-draft and receive `ready` status. **Only then** publish the canonical `ready` marker. If marker publication fails, the PR may remain ready but cannot serve as a trusted stack base until the exact marker is durably present and verified.
 
-Re-read the PR and verify draft state is false, base/head SHAs remain the validated pair, and exact issue ownership is unchanged. Do not submit approval, merge, unassign, remove readiness labels, close issues, release infrastructure, or clean up the worktree.
+#### Trusted stacked PR
 
-### 12. Report completion
+Keep the PR draft, re-read its tuple/checks/draft state, and only then publish the exact canonical `stack-ready` attestation. Do **not** call `gh pr ready`: the PR is review-clean as an implementation base, not merge-ready against the repository default branch. A descendant may use it only through `implement-issue --stack-on` while the complete tuple remains unchanged.
+
+If decisive required checks cannot run while the PR is draft or targets a non-default branch, do not grant `stack-ready`; keep it blocked until the repository supplies equivalent evidence. A stack-ready attestation expires immediately when the target tip, effective diff base, or head moves.
+
+When this review followed a restack, mark the journal terminal `completed`, clear the status record's operation field in a new verified sequence while preserving its positive status/tuple, and verify both records agree. Until then, descendants must reject the PR as an active mutation base.
+
+Do not submit approval, merge, unassign, remove readiness labels, close issues, release infrastructure, or clean up the worktree.
+
+### 12. Restack one trusted PR
+
+Run this section only for explicit `--restack`. Never restack multiple fan-out children in one invocation.
+
+Require before mutation:
+
+- the PR is a workflow-created stacked draft with one uniquely owned clean implementation worktree and live lease;
+- its issue, topology edge, assignment, branch, stack block, and lower lineage are unambiguous;
+- either a prior exact status record exists or the stack block contains verified PR-creation base-race evidence; a prior positive attestation is not required for creation-race recovery;
+- local HEAD equals remote head;
+- no fix writer or other process owns the worktree;
+- the current remote head SHA is recorded as the push lease point;
+- the intended new base is one reviewed lower head or the lower PR's target branch after an exact merge.
+
+Before any writer or Git mutation, create or transition the single PR status record to `invalidated` with the current tuple and deterministic restack operation ID, then read it back and verify descendants can no longer consume the old positive status. Next create or reuse one coordinator-authored durable restack record with that same operation ID derived from PR number plus old/new tuples:
+
+```markdown
+<!-- review-pr:restack:v1 {"operation":"<digest>","stage":"planned","old_target":"<ref@sha>","old_head":"<sha>","new_target":"<ref@sha>","new_lower_pr":123} -->
+```
+
+Update only that record after each verified stage: `planned`, `local-merge-committed`, `pushed`, `retargeted`, `metadata-updated`, `re-review-started`, then terminal `completed` or `blocked`. Stages before the terminal values are active mutation journals and make the PR inadmissible as a stack base. Re-read Git/GitHub postconditions before advancing; the record is a recovery journal, not proof by itself.
+
+Launch exactly one restack fix writer in the existing worktree with a contract limited to the specified Git merge, conflict resolution, validation needed for the merge, and local commit. The writer may not push, edit the PR/body/status journal, retarget, mutate GitHub, or launch subagents. The coordinator performs and verifies every push and GitHub mutation.
+
+Two transitions are allowed:
+
+1. **Lower PR moved but remains open.** Require a new exact latest `ready` or `stack-ready` lower attestation and require the previously trusted lower head to be an ancestor of the new lower head. If ancestry was rewritten, stop. The sole fix writer may merge the new lower head into the upper branch, resolve only in-scope conflicts, and create the local merge commit. The coordinator alone verifies and pushes without force, then updates the PR stack block to the new pinned lower tuple. Keep the PR based on the same raw lower branch.
+2. **Lower PR merged.** Require the lower PR to have merged the exact trusted lower head with ancestry preserved: `git merge-base --is-ancestor <trusted-lower-head> <new-target-tip>` must pass. The sole fix writer may merge the lower PR's current target tip into the upper branch when needed and create the local merge commit. The coordinator alone verifies/pushes without force, retargets the PR to that verified target ref, and updates the PR stack block with merged-lower provenance and the new tuple.
+
+A squash/rebase merge or force-updated lower branch that loses trusted ancestry is not automatically recoverable under the no-force policy. Stop with an exact recovery decision: either restore/merge an ancestry-preserving lower head, or obtain explicit human approval to create a replacement upper delivery line from the current target, cherry-pick only the upper issue's fixed-base commits, open a replacement draft, and supersede—but do not silently close—the old PR. This replacement flow is separate recovery work and requires full re-review.
+
+On any failure, stop with the worktree, branch, and durable stage record intact. Recovery must inspect ancestry and remote state before deciding whether a step already happened. Never duplicate a merge commit, let the writer mutate GitHub, force-push, or silently choose a different target.
+
+The restack writer becomes the sole fix writer for all later project/source mutations in this invocation and must be reused by the review fix loop; never launch a second writer. Any restack invalidates all prior review evidence. Re-enter the complete review at section 1 with a new fixed tuple. A still-stacked PR can regain `stack-ready`; a PR safely retargeted to the default branch can become ordinary `ready` only after the full default-based review passes. After publishing the final `ready`, `stack-ready`, or `blocked` status, update and verify the restack journal's terminal stage (`completed` for positive status, `blocked` otherwise) and clear `operation` in the status record. Until both records agree, consumers must reject the PR as a base.
+
+### 13. Report completion
 
 Return:
 
-- PR URL, final head SHA, base, and draft/ready state;
+- PR URL, final target identity/target-tip/effective-diff-base/head tuple, and draft/stack-ready/ready state;
 - linked issue URL and assignment state;
 - worktree and branch;
 - safe sandbox branch name/ID and expiration, never URLs or values;
@@ -475,7 +581,7 @@ Return:
 - commits pushed during review;
 - local commands and remote checks with exact results;
 - baseline failures or unavailable validation;
-- final status: `ready`, `blocked`, `decision required`, or `check-only`;
+- final status: `ready`, `stack-ready`, `blocked`, `decision required`, or `check-only`;
 - explicit statement that no merge, issue closure, lease release, or worktree cleanup occurred.
 
 ## Failure and recovery
@@ -488,7 +594,8 @@ Return:
 - **Push failure:** preserve local commits and draft state; never force-push.
 - **Validation failure:** classify it before any ready transition.
 - **Remote check pending/failure:** keep draft and report the exact check state.
-- **GitHub comment/ready transition failure:** preserve the reviewed pushed head, inspect idempotency markers and the agent-owned body block, and retry only the missing mutation after base/head revalidation.
-- **Unexpected base or head movement during review:** stop, discard no work, and restart affected review/validation from a newly pinned pair after resolving ownership.
+- **GitHub comment/attestation/ready transition failure:** preserve the reviewed pushed head, inspect idempotency markers and agent-owned body blocks, and retry only the missing mutation after complete-tuple revalidation.
+- **Restack failure:** preserve the exact local commit, push, retarget, and metadata stages; never repeat a completed merge or force-push.
+- **Unexpected target, diff-base, or head movement during review:** stop, discard no work, and restart affected review/validation from a newly pinned tuple after resolving ownership.
 
 Recovery is explicit and head-SHA-aware. A later invocation must re-read GitHub, local worktrees, lease state, prior review comments, and the current diff before resuming. No prior review remains authoritative after the PR head changes.

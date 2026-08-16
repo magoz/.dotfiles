@@ -1,6 +1,6 @@
 import { Prompt } from "@effect/cli"
 import { FileSystem, Path } from "@effect/platform"
-import { Cause, Console, Effect, Either, Option, Schema } from "effect"
+import { Cause, Console, Effect, Option, Schema } from "effect"
 import {
   ProvisionError,
   type EnvConflictPolicy,
@@ -84,6 +84,25 @@ export const stripPulledEnvironment = (
   } as const
 }
 
+const keepExistingDatabaseUrls = (pulled: string, existing: string) => {
+  const retained = new Map<string, string>()
+  for (const line of existing.split("\n")) {
+    const key = /^([A-Za-z_][A-Za-z0-9_]*)=/.exec(line)?.[1]
+    if (key !== undefined && databaseUrlKeys.has(key)) retained.set(key, line)
+  }
+  if (retained.size === 0) return pulled
+
+  const trailingNewline = pulled.endsWith("\n")
+  const lines = pulled.split("\n")
+  if (trailingNewline) lines.pop()
+  for (const [key, line] of retained) {
+    const index = lines.findIndex((candidate) => candidate.startsWith(`${key}=`))
+    if (index >= 0) lines[index] = line
+    else lines.push(line)
+  }
+  return `${lines.join("\n")}${trailingNewline ? "\n" : ""}`
+}
+
 const listExplicitVercelKeys = (repo: string, environment: string) =>
   Effect.gen(function* () {
     const process = yield* ProvisionProcess
@@ -107,7 +126,8 @@ const sanitizePulledEnvironment = (
   file: string,
   label: string,
   explicitKeys: ReadonlySet<string>,
-  replaceDatabaseUrls: boolean
+  replaceDatabaseUrls: boolean,
+  existingEnvironment?: string
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
@@ -115,8 +135,11 @@ const sanitizePulledEnvironment = (
       mapFileError(`cannot inspect pulled ${label} environment`)
     )
     const sanitized = stripPulledEnvironment(pulled, explicitKeys, replaceDatabaseUrls)
-    if (sanitized.metadataRemoved === 0 && sanitized.databaseUrlsRemoved === 0) return
-    yield* fs.writeFileString(file, sanitized.content).pipe(
+    const content = existingEnvironment === undefined
+      ? sanitized.content
+      : keepExistingDatabaseUrls(sanitized.content, existingEnvironment)
+    if (content === pulled) return
+    yield* fs.writeFileString(file, content).pipe(
       mapFileError(`cannot sanitize pulled ${label} environment`)
     )
     yield* fs.chmod(file, 0o600).pipe(
@@ -356,57 +379,6 @@ const hasDatabaseUrls = (file: string) =>
     return keys.has("DATABASE_URL") && keys.has("DATABASE_URL_UNPOOLED")
   })
 
-const LeaseStatusReport = Schema.parseJson(
-  Schema.Struct({
-    status: Schema.Union(
-      Schema.Literal("live"),
-      Schema.Literal("missing"),
-      Schema.Literal("none")
-    )
-  })
-)
-
-const leaseIsLive = (repo: string, leaseName: string) =>
-  Effect.gen(function* () {
-    const process = yield* ProvisionProcess
-    const result = yield* Effect.either(
-      process.capture("sandbox-db", [
-        "status",
-        "--worktree",
-        repo,
-        "--lease",
-        leaseName,
-        "--json"
-      ])
-    )
-    const output = Either.isRight(result) ? result.right.stdout : result.left.stdout
-    if (output.trim().length === 0) {
-      const detail = Either.isLeft(result) ? result.left.message : "empty status response"
-      return yield* fail(`cannot verify ${leaseName} database lease: ${detail}`)
-    }
-    const report = yield* Schema.decodeUnknown(LeaseStatusReport)(output).pipe(
-      Effect.mapError(
-        (cause) =>
-          new ProvisionError({
-            message: `cannot verify ${leaseName} database lease: invalid status response: ${cause}`
-          })
-      )
-    )
-    return report.status === "live"
-  })
-
-const ensureNoLiveLeases = (repo: string) =>
-  Effect.gen(function* () {
-    const liveLeases: Array<string> = []
-    if (yield* leaseIsLive(repo, "default")) liveLeases.push("default")
-    if (yield* leaseIsLive(repo, "test")) liveLeases.push("test")
-    if (liveLeases.length > 0) {
-      return yield* fail(
-        `cannot overwrite env files while ${liveLeases.join(" and ")} database lease${liveLeases.length === 1 ? " is" : "s are"} live; preserve the files or release the leases first`
-      )
-    }
-  })
-
 const ensureEnvUnchanged = (
   file: string,
   existed: boolean,
@@ -493,35 +465,60 @@ const rollback = (
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
-    if (state.createdTestLease) yield* releaseLease(repo, "test")
-    if (state.createdDefaultLease) yield* releaseLease(repo, "default")
+    const failures: Array<string> = []
+    const attempt = <A, E, R>(label: string, effect: Effect.Effect<A, E, R>) =>
+      effect.pipe(
+        Effect.matchCauseEffect({
+          onFailure: (cause) =>
+            Effect.sync(() => {
+              failures.push(`${label}:\n${Cause.pretty(cause)}`)
+            }),
+          onSuccess: () => Effect.void
+        })
+      )
+
+    if (state.createdTestLease) {
+      yield* attempt("cannot release test lease", releaseLease(repo, "test"))
+    }
+    if (state.createdDefaultLease) {
+      yield* attempt("cannot release default lease", releaseLease(repo, "default"))
+    }
 
     if (state.createdTestEnv) {
-      if (state.testEnvSnapshot !== undefined) {
-        yield* writePrivately(testEnvFile, state.testEnvSnapshot)
-        yield* Console.error("provision-env: restored .env.test after setup failure")
-      } else {
-        yield* fs.remove(testEnvFile).pipe(mapFileError("cannot roll back .env.test"))
-        yield* Console.error("provision-env: rolled back .env.test after setup failure")
-      }
+      const restoreTest = state.testEnvSnapshot !== undefined
+        ? writePrivately(testEnvFile, state.testEnvSnapshot).pipe(
+            Effect.zipRight(Console.error("provision-env: restored .env.test after setup failure"))
+          )
+        : fs.remove(testEnvFile).pipe(
+            mapFileError("cannot roll back .env.test"),
+            Effect.zipRight(Console.error("provision-env: rolled back .env.test after setup failure"))
+          )
+      yield* attempt("cannot restore .env.test", restoreTest)
     }
 
     if (state.createdLocalEnv) {
-      if (state.localEnvSnapshot !== undefined) {
-        yield* writePrivately(localEnvFile, state.localEnvSnapshot)
-        yield* Console.error("provision-env: restored .env.local after setup failure")
-      } else {
-        yield* fs.remove(localEnvFile).pipe(mapFileError("cannot roll back .env.local"))
-        yield* Console.error("provision-env: rolled back .env.local after setup failure")
-      }
+      const restoreLocal = state.localEnvSnapshot !== undefined
+        ? writePrivately(localEnvFile, state.localEnvSnapshot).pipe(
+            Effect.zipRight(Console.error("provision-env: restored .env.local after setup failure"))
+          )
+        : fs.remove(localEnvFile).pipe(
+            mapFileError("cannot roll back .env.local"),
+            Effect.zipRight(Console.error("provision-env: rolled back .env.local after setup failure"))
+          )
+      yield* attempt("cannot restore .env.local", restoreLocal)
     }
 
     for (const temporary of [state.testPullTemporary, state.localPullTemporary]) {
       if (temporary !== undefined) {
-        yield* fs.remove(temporary).pipe(
-          mapFileError(`cannot remove staged environment ${temporary}`)
+        yield* attempt(
+          `cannot remove staged environment ${temporary}`,
+          fs.remove(temporary).pipe(mapFileError(`cannot remove staged environment ${temporary}`))
         )
       }
+    }
+
+    if (failures.length > 0) {
+      return yield* fail(`rollback completed with errors:\n${failures.join("\n")}`)
     }
   })
 
@@ -639,10 +636,6 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           )
       const pullVercel = !options.skipVercel && envDecision === "overwrite"
 
-      if (pullVercel && (localEnvExists || testEnvExists)) {
-        yield* ensureNoLiveLeases(repo)
-      }
-
       if (pullVercel && localEnvExists) {
         state.localEnvSnapshot = yield* fs.readFileString(localEnvFile).pipe(
           mapFileError("cannot snapshot existing .env.local")
@@ -706,7 +699,8 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           localPullTemporary,
           "Development",
           developmentExplicitKeys,
-          options.database
+          options.database,
+          options.database ? undefined : state.localEnvSnapshot
         )
         yield* fs.chmod(localPullTemporary, 0o600).pipe(
           mapFileError("cannot protect pulled Development environment")
@@ -730,7 +724,8 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           testPullTemporary,
           options.testEnvironment,
           testExplicitKeys,
-          options.database
+          options.database,
+          options.database ? undefined : state.testEnvSnapshot
         )
         yield* fs.chmod(testPullTemporary, 0o600).pipe(
           mapFileError("cannot protect pulled test environment")
@@ -738,7 +733,6 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
 
         yield* ensureEnvUnchanged(localEnvFile, localEnvExists, state.localEnvSnapshot)
         yield* ensureEnvUnchanged(testEnvFile, testEnvExists, state.testEnvSnapshot)
-        yield* ensureNoLiveLeases(repo)
 
         yield* Effect.uninterruptible(
           Effect.gen(function* () {
@@ -774,29 +768,19 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           }
         }
 
-        const defaultLeaseLive = yield* leaseIsLive(repo, "default")
-        if (defaultLeaseLive && state.createdLocalEnv) {
-          return yield* fail(
-            "a live default database lease exists but .env.local was freshly pulled; release it before reprovisioning"
-          )
-        }
-        if (defaultLeaseLive && !(yield* hasDatabaseUrls(localEnvFile))) {
-          return yield* fail(
-            "the live default database lease is missing URLs in .env.local; release it before reprovisioning"
-          )
-        }
+        const defaultEnvExists = yield* fs
+          .exists(localEnvFile)
+          .pipe(Effect.orElseSucceed(() => false))
+        const defaultUrlsPresent = defaultEnvExists
+          ? yield* hasDatabaseUrls(localEnvFile)
+          : false
 
-        const testLeaseLive = yield* leaseIsLive(repo, "test")
-        if (testLeaseLive && state.createdTestEnv) {
-          return yield* fail(
-            "a live test database lease exists but .env.test was freshly pulled; release it before reprovisioning"
-          )
-        }
-        if (testLeaseLive && !(yield* hasDatabaseUrls(testEnvFile))) {
-          return yield* fail(
-            "the live test database lease is missing URLs in .env.test; release it before reprovisioning"
-          )
-        }
+        const testEnvExistsNow = yield* fs
+          .exists(testEnvFile)
+          .pipe(Effect.orElseSucceed(() => false))
+        const testUrlsPresent = testEnvExistsNow
+          ? yield* hasDatabaseUrls(testEnvFile)
+          : false
 
         const label =
           options.label ??
@@ -812,7 +796,7 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           options.ttl
         )
         state.createdDefaultLease = defaultStatus === "created"
-        if (defaultStatus === "created") state.createdLocalEnv = true
+        if (defaultStatus === "created" || !defaultUrlsPresent) state.createdLocalEnv = true
 
         yield* Console.log("provision-env: allocating isolated test PostgreSQL")
         const testStatus = yield* createDatabaseLease(
@@ -823,7 +807,7 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           options.ttl
         )
         state.createdTestLease = testStatus === "created"
-        if (testStatus === "created") state.createdTestEnv = true
+        if (testStatus === "created" || !testUrlsPresent) state.createdTestEnv = true
       }
 
       yield* Console.log("")
