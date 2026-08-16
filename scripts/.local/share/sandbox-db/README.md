@@ -71,7 +71,10 @@ The profile is atomic:
   credentials and settings from different accounts.
 
 After resolving the profile, `sandbox-db` creates two independently expiring
-branches with `SANDBOX_DB_PARENT_BRANCH_ID` as their Neon `parent_id`:
+branches with `SANDBOX_DB_PARENT_BRANCH_ID` as their Neon `parent_id`. Local
+lease records are disposable lookup hints for branch reuse and cleanup, not
+locks: a stale record is replaced and its old branch is left to its bounded TTL.
+The two slots are:
 
 - the backward-compatible `default` lease writes `DATABASE_URL` and
   `DATABASE_URL_UNPOOLED` to `.env.local`;
@@ -159,7 +162,10 @@ Important lifecycle behavior:
 
 - branch names use the guarded `agent/` prefix;
 - TTL is mandatory and cannot exceed seven days;
-- `create` reuses a live lease in the same named slot by default;
+- `create` reuses a compatible live lease in the same named slot, refreshes its
+  requested TTL, and restores connection URLs when the env file lost them;
+- a mismatched or unusable lease record is ignored and replaced; the old branch
+  expires automatically;
 - release refuses default, protected, wrong-project, or non-`agent/` branches;
 - release removes the leased database URL keys unless `--keep-env` is passed;
 - leases contain identifiers and paths, never API keys or database URLs;
@@ -167,9 +173,8 @@ Important lifecycle behavior:
 - custom `--keys` must be valid environment names and cannot overwrite the
   `SANDBOX_DB_*` authentication profile.
 
-Prefer releasing an existing lease before creating another. Use `--force-new`
-only when the recorded branch is known to be gone; replacing a live lease record
-would make the old branch harder to manage until its TTL expires.
+Use `--force-new` when a fresh branch is explicitly desired. Replaced branches
+may remain until their TTL expires, but they never block normal provisioning.
 
 ## `provision-env` behavior
 
@@ -190,20 +195,19 @@ In order, the coordinator:
 9. atomically publishes both files with mode `0600`;
 10. creates the `default` and `test` database leases when `--database` is requested.
 
-On a TTY, the default `--env-conflict=ask` offers to preserve both files,
-overwrite both from Vercel, or cancel. Preserve is available only for a complete
-`.env.local`/`.env.test` pair. Overwrite snapshots existing files and restores
-them if any later step fails. It refuses to disconnect an existing live database
-lease; preserve the files or release the lease before overwriting. Lease status
-errors also fail closed rather than being treated as an absent lease.
+The default is `--env-conflict=overwrite`: repeated runs refresh both files from
+Vercel without prompting. Existing database URLs are retained when database
+allocation is skipped. With `--database`, Vercel database URLs are removed and
+matching live leases restore their URLs; stale lease records are replaced with
+fresh disposable branches. `--env-conflict=preserve`, `ask`, and `error` remain
+available for explicit alternative behavior.
 
 A worktree-scoped Git lock prevents concurrent `provision-env` runs. Immediately
-before publication, overwrite mode revalidates both original files and lease
-status so concurrent changes are preserved instead of replaced.
+before publication, overwrite mode revalidates both original files so concurrent
+changes are preserved instead of replaced.
 
-Agents and scripts should pass `--non-interactive`. That mode fails safely on a
-conflict unless `--env-conflict=preserve` or `--env-conflict=overwrite` is also
-explicit. `--skip-vercel` remains the direct way to use an intentionally
+Agents and scripts may pass `--non-interactive`; the default refresh behavior
+requires no extra conflict flag. `--skip-vercel` remains the direct way to use an intentionally
 prepared pair without pulling. If setup fails after database allocation starts,
 it releases only leases created by that invocation in reverse order, restores
 preserved env files, and removes only env files it created.
@@ -211,14 +215,17 @@ preserved env files, and removes only env files it created.
 ## Recovery and cleanup
 
 Both project-local lease slots resolve their credential from `.env.local`. If
-that file is deleted, moved, or no longer contains the original profile:
+both `.env.local` and `.env.test` are deleted, rerun `provision-env --database`:
+it pulls the original Vercel profile, verifies the recorded branches, and
+restores both connection overlays. Existing lease records store the database and
+role selection; older records can also be repaired when their branch has exactly
+one database.
 
-1. restore the worktree's Vercel link if needed;
-2. run `vercel env pull .env.local --environment development` in the worktree;
-3. retry `sandbox-db status`, `renew`, or `release` with the affected `--lease`.
-
-Do not substitute a profile from another Neon project. Project mismatches fail
-closed.
+For direct lifecycle commands, restore the worktree's Vercel link if needed and
+pull `.env.local` from Vercel Development before retrying `sandbox-db status`,
+`renew`, or `release`. Those explicit management commands still require the
+lease's original profile; normal `create`/`provision-env` instead replaces stale
+records.
 
 `gc` reports `partial` and exits non-zero when a lease cannot be authenticated;
 it does not assume an inaccessible branch is gone. Neon TTL expiration remains

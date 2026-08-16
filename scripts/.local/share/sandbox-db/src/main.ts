@@ -21,6 +21,7 @@ import {
   describeProject,
   findDefaultBranch,
   getBranch,
+  getConnectionUris,
   setExpiration,
   waitUntilReady
 } from "./neon"
@@ -366,45 +367,110 @@ const create = Command.make(
       const ttlSeconds = yield* parseTtl(ttl)
 
       const existing = yield* readLease(workspace.root, validatedLeaseName)
-      if (Option.isSome(existing)) yield* ensureLeaseProfile(config, existing.value)
       if (Option.isSome(existing) && !forceNew) {
-        const live = yield* getBranch(config, existing.value.branchId)
-        if (Option.isSome(live)) {
-          const sameKeys =
-            existing.value.envKeys.length === envKeys.length &&
-            existing.value.envKeys.every((key, index) => key === envKeys[index])
-          if (
-            existing.value.envFile !== envPath ||
-            existing.value.configEnvFile !== configEnvPath ||
-            !sameKeys
-          ) {
-            return yield* Effect.fail(
-              new PolicyError({
-                message:
-                  `live ${validatedLeaseName} lease targets different env paths or keys; ` +
-                  "release it before changing lease configuration"
-              })
-            )
+        const sameKeys =
+          existing.value.envKeys.length === envKeys.length &&
+          existing.value.envKeys.every((key, index) => key === envKeys[index])
+        const sameProfile =
+          existing.value.projectId === config.projectId &&
+          existing.value.parentBranch === config.parentBranch
+        const sameTarget =
+          existing.value.envFile === envPath &&
+          existing.value.configEnvFile === configEnvPath &&
+          sameKeys
+        const completeConnectionMetadata =
+          (existing.value.databaseName === undefined) ===
+          (existing.value.roleName === undefined)
+
+        if (sameProfile && sameTarget && completeConnectionMetadata) {
+          const live = yield* getBranch(config, existing.value.branchId)
+          if (Option.isSome(live)) {
+            if (!(yield* hasEnvKeys(existing.value.envFile, existing.value.envKeys))) {
+              const databaseName = existing.value.databaseName
+              const roleName = existing.value.roleName
+              const connection = yield* Effect.option(
+                getConnectionUris(
+                  config,
+                  existing.value.branchId,
+                  databaseName !== undefined && roleName !== undefined
+                    ? { databaseName, roleName }
+                    : undefined
+                )
+              )
+              if (Option.isSome(connection)) {
+                const requestedExpiration = timestamp(ttlSeconds)
+                const refreshed = yield* Effect.option(
+                  setExpiration(config, existing.value.branchId, requestedExpiration)
+                )
+                if (Option.isSome(refreshed)) {
+                  const refreshedExpiration =
+                    refreshed.value.expires_at ?? requestedExpiration
+                  yield* writeEnvKeys(
+                    existing.value.envFile,
+                    existing.value.envKeys.map(
+                      (key) =>
+                        [
+                          key,
+                          key.toUpperCase().endsWith("UNPOOLED")
+                            ? connection.value.direct
+                            : connection.value.pooled
+                        ] as const
+                    )
+                  )
+                  yield* writeLease({
+                    ...existing.value,
+                    databaseName: connection.value.databaseName,
+                    roleName: connection.value.roleName,
+                    expiresAt: refreshedExpiration
+                  })
+                  return yield* report(json, {
+                    status: "reused",
+                    lease: existing.value.leaseName,
+                    branch_name: existing.value.branchName,
+                    branch_id: existing.value.branchId,
+                    expires_at: refreshedExpiration,
+                    config_env_file: existing.value.configEnvFile,
+                    env_file: existing.value.envFile,
+                    note: "restored missing connection URLs for the existing live lease"
+                  })
+                }
+                yield* Console.error(
+                  `sandbox-db: could not extend ${validatedLeaseName} lease; creating a replacement`
+                )
+              } else {
+                yield* Console.error(
+                  `sandbox-db: could not restore ${validatedLeaseName} lease URLs; creating a replacement`
+                )
+              }
+            } else {
+              const requestedExpiration = timestamp(ttlSeconds)
+              const refreshed = yield* Effect.option(
+                setExpiration(config, existing.value.branchId, requestedExpiration)
+              )
+              if (Option.isSome(refreshed)) {
+                const refreshedExpiration =
+                  refreshed.value.expires_at ?? requestedExpiration
+                yield* writeLease({ ...existing.value, expiresAt: refreshedExpiration })
+                return yield* report(json, {
+                  status: "reused",
+                  lease: existing.value.leaseName,
+                  branch_name: existing.value.branchName,
+                  branch_id: existing.value.branchId,
+                  expires_at: refreshedExpiration,
+                  config_env_file: existing.value.configEnvFile,
+                  env_file: existing.value.envFile,
+                  note: "existing lease is still live and its TTL was refreshed"
+                })
+              }
+              yield* Console.error(
+                `sandbox-db: could not extend ${validatedLeaseName} lease; creating a replacement`
+              )
+            }
           }
-          if (!(yield* hasEnvKeys(existing.value.envFile, existing.value.envKeys))) {
-            return yield* Effect.fail(
-              new PolicyError({
-                message:
-                  `live ${validatedLeaseName} lease URLs are missing from ${existing.value.envFile}; ` +
-                  "release it before reprovisioning"
-              })
-            )
-          }
-          return yield* report(json, {
-            status: "reused",
-            lease: existing.value.leaseName,
-            branch_name: existing.value.branchName,
-            branch_id: existing.value.branchId,
-            expires_at: live.value.expires_at ?? "none",
-            config_env_file: existing.value.configEnvFile,
-            env_file: existing.value.envFile,
-            note: "existing lease is still live; use renew to extend"
-          })
+        } else {
+          yield* Console.error(
+            `sandbox-db: ignoring stale ${validatedLeaseName} lease record; its branch will expire automatically`
+          )
         }
       }
 
@@ -436,6 +502,8 @@ const create = Command.make(
         configEnvFile: configEnvPath,
         envFile: envPath,
         envKeys,
+        databaseName: created.databaseName,
+        roleName: created.roleName,
         createdAt: timestamp(),
         expiresAt: created.branch.expires_at ?? expiresAt
       }

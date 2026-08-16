@@ -4,7 +4,9 @@ import {
   Branch,
   BranchListResponse,
   BranchResponse,
+  ConnectionUriResponse,
   CreateBranchResponse,
+  DatabaseListResponse,
   NeonError,
   ProjectResponse,
   READY_TIMEOUT_SECONDS,
@@ -48,7 +50,7 @@ const request = (
     }
 
     return yield* client.execute(req).pipe(
-      Effect.mapError((cause) => new NeonError({ message: `neon unreachable: ${cause}` }))
+      Effect.mapError(() => new NeonError({ message: "neon unreachable" }))
     )
   })
 
@@ -93,6 +95,66 @@ export const listBranches = (config: NeonAccess) =>
     return body.branches
   })
 
+export const listDatabases = (config: NeonAccess, branchId: string) =>
+  Effect.gen(function* () {
+    const response = yield* request(config, "GET", `/branches/${branchId}/databases`)
+    if (response.status >= 400) return yield* failing(response, "database listing")
+    const body = yield* decode(DatabaseListResponse, response)
+    return body.databases
+  })
+
+export interface ConnectionTarget {
+  readonly databaseName: string
+  readonly roleName: string
+}
+
+const retrieveConnectionUri = (
+  config: NeonAccess,
+  branchId: string,
+  target: ConnectionTarget,
+  pooled: boolean
+) =>
+  Effect.gen(function* () {
+    const query = new URLSearchParams({
+      branch_id: branchId,
+      database_name: target.databaseName,
+      role_name: target.roleName,
+      pooled: String(pooled)
+    })
+    const response = yield* request(config, "GET", `/connection_uri?${query}`)
+    if (response.status >= 400) return yield* failing(response, "connection URI retrieval")
+    return (yield* decode(ConnectionUriResponse, response)).uri
+  })
+
+export const getConnectionUris = (
+  config: NeonAccess,
+  branchId: string,
+  recordedTarget?: ConnectionTarget
+) =>
+  Effect.gen(function* () {
+    const target = recordedTarget ?? (yield* listDatabases(config, branchId).pipe(
+      Effect.flatMap((databases) =>
+        databases.length === 1
+          ? Effect.succeed({
+              databaseName: databases[0]!.name,
+              roleName: databases[0]!.owner_name
+            })
+          : Effect.fail(
+              new NeonError({
+                message:
+                  `cannot restore connection URLs for branch ${branchId}: ` +
+                  `expected one database, found ${databases.length}`
+              })
+            )
+      )
+    ))
+    const [direct, pooled] = yield* Effect.all([
+      retrieveConnectionUri(config, branchId, target, false),
+      retrieveConnectionUri(config, branchId, target, true)
+    ], { concurrency: 2 })
+    return { ...target, direct, pooled }
+  })
+
 /** Validates a credential against one project and returns its display name. */
 export const describeProject = (config: NeonAccess) =>
   Effect.gen(function* () {
@@ -127,6 +189,8 @@ export interface CreatedBranch {
   readonly branch: Branch
   readonly pooled: Redacted.Redacted<string>
   readonly direct: Redacted.Redacted<string>
+  readonly databaseName: string
+  readonly roleName: string
 }
 
 export const createBranch = (
@@ -154,13 +218,26 @@ export const createBranch = (
 
     const host = first.connection_parameters?.host
     const poolerHost = first.connection_parameters?.pooler_host
+    const databaseName = first.connection_parameters?.database
+    const roleName = first.connection_parameters?.role
+    if (!databaseName || !roleName) {
+      return yield* Effect.fail(
+        new NeonError({ message: "neon returned no database or role for the new branch" })
+      )
+    }
     const direct = first.connection_uri
     const pooled =
       host && poolerHost
         ? Redacted.make(Redacted.value(direct).replace(host, poolerHost))
         : direct
 
-    return { branch: body.branch, pooled, direct } satisfies CreatedBranch
+    return {
+      branch: body.branch,
+      pooled,
+      direct,
+      databaseName,
+      roleName
+    } satisfies CreatedBranch
   })
 
 export const setExpiration = (config: NeonAccess, branchId: string, expiresAt: string) =>
