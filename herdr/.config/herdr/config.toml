@@ -24,7 +24,8 @@ rows = [
 ]
 
 [ui.toast]
-delivery = "herdr"
+delivery = "terminal"
+delay_seconds = 1
 
 [ui.toast.herdr]
 position = "top-right"
