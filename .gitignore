@@ -6,48 +6,48 @@ __pycache__/
 *.py[cod]
 
 # tmux
-tmux/.config/tmux/plugins
+home/tmux/.config/tmux/plugins
 
 # Box host-local installer configuration
 box/config.local
 
 # herdr runtime state
-herdr/.config/herdr/session.json
-herdr/.config/herdr/session-history.json
-herdr/.config/herdr/release-notes.json
+home/herdr/.config/herdr/session.json
+home/herdr/.config/herdr/session-history.json
+home/herdr/.config/herdr/release-notes.json
 
 # nvim
-nvim/.config/nvim/plugin/packer_compiled.lua
+home/nvim/.config/nvim/plugin/packer_compiled.lua
 
 # iterm2
-iterm2/.config/iterm2/AppSupport
+home/iterm2/.config/iterm2/AppSupport
 
 # zsh
-zsh/.config/zsh/.zcompcache
+home/zsh/.config/zsh/.zcompcache
 
 # opencode
-opencode/.config/opencode/node_modules/
-opencode/.config/opencode/plugins/*/node_modules/
-opencode/.config/opencode/service.json
-opencode/.config/opencode/service-*.json
+home/opencode/.config/opencode/node_modules/
+home/opencode/.config/opencode/plugins/*/node_modules/
+home/opencode/.config/opencode/service.json
+home/opencode/.config/opencode/service-*.json
 
 # pi runtime state
 /.pi-subagents/
-pi/.pi/agent/auth.json
-pi/.pi/agent/bin/
-pi/.pi/agent/git/
-pi/.pi/agent/models-store.json
-pi/.pi/agent/npm/
-pi/.pi/agent/sessions/
-pi/.pi/agent/trust.json
-pi/.pi/agent/*.log
-pi/.pi/node_modules/
-pi/.pi/agent/extensions/**/node_modules/
+home/pi/.pi/agent/auth.json
+home/pi/.pi/agent/bin/
+home/pi/.pi/agent/git/
+home/pi/.pi/agent/models-store.json
+home/pi/.pi/agent/npm/
+home/pi/.pi/agent/sessions/
+home/pi/.pi/agent/trust.json
+home/pi/.pi/agent/*.log
+home/pi/.pi/node_modules/
+home/pi/.pi/agent/extensions/**/node_modules/
 
 
 # local Effect CLIs (deps are installed locally, not vendored)
-scripts/.local/share/sandbox-db/node_modules/
-scripts/.local/share/worktree/node_modules/
+home/scripts/.local/share/sandbox-db/node_modules/
+home/scripts/.local/share/worktree/node_modules/
 
 # vim temp files
 *.swp

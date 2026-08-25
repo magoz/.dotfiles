@@ -14,8 +14,8 @@ The observed cost is specifically the cost of loading Effect v4's **barrel entry
 
 ## Versions and source snapshot
 
-- Local declaration: [`pi/.pi/agent/extensions/file-search/package.json`](../pi/.pi/agent/extensions/file-search/package.json) requests `effect` and `@effect/platform-node` with `^4.0.0-beta.99`.
-- Local lockfile: [`pi/.pi/package-lock.json`](../pi/.pi/package-lock.json) resolves both packages to `4.0.0-beta.102`.
+- Local declaration: [`home/pi/.pi/agent/extensions/file-search/package.json`](../home/pi/.pi/agent/extensions/file-search/package.json) requests `effect` and `@effect/platform-node` with `^4.0.0-beta.99`.
+- Local lockfile: [`home/pi/.pi/package-lock.json`](../home/pi/.pi/package-lock.json) resolves both packages to `4.0.0-beta.102`.
 - Official repository cloned to `/tmp/effect-v4-investigation`.
 - Investigated commit: [`c9aa7d0fa8874178906329e3c3581ad785b67101`](https://github.com/Effect-TS/effect/tree/c9aa7d0fa8874178906329e3c3581ad785b67101).
 - At that commit, [`packages/effect/package.json`](https://github.com/Effect-TS/effect/blob/c9aa7d0fa8874178906329e3c3581ad785b67101/packages/effect/package.json#L4) declares `4.0.0-beta.102`.
@@ -29,7 +29,7 @@ git -C /tmp/effect-v4-investigation rev-parse HEAD
 
 ## Why the barrel imports are expensive
 
-At investigation time, `file-search` imported namespaces from the package roots in [`index.ts`](../pi/.pi/agent/extensions/file-search/index.ts) and [`src/binaries.ts`](../pi/.pi/agent/extensions/file-search/src/binaries.ts):
+At investigation time, `file-search` imported namespaces from the package roots in [`index.ts`](../home/pi/.pi/agent/extensions/file-search/index.ts) and [`src/binaries.ts`](../home/pi/.pi/agent/extensions/file-search/src/binaries.ts):
 
 ```ts
 import { Cause, Data, Effect, Exit } from "effect"
@@ -80,7 +80,7 @@ The direct-import prototype reduced actual Pi TUI startup from a 1.197 s median 
 Representative benchmark command:
 
 ```sh
-cd /Users/magoz/.dotfiles/pi/.pi
+cd /Users/magoz/.dotfiles/home/pi/.pi
 node --input-type=module -e \
   'const t=performance.now(); await import("effect"); console.log(performance.now()-t)'
 

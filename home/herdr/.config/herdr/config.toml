@@ -1,0 +1,114 @@
+onboarding = false
+
+[theme]
+name = "terminal"
+
+[theme.custom]
+accent = "#44FFB1"
+
+[ui]
+prompt_new_tab_name = false
+tab_bar_position = "bottom"
+
+agent_panel_sort = "priority"
+
+# Default rows are [["state_icon", "workspace", "tab"], ["agent"]], which never
+# renders reported state labels. Adding state_text surfaces the pi-subagents
+# label (e.g. "⏳ 1 subagent (general)") published by
+# home/pi/.pi/agent/extensions/herdr-pi-subagents-status.ts.
+[ui.sidebar.agents]
+row_gap = 0
+rows = [
+  ["state_icon", "workspace", "tab"],
+  ["agent", "state_text"],
+]
+
+[ui.toast]
+delivery = "terminal"
+delay_seconds = 1
+
+[ui.toast.herdr]
+position = "top-right"
+
+[ui.sound]
+enabled = false
+
+[keys]
+prefix = "ctrl+t"
+reload_config = "prefix+r"
+resize_mode = "prefix+shift+r"
+previous_workspace = ["prefix+k", "prefix+ctrl+k"]
+next_workspace = ["prefix+j", "prefix+ctrl+j"]
+previous_agent = "prefix+up"
+next_agent = "prefix+down"
+previous_tab = ["prefix+p", "prefix+ctrl+p"]
+next_tab = ["prefix+n", "prefix+ctrl+n"]
+switch_tab = "prefix+1..9"
+switch_workspace = "prefix+shift+1..9"
+
+# With agent_panel_sort = "priority", alt+1 jumps to the top-priority agent,
+# alt+2 to the next, etc. The terminal remaps Cmd+1..9 to Alt+1..9 (ghostty
+# config: cmd+digit_N=text:\x1bN; wezterm.lua: SendKey), so in practice
+# these fire on Cmd+N. Alt remap is needed because herdr doesn't request the
+# kitty keyboard protocol, so cmd/super can't reach it in any terminal.
+[keys.indexed]
+agents = "alt"
+
+[[keys.command]]
+key = "prefix+f"
+type = "popup"
+command = "HERDR_ENV=1 herdr-sessionizer"
+width = "80%"
+height = "80%"
+description = "project picker"
+
+[[keys.command]]
+key = "f7"
+type = "shell"
+command = 'herdr tab focus "${HERDR_ACTIVE_WORKSPACE_ID}:1" >/dev/null'
+description = "tab 1"
+
+[[keys.command]]
+key = "f8"
+type = "shell"
+command = 'herdr tab focus "${HERDR_ACTIVE_WORKSPACE_ID}:2" >/dev/null'
+description = "tab 2"
+
+[[keys.command]]
+key = "f9"
+type = "shell"
+command = 'herdr tab focus "${HERDR_ACTIVE_WORKSPACE_ID}:3" >/dev/null'
+description = "tab 3"
+
+[[keys.command]]
+key = "f10"
+type = "shell"
+command = 'herdr tab focus "${HERDR_ACTIVE_WORKSPACE_ID}:4" >/dev/null'
+description = "tab 4"
+
+[[keys.command]]
+key = "f1"
+type = "shell"
+command = "herdr workspace focus 1 >/dev/null"
+description = "space 1"
+
+[[keys.command]]
+key = "f2"
+type = "shell"
+command = "herdr workspace focus 2 >/dev/null"
+description = "space 2"
+
+[[keys.command]]
+key = "f3"
+type = "shell"
+command = "herdr workspace focus 3 >/dev/null"
+description = "space 3"
+
+[[keys.command]]
+key = "f12"
+type = "shell"
+command = "herdr workspace focus 4 >/dev/null"
+description = "space 4"
+
+[advanced]
+scrollback_limit_bytes = 52428800

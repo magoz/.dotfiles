@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+MACOS_DIR=$(cd "$SCRIPT_DIR/.." && pwd -P)
+REPO_ROOT=$(cd "$MACOS_DIR/.." && pwd -P)
+TEST_ROOT=$(mktemp -d)
+trap 'rm -rf "$TEST_ROOT"' EXIT
+
+positive_home=$TEST_ROOT/positive
+mkdir -p "$positive_home/.config"
+legacy_source=$REPO_ROOT/nvim/.config/nvim
+legacy_link=$(perl -MFile::Spec -e 'print File::Spec->abs2rel($ARGV[0], $ARGV[1])' \
+  "$legacy_source" "$positive_home/.config")
+ln -s "$legacy_link" "$positive_home/.config/nvim"
+
+HOME=$positive_home "$MACOS_DIR/stow" >/dev/null
+
+link=$(readlink "$positive_home/.config/nvim")
+case $link in
+  *"/home/nvim/"*) ;;
+  *)
+    printf 'fail: nvim link does not target home/nvim: %s\n' "$link" >&2
+    exit 1
+    ;;
+esac
+printf 'ok: legacy Stow links migrate to home/ packages\n'
+
+negative_home=$TEST_ROOT/negative
+foreign_source=$TEST_ROOT/backup/${REPO_ROOT##*/}/nvim/.config/nvim
+mkdir -p "$negative_home/.config" "$foreign_source"
+foreign_link=$(perl -MFile::Spec -e 'print File::Spec->abs2rel($ARGV[0], $ARGV[1])' \
+  "$foreign_source" "$negative_home/.config")
+ln -s "$foreign_link" "$negative_home/.config/nvim"
+
+if HOME=$negative_home "$MACOS_DIR/stow" >/dev/null 2>&1; then
+  printf 'fail: Stow unexpectedly replaced an unrelated nvim link\n' >&2
+  exit 1
+fi
+[[ $(readlink "$negative_home/.config/nvim") == "$foreign_link" ]]
+printf 'ok: unrelated same-basename links are preserved\n'

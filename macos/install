@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
+HOME_PACKAGES=$REPO_ROOT/home
+
+# --------------------------------------
+# ------ CLEANUP EXISTING CONF ---------
+# --------------------------------------
+rm -rf "$HOME_PACKAGES/tmux/.config/tmux/plugins"
+rm -f ~/.gitconfig ~/.zprofile
+
+# --------------------------------------
+# -------- TRUST THIRD-PARTY TAPS ------
+# --------------------------------------
+# Treat taps already used on this machine as explicitly trusted sources.
+brew trust --tap \
+  anomalyco/tap \
+  jnsahaj/lumen \
+  libsql/sqld \
+  ngrok/ngrok \
+  nikitabobko/tap \
+  oven-sh/bun \
+  stripe/stripe-cli \
+  tursodatabase/tap
+
+# --------------------------------------
+# ---------  INSTALL PACKAGES ----------
+# --------------------------------------
+echo "🍺 Installing basic config packages with Homebrew"
+brew install \
+  bat \
+  bun \
+  git \
+  fnm \
+  jq \
+  wezterm \
+  ghostty \
+  font-meslo-lg-nerd-font \
+  neovim \
+  nikitabobko/tap/aerospace \
+  stow \
+  tmux \
+  herdr \
+  zsh \
+  eza \
+  zoxide \
+  fzf \
+  powerlevel10k \
+  zsh-autosuggestions \
+  zsh-syntax-highlighting \
+  zsh-completions
+
+# Node/npm are required for Pi, OpenCode, and local extension dependencies.
+eval "$(fnm env --shell bash)"
+fnm install --lts --use
+fnm default "$(fnm current)"
+
+export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
+export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+
+# Install Pi before stowing its configuration.
+echo "🥧 Installing Pi"
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
+# Borders
+brew tap FelixKratz/formulae
+brew trust --formula felixkratz/formulae/borders
+brew install borders
+
+# --------------------------------------
+# --------------  STOW -----------------
+# --------------------------------------
+"$SCRIPT_DIR/stow"
+
+# --------------------------------------
+# -------- CONFIG DEPENDENCIES ----------
+# --------------------------------------
+echo "📦 Installing OpenCode dependencies"
+bun install --cwd "$HOME_PACKAGES/opencode/.config/opencode"
+
+npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-anthropic-auth"
+npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-vim-compat"
+
+echo "📦 Installing Pi extension dependencies"
+# Extensions resolve from their real (stowed) source paths in this repo, so
+# their shared node_modules must live beside the repo's package.json.
+npm ci --omit=dev --prefix "$HOME_PACKAGES/pi/.pi"
+
+# Install the pinned Pi packages declared by the stowed settings file.
+echo "📦 Installing Pi packages"
+while IFS= read -r package; do
+  if [[ $package == git:github.com/joelhooks/pi-until@* ]]; then
+    # Upstream's exact devEngines npm pin rejects newer compatible npm 11.x.
+    NPM_CONFIG_FORCE=true pi install "$package"
+  else
+    pi install "$package"
+  fi
+done < <(jq -r '.packages[] | if type == "string" then . else .source end' "$HOME/.pi/agent/settings.json")
+
+# --------------------------------------
+# --------------  ZSH ------------------
+# --------------------------------------
+# Force Zsh to rebuild completions with the stowed configuration on next launch.
+rm -f "$HOME/.zcompdump" "$HOME/.config/zsh/.zcompdump"*
+
+# --------------------------------------
+# -------------  NEOVIM ----------------
+# --------------------------------------
+# Plugins dependencies
+# telescope uses fd and ripgrep
+
+echo "⚡ Setting up Neovim"
+brew install \
+  fd \
+  lazygit \
+  ripgrep
+
+# Install plugins
+nvim --headless "+Lazy! sync" +qa
+
+# --------------------------------------
+# ------------- BORDERS ----------------
+# --------------------------------------
+brew services restart borders
+
+# --------------------------------------
+# ------------- TMUX ----------------
+# --------------------------------------
+if tmux list-sessions &>/dev/null; then
+  tmux source-file "$HOME/.config/tmux/tmux.conf"
+  echo "✅ Sourced Tmux"
+else
+  echo "ℹ️ No running Tmux server; config will load on first start"
+fi
+
+# --------------------------------------
+# ------  INSTALL DEV PACKAGES ---------
+# --------------------------------------
+# tlrc is tldr
+echo "🚀 Installing DEV packages with Homebrew"
+brew install \
+  tlrc
+
+# pnpm (standalone, works with fnm)
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PNPM_HOME/bin:$PATH"
+
+if ! command -v pnpm &>/dev/null; then
+  curl -fsSL https://get.pnpm.io/install.sh | sh -
+  # Installer appends to .zshrc but we already have PNPM_HOME in zsh-exports
+  sed -i '' '/# pnpm/,/# pnpm end/d' "$HOME/.config/zsh/.zshrc"
+else
+  echo "pnpm already installed, skipping"
+fi
+
+# OpenCode 2 beta
+echo "🤖 Installing OpenCode 2"
+npm install -g @opencode-ai/cli@next

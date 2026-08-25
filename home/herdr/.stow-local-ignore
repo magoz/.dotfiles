@@ -1,0 +1,5 @@
+\.config/herdr/session\.json
+\.config/herdr/session-history\.json
+\.config/herdr/release-notes\.json
+\.config/herdr/.*\.log
+\.config/herdr/.*\.sock

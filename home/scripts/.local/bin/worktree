@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Launcher for the worktree CLI (TypeScript + Effect).
+set -euo pipefail
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "worktree: bun is required (https://bun.sh)" >&2
+  exit 127
+fi
+
+entry="${XDG_DATA_HOME:-$HOME/.local/share}/worktree/src/main.ts"
+if [[ ! -f "$entry" ]]; then
+  echo "worktree: missing $entry (restow the scripts package from ~/.dotfiles/home)" >&2
+  exit 127
+fi
+
+if [[ ! -d "$(dirname "$entry")/../node_modules" ]]; then
+  echo "worktree: dependencies missing; run: (cd $(dirname "$entry")/.. && bun install)" >&2
+  exit 127
+fi
+
+exec bun "$entry" "$@"

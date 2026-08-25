@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
+HOME_PACKAGES=$REPO_ROOT/home
+
+packages=(
+  stow
+  nvim
+  wezterm
+  ghostty
+  zsh
+  tmux
+  git
+  lazygit
+  opencode
+  agents
+  pi
+  aerospace
+  borders
+  leaderkey
+  scripts
+  herdr
+)
+
+normalize_path() {
+  local path=$1
+  local base=$2
+  local part index
+  local -a components normalized=()
+
+  [[ $path == /* ]] || path=$base/$path
+  IFS=/ read -r -a components <<<"$path"
+  for part in "${components[@]}"; do
+    case $part in
+      '' | .) ;;
+      ..)
+        if ((${#normalized[@]} > 0)); then
+          index=$((${#normalized[@]} - 1))
+          unset "normalized[$index]"
+        fi
+        ;;
+      *) normalized[${#normalized[@]}]=$part ;;
+    esac
+  done
+  (IFS=/; printf '/%s' "${normalized[*]}")
+}
+
+migrate_legacy_node() {
+  local source_node=$1
+  local target_node=$2
+  local package=$3
+  local link candidate child relative
+  local legacy_root=$REPO_ROOT/$package
+
+  if [[ -L $target_node ]]; then
+    link=$(readlink "$target_node")
+    candidate=$(normalize_path "$link" "$(dirname "$target_node")")
+    case $candidate in
+      "$legacy_root" | "$legacy_root"/*)
+        rm "$target_node"
+        ;;
+    esac
+    return 0
+  fi
+
+  git -C "$REPO_ROOT" check-ignore --quiet -- "$source_node" && return 0
+  [[ -d $source_node && -d $target_node ]] || return 0
+  while IFS= read -r -d '' child; do
+    relative=${child#"$source_node"/}
+    migrate_legacy_node "$child" "$target_node/$relative" "$package"
+  done < <(find "$source_node" -mindepth 1 -maxdepth 1 -print0)
+}
+
+echo "🔗 Running Stow for macOS..."
+
+for package in "${packages[@]}"; do
+  migrate_legacy_node "$HOME_PACKAGES/$package" "$HOME" "$package"
+done
+
+# Stow refuses to adopt an absolute symlink, even when it already points to
+# this package. Remove that legacy link so Stow can recreate and own it.
+if [[ -L $HOME/.agents ]] &&
+  [[ $(readlink "$HOME/.agents") == "$HOME_PACKAGES/agents/.agents" ]]; then
+  rm "$HOME/.agents"
+fi
+
+mkdir -p "$HOME/.pi/agent"
+
+for package in "${packages[@]}"; do
+  stow --dir "$HOME_PACKAGES" --target "$HOME" --restow "$package"
+done
+
+echo "✅ Stow complete"

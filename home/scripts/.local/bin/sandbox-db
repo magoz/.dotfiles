@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Launcher for the sandbox-db CLI (TypeScript + Effect).
+# Source lives in the home/scripts Stow package; Bun runs it directly, no build step.
+set -euo pipefail
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "sandbox-db: bun is required (https://bun.sh)" >&2
+  exit 127
+fi
+
+entry="${XDG_DATA_HOME:-$HOME/.local/share}/sandbox-db/src/main.ts"
+if [[ ! -f "$entry" ]]; then
+  echo "sandbox-db: missing $entry (restow the scripts package from ~/.dotfiles/home)" >&2
+  exit 127
+fi
+
+if [[ ! -d "$(dirname "$entry")/../node_modules" ]]; then
+  echo "sandbox-db: dependencies missing; run: (cd $(dirname "$entry")/.. && bun install)" >&2
+  exit 127
+fi
+
+exec bun "$entry" "$@"

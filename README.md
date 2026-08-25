@@ -1,21 +1,24 @@
-## Install
+## macOS installation
 
 ```sh
-./install
+./macos/install
+./macos/install-apps # optional desktop applications
 ```
 
 After the install we need to configure Copilot.  
 Follow the instructions: <https://github.com/github/copilot.vim>
 
+## Repository layout
+
+- [`home/`](home/) — GNU Stow packages projected into the operator's home directory.
+- [`macos/`](macos/) — macOS installation and Stow entry points.
+- [`box/`](box/README.md) — plan, automation, and decisions for the dedicated agent host.
+  - [`Framework Desktop`](box/framework-desktop/README.md) — hardware-specific assembly, firmware, compatibility, and platform notes.
+
 ## Development tooling
 
-- [`sandbox-db` and `provision-env`](scripts/.local/share/sandbox-db/README.md) — provision Vercel-backed local environments and expiring Neon database branches.
-- [`worktree`](scripts/.local/share/worktree/README.md) — create a provisioned Herdr worktree and hand off to a fresh Pi session.
-
-## Infrastructure
-
-- [`box`](box/README.md) — plan, automation, and decisions for the dedicated agent host.
-  - [`Framework Desktop`](box/framework-desktop/README.md) — hardware-specific assembly, firmware, compatibility, and platform notes.
+- [`sandbox-db` and `provision-env`](home/scripts/.local/share/sandbox-db/README.md) — provision Vercel-backed local environments and expiring Neon database branches.
+- [`worktree`](home/scripts/.local/share/worktree/README.md) — create a provisioned Herdr worktree and hand off to a fresh Pi session.
 
 ## TODO
 
