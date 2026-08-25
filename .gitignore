@@ -8,6 +8,9 @@ __pycache__/
 # tmux
 tmux/.config/tmux/plugins
 
+# Box host-local installer configuration
+box/config.local
+
 # herdr runtime state
 herdr/.config/herdr/session.json
 herdr/.config/herdr/session-history.json

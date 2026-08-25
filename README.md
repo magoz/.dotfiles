@@ -12,6 +12,11 @@ Follow the instructions: <https://github.com/github/copilot.vim>
 - [`sandbox-db` and `provision-env`](scripts/.local/share/sandbox-db/README.md) — provision Vercel-backed local environments and expiring Neon database branches.
 - [`worktree`](scripts/.local/share/worktree/README.md) — create a provisioned Herdr worktree and hand off to a fresh Pi session.
 
+## Infrastructure
+
+- [`box`](box/README.md) — plan, automation, and decisions for the dedicated agent host.
+  - [`Framework Desktop`](box/framework-desktop/README.md) — hardware-specific assembly, firmware, compatibility, and platform notes.
+
 ## TODO
 
 ### ZSH
