@@ -90,7 +90,12 @@ npm ci --omit=dev --prefix "$PWD/pi/.pi"
 # Install the pinned Pi packages declared by the stowed settings file.
 echo "📦 Installing Pi packages"
 while IFS= read -r package; do
-  pi install "$package"
+  if [[ $package == git:github.com/joelhooks/pi-until@* ]]; then
+    # Upstream's exact devEngines npm pin rejects newer compatible npm 11.x.
+    NPM_CONFIG_FORCE=true pi install "$package"
+  else
+    pi install "$package"
+  fi
 done < <(jq -r '.packages[] | if type == "string" then . else .source end' "$HOME/.pi/agent/settings.json")
 
 # --------------------------------------

@@ -13,7 +13,8 @@
     "npm:@juanibiapina/pi-tokyonight@1.1.0",
     "npm:@plannotator/pi-extension",
     "npm:pi-mcp-adapter",
-    "npm:pi-context-budget@0.1.2"
+    "npm:pi-context-budget@0.1.2",
+    "git:github.com/joelhooks/pi-until@7c90bdc90291321f60130984e479bc4a844a7d50"
   ],
   "piVimMode": {
     "ui": {
