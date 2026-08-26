@@ -18,6 +18,42 @@
       "skillFolderHash": "585f9be899e09368f4e4da04a05cee9e7fc1b3c9",
       "installedAt": "2026-07-30T16:10:39.780Z",
       "updatedAt": "2026-07-30T16:10:39.780Z"
+    },
+    "next-cache-components-adoption": {
+      "source": "vercel/next.js",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel/next.js.git",
+      "skillPath": "skills/next-cache-components-adoption/SKILL.md",
+      "skillFolderHash": "b5c3b9b66bec41c6be6d47eb4a99ba93bdd446d5",
+      "installedAt": "2026-08-26T07:32:50.570Z",
+      "updatedAt": "2026-08-26T07:32:50.570Z"
+    },
+    "next-cache-components-optimizer": {
+      "source": "vercel/next.js",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel/next.js.git",
+      "skillPath": "skills/next-cache-components-optimizer/SKILL.md",
+      "skillFolderHash": "c5e83944e64b711e8c49f898bafd67fd99255a2f",
+      "installedAt": "2026-08-26T07:32:50.572Z",
+      "updatedAt": "2026-08-26T07:32:50.572Z"
+    },
+    "next-dev-loop": {
+      "source": "vercel/next.js",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel/next.js.git",
+      "skillPath": "skills/next-dev-loop/SKILL.md",
+      "skillFolderHash": "8ca0a996b9b38a667772df4623dc07261863fe23",
+      "installedAt": "2026-08-26T07:32:50.573Z",
+      "updatedAt": "2026-08-26T07:32:50.573Z"
+    },
+    "next-partial-prefetching-adoption": {
+      "source": "vercel/next.js",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel/next.js.git",
+      "skillPath": "skills/next-partial-prefetching-adoption/SKILL.md",
+      "skillFolderHash": "66533620b7f0cf5436a57821c215f17dbc5b631a",
+      "installedAt": "2026-08-26T07:32:50.573Z",
+      "updatedAt": "2026-08-26T07:32:50.573Z"
     }
   },
   "dismissed": {}
