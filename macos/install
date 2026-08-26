@@ -77,6 +77,10 @@ brew install borders
 # --------------------------------------
 # -------- CONFIG DEPENDENCIES ----------
 # --------------------------------------
+echo "📦 Installing local script dependencies"
+bun install --cwd "$HOME_PACKAGES/scripts/.local/share/sandbox-db"
+bun install --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
+
 echo "📦 Installing OpenCode dependencies"
 bun install --cwd "$HOME_PACKAGES/opencode/.config/opencode"
 
