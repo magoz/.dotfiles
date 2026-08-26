@@ -11,7 +11,6 @@ packages=(
   wezterm
   ghostty
   zsh
-  tmux
   git
   lazygit
   opencode
@@ -34,17 +33,20 @@ normalize_path() {
   IFS=/ read -r -a components <<<"$path"
   for part in "${components[@]}"; do
     case $part in
-      '' | .) ;;
-      ..)
-        if ((${#normalized[@]} > 0)); then
-          index=$((${#normalized[@]} - 1))
-          unset "normalized[$index]"
-        fi
-        ;;
-      *) normalized[${#normalized[@]}]=$part ;;
+    '' | .) ;;
+    ..)
+      if ((${#normalized[@]} > 0)); then
+        index=$((${#normalized[@]} - 1))
+        unset "normalized[$index]"
+      fi
+      ;;
+    *) normalized[${#normalized[@]}]=$part ;;
     esac
   done
-  (IFS=/; printf '/%s' "${normalized[*]}")
+  (
+    IFS=/
+    printf '/%s' "${normalized[*]}"
+  )
 }
 
 migrate_legacy_node() {
@@ -58,9 +60,9 @@ migrate_legacy_node() {
     link=$(readlink "$target_node")
     candidate=$(normalize_path "$link" "$(dirname "$target_node")")
     case $candidate in
-      "$legacy_root" | "$legacy_root"/*)
-        rm "$target_node"
-        ;;
+    "$legacy_root" | "$legacy_root"/*)
+      rm "$target_node"
+      ;;
     esac
     return 0
   fi

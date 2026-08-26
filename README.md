@@ -33,7 +33,7 @@ Package groups include:
 
 - Agent tooling: `agents`, `herdr`, `opencode`, and `pi`
 - Development tools: `git`, `lazygit`, `nvim`, and `scripts`
-- Shell and terminals: `ghostty`, `iterm2`, `tmux`, `wezterm`, and `zsh`
+- Shell and terminals: `ghostty`, `wezterm`, and `zsh`
 - macOS UI: `aerospace`, `borders`, and `leaderkey`
 - Stow configuration: `stow`
 

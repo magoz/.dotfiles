@@ -8,7 +8,6 @@ HOME_PACKAGES=$REPO_ROOT/home
 # --------------------------------------
 # ------ CLEANUP EXISTING CONF ---------
 # --------------------------------------
-rm -rf "$HOME_PACKAGES/tmux/.config/tmux/plugins"
 rm -f ~/.gitconfig ~/.zprofile
 
 # --------------------------------------
@@ -41,7 +40,6 @@ brew install \
   neovim \
   nikitabobko/tap/aerospace \
   stow \
-  tmux \
   herdr \
   zsh \
   eza \
@@ -128,16 +126,6 @@ nvim --headless "+Lazy! sync" +qa
 # ------------- BORDERS ----------------
 # --------------------------------------
 brew services restart borders
-
-# --------------------------------------
-# ------------- TMUX ----------------
-# --------------------------------------
-if tmux list-sessions &>/dev/null; then
-  tmux source-file "$HOME/.config/tmux/tmux.conf"
-  echo "✅ Sourced Tmux"
-else
-  echo "ℹ️ No running Tmux server; config will load on first start"
-fi
 
 # --------------------------------------
 # ------  INSTALL DEV PACKAGES ---------
