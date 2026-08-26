@@ -57,7 +57,7 @@ agents = "alt"
 [[keys.command]]
 key = "prefix+f"
 type = "popup"
-command = "HERDR_ENV=1 herdr-sessionizer"
+command = 'HERDR_ENV=1 exec "$HOME/.local/bin/herdr-sessionizer"'
 width = "80%"
 height = "80%"
 description = "project picker"

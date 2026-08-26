@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Herdr popup commands inherit the server's environment, which may not include
+# user or Homebrew paths when Herdr is launched directly by a terminal app.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+herdr_bin=${HERDR_BIN_PATH:-herdr}
+
 if [[ $# -eq 1 ]]; then
   selected=$1
 else
@@ -42,18 +47,18 @@ selected=$(cd "$selected" && pwd -P)
 selected_name=$(basename "$selected" | tr . _)
 
 if [[ ${HERDR_ENV:-} == 1 ]]; then
-  workspace_id=$(herdr workspace list | jq -r \
+  workspace_id=$("$herdr_bin" workspace list | jq -r \
     --arg label "$selected_name" \
     'first(.result.workspaces[]? | select(.label == $label) | .workspace_id) // empty')
 
   if [[ -n $workspace_id ]]; then
-    herdr workspace focus "$workspace_id" >/dev/null
+    "$herdr_bin" workspace focus "$workspace_id" >/dev/null
   else
-    herdr workspace create --cwd "$selected" --label "$selected_name" --focus >/dev/null
+    "$herdr_bin" workspace create --cwd "$selected" --label "$selected_name" --focus >/dev/null
   fi
 
   exit 0
 fi
 
 cd "$selected"
-exec herdr
+exec "$herdr_bin"
