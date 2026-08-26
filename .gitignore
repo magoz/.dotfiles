@@ -12,6 +12,7 @@ home/tmux/.config/tmux/plugins
 box/config.local
 
 # herdr runtime state
+home/herdr/.config/herdr/.plugins.lock
 home/herdr/.config/herdr/session.json
 home/herdr/.config/herdr/session-history.json
 home/herdr/.config/herdr/release-notes.json
