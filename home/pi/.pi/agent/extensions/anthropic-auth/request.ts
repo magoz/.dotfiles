@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-const DEFAULT_CLAUDE_CODE_VERSION = "2.1.220";
+const DEFAULT_CLAUDE_CODE_VERSION = "2.1.258";
 const CLAUDE_CODE_ENTRYPOINT = "sdk-cli";
 const BILLING_HEADER_PREFIX = "x-anthropic-billing-header:";
 const BILLING_HEADER_SALT = "59cf53e54c78";
