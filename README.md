@@ -142,4 +142,4 @@ Do not commit credentials, private keys, auth files, machine-local installer val
 
 - `box/config.local` is ignored and contains the real machine and disk values.
 - Pi, OpenCode, Herdr, package-manager, and browser runtime state is excluded through `.gitignore` or package-local Stow ignore rules.
-- SSH private keys are never stored in this repository; Box bootstrap receives only a public-key file path.
+- SSH private keys are never stored in this repository or copied between machines; Box bootstrap receives only a public-key file path, and GitHub authentication generates a separately revocable key directly on Box.
