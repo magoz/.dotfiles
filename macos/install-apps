@@ -24,3 +24,6 @@ brew install \
   spotify \
   todoist \
   fontbase
+
+# Point Leader Key at the configuration managed by the leaderkey Stow package.
+defaults write com.brnbw.Leader-Key configDir -string "$HOME/.config/leaderkey"
