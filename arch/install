@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
+HOME_PACKAGES=$REPO_ROOT/home
+
+if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+  cat <<'EOF'
+Usage: arch/install
+
+Install portable user configuration, Pi, OpenCode 2, and local dependencies.
+Run as your normal user on an installed Arch Linux system (including Omarchy).
+System prerequisites are listed in README.md; this command never runs pacman,
+changes the login shell, or configures desktop, storage, or system services.
+Use arch/stow to apply configuration without installing dependencies.
+EOF
+  exit 0
+fi
+[[ $# -eq 0 ]] || { printf 'error: unexpected arguments\n' >&2; exit 2; }
+[[ $EUID -ne 0 ]] || { printf 'error: run as your normal user, not root\n' >&2; exit 1; }
+[[ -f /etc/arch-release ]] || { printf 'error: this installer requires Arch Linux\n' >&2; exit 1; }
+
+export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
+export PATH="$HOME/.local/bin:$NPM_CONFIG_PREFIX/bin:$PATH"
+for tool in git stow bun node npm jq nvim starship zsh pnpm; do
+  command -v "$tool" >/dev/null || {
+    printf 'error: missing %s; install the Arch prerequisites in README.md\n' "$tool" >&2
+    exit 1
+  }
+done
+# Keep the Node runtime compatible with the configured Pi packages.
+node -e '
+  const [major, minor] = process.versions.node.split(".").map(Number)
+  if (major !== 24 || minor < 18) {
+    console.error("error: use Node >=24.18 and <25 (nodejs-lts-krypton)")
+    process.exit(1)
+  }
+'
+
+"$SCRIPT_DIR/stow"
+
+# Set portable workflow defaults, but preserve identity, credentials, and other
+# machine-local Git settings. Do not stow the macOS Git configuration.
+git config --global core.editor nvim
+git config --global core.excludesFile "$HOME_PACKAGES/git/.config/git/ignore"
+git config --global pull.ff only
+git config --global init.defaultBranch main
+git config --global push.autoSetupRemote true
+
+# npm 11.16 supports the package-script allowlist and matches the agent packages.
+if [[ $(npm --version) != 11.16.0 ]]; then
+  npm install --global --ignore-scripts npm@11.16.0
+  hash -r
+fi
+[[ $(npm --version) == 11.16.0 ]] || { printf 'error: npm 11.16.0 is required\n' >&2; exit 1; }
+npm install --global --ignore-scripts @earendil-works/pi-coding-agent
+npm install --global --allow-scripts=@opencode-ai/cli @opencode-ai/cli@beta
+
+bun install --cwd "$HOME_PACKAGES/scripts/.local/share/sandbox-db"
+bun install --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
+bun install --cwd "$HOME_PACKAGES/opencode/.config/opencode"
+npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-anthropic-auth"
+npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-vim-compat"
+npm ci --omit=dev --prefix "$HOME_PACKAGES/pi/.pi"
+
+while IFS= read -r package; do
+  if [[ $package == git:github.com/joelhooks/pi-until@* ]]; then
+    # Upstream pins devEngines to an exact npm version; match the macOS workaround.
+    NPM_CONFIG_FORCE=true pi install "$package"
+  else
+    pi install "$package"
+  fi
+done < <(jq -r '.packages[] | if type == "string" then . else .source end' "$HOME/.pi/agent/settings.json")
+
+nvim --headless '+Lazy! sync' +qa
+"$HOME/.local/bin/update-zsh-completions"
+printf 'Arch dotfiles installed. Start a new Zsh with: exec zsh -l\n'

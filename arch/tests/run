@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+ARCH_DIR=$(cd "$SCRIPT_DIR/.." && pwd -P)
+REPO_ROOT=$(cd "$ARCH_DIR/.." && pwd -P)
+TEST_ROOT=$(mktemp -d)
+trap 'rm -rf "$TEST_ROOT"' EXIT
+# HOME alone does not isolate tools that honor inherited XDG directories.
+export XDG_CACHE_HOME=$TEST_ROOT/cache
+export XDG_CONFIG_HOME=$TEST_ROOT/config
+export XDG_DATA_HOME=$TEST_ROOT/data
+
+for entrypoint in install stow; do
+  bash -n "$ARCH_DIR/$entrypoint"
+  "$ARCH_DIR/$entrypoint" --help >/dev/null
+  if "$ARCH_DIR/$entrypoint" --invalid >/dev/null 2>&1; then
+    printf 'fail: %s accepted an unknown argument\n' "$entrypoint" >&2
+    exit 1
+  fi
+done
+printf 'ok: entrypoints parse, expose help, and reject unknown arguments\n'
+
+# Keep completion generation and dependency installation offline and isolated.
+mkdir -p "$TEST_ROOT/bin"
+export ARCH_TEST_LOG=$TEST_ROOT/commands
+for tool in herdr opencode2 pnpm npm bun pi nvim; do
+  cat >"$TEST_ROOT/bin/$tool" <<'EOF'
+#!/usr/bin/env bash
+printf '%s %s\n' "${0##*/}" "$*" >>"$ARCH_TEST_LOG"
+case "${0##*/} $*" in
+  'npm --version') printf '11.16.0\n' ;;
+  'herdr completion zsh'|'opencode2 --completions zsh'|'pnpm completion zsh')
+    printf '#compdef %s\n' "${0##*/}"
+    ;;
+esac
+EOF
+  chmod +x "$TEST_ROOT/bin/$tool"
+done
+export PATH="$TEST_ROOT/bin:$PATH"
+
+positive_home=$TEST_ROOT/positive
+mkdir -p "$positive_home/.config/ghostty" "$positive_home/.config/hypr" "$positive_home/.pi/agent/sessions"
+printf 'desktop-owned\n' >"$positive_home/.config/ghostty/config"
+printf 'desktop-owned\n' >"$positive_home/.config/hypr/hyprland.conf"
+printf 'runtime\n' >"$positive_home/.pi/agent/sessions/keep"
+ln -s "$REPO_ROOT/nvim/.config/nvim" "$positive_home/.config/nvim"
+
+HOME=$positive_home "$ARCH_DIR/stow" >/dev/null
+[[ $(readlink "$positive_home/.config/nvim") == *'/home/nvim/'* ]]
+[[ -L $positive_home/.config/starship.toml ]]
+[[ -e $positive_home/.local/bin/worktree ]]
+[[ $(<"$positive_home/.config/ghostty/config") == desktop-owned ]]
+[[ $(<"$positive_home/.config/hypr/hyprland.conf") == desktop-owned ]]
+[[ $(<"$positive_home/.pi/agent/sessions/keep") == runtime ]]
+[[ ! -e $positive_home/.config/herdr && ! -e $positive_home/.gitconfig ]]
+[[ ! -e $positive_home/.config/aerospace && ! -e $positive_home/.config/borders ]]
+printf 'ok: portable selection migrates legacy links and preserves desktop/runtime state\n'
+
+HOME=$positive_home "$ARCH_DIR/stow" >/dev/null
+[[ $(<"$positive_home/.pi/agent/sessions/keep") == runtime ]]
+HOME=$positive_home zsh -dfc '
+  typeset -g OSTYPE=linux-gnu
+  source "$HOME/.zshenv"
+  source "$HOME/.zprofile"
+  source "$ZDOTDIR/.zshrc"
+  [[ -z ${HOMEBREW_PREFIX:-} ]]
+  [[ $ZDOTDIR == "$HOME/.config/zsh" ]]
+  [[ :$PATH: == *:$HOME/.local/share/npm/bin:* ]]
+  [[ ${aliases[o]} == opencode2 ]]
+' >/dev/null 2>&1
+printf 'ok: repeated Stow is safe and Linux Zsh loads\n'
+
+conflict_home=$TEST_ROOT/conflict
+mkdir -p "$conflict_home/.config"
+printf 'keep me\n' >"$conflict_home/.config/starship.toml"
+ln -s "$REPO_ROOT/home/agents/.agents" "$conflict_home/.agents"
+ln -s "$REPO_ROOT/nvim/.config/nvim" "$conflict_home/.config/nvim"
+if HOME=$conflict_home "$ARCH_DIR/stow" >/dev/null 2>&1; then
+  printf 'fail: real-file conflict was ignored\n' >&2
+  exit 1
+fi
+[[ $(<"$conflict_home/.config/starship.toml") == 'keep me' ]]
+[[ ! -e $conflict_home/.zshenv && ! -e $conflict_home/.stow-global-ignore ]]
+[[ $(readlink "$conflict_home/.agents") == "$REPO_ROOT/home/agents/.agents" ]]
+[[ -d $conflict_home/.agents ]]
+[[ $(readlink "$conflict_home/.config/nvim") == "$REPO_ROOT/nvim/.config/nvim" ]]
+printf 'ok: conflicts prevent application and restore migrated links\n'
+
+foreign_home=$TEST_ROOT/foreign
+foreign_source=$TEST_ROOT/backup/${REPO_ROOT##*/}/nvim/.config/nvim
+mkdir -p "$foreign_home/.config" "$foreign_source"
+ln -s "$foreign_source" "$foreign_home/.config/nvim"
+if HOME=$foreign_home "$ARCH_DIR/stow" >/dev/null 2>&1; then
+  printf 'fail: unrelated symlink was replaced\n' >&2
+  exit 1
+fi
+[[ $(readlink "$foreign_home/.config/nvim") == "$foreign_source" ]]
+printf 'ok: unrelated same-basename links are preserved\n'
+
+if [[ -f /etc/arch-release && $EUID -ne 0 ]]; then
+  export GIT_CONFIG_GLOBAL=$positive_home/.gitconfig
+  git config --global user.name 'Existing User'
+  git config --global user.email existing@example.com
+  git config --global credential.helper keep-existing-helper
+  HOME=$positive_home "$ARCH_DIR/install" >/dev/null
+  [[ $(git config --global user.name) == 'Existing User' ]]
+  [[ $(git config --global user.email) == existing@example.com ]]
+  [[ $(git config --global credential.helper) == keep-existing-helper ]]
+  [[ $(git config --global core.excludesFile) == "$REPO_ROOT/home/git/.config/git/ignore" ]]
+  [[ $(git config --global pull.ff) == only ]]
+  grep -Fq 'npm install --global --ignore-scripts @earendil-works/pi-coding-agent' "$ARCH_TEST_LOG"
+  grep -Fq 'npm install --global --allow-scripts=@opencode-ai/cli @opencode-ai/cli@beta' "$ARCH_TEST_LOG"
+  grep -Fq 'nvim --headless +Lazy! sync +qa' "$ARCH_TEST_LOG"
+  printf 'ok: mocked installer installs dependencies and preserves Git identity/authentication\n'
+else
+  printf 'skip: mocked installer integration requires an unprivileged Arch host\n'
+fi
+
+# Machine-level actions belong in a separate infrastructure repository.
+! grep -Eq '(^|[[:space:]])(sudo|pacman|systemctl|tailscale|usermod|chsh|mkfs|lvcreate)([[:space:]]|$)' "$ARCH_DIR/install" "$ARCH_DIR/stow"
+printf 'ok: no machine provisioning commands in Arch entrypoints\n'
