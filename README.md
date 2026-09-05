@@ -1,25 +1,19 @@
 # Dotfiles
 
-Personal development environment for macOS clients and the dedicated Arch Linux agent host named `box`.
+Personal development environment shared across macOS and Arch Linux machines.
 
-Configuration installed into a user home directory lives in GNU Stow packages under [`home/`](home/). Platform setup stays outside that tree: [`macos/`](macos/) provisions client machines, while [`box/`](box/README.md) installs and operates the remote agent host.
+Configuration installed into a user home directory lives in GNU Stow packages under [`home/`](home/). Platform setup stays outside that tree: [`macos/`](macos/) provisions client machines, while the dedicated Box agent host is installed and operated from a separate private infrastructure repository.
 
 ## Repository layout
 
 ```text
 .
 ├── home/                  GNU Stow packages projected into $HOME
-├── macos/                 macOS installation and package selection
-│   ├── install
-│   ├── install-apps
-│   ├── stow
-│   └── tests/
-└── box/                   Arch agent-host installation and operations
-    ├── bootstrap
+└── macos/                 macOS installation and package selection
     ├── install
-    ├── provision
-    ├── verify
-    └── framework-desktop/
+    ├── install-apps
+    ├── stow
+    └── tests/
 ```
 
 The directories under `home/` mirror their destination beneath `$HOME`. For example:
@@ -39,7 +33,7 @@ Package groups include:
 - macOS UI: `aerospace`, `borders`, and `leaderkey`
 - Stow configuration: `stow`
 
-Not every target installs every package. [`macos/stow`](macos/stow) defines the macOS selection; [`box/provision`](box/provision) defines the smaller Linux-safe selection.
+Not every target installs every package. [`macos/stow`](macos/stow) defines the macOS selection; machine-role installers select their own compatible subset from this package catalog.
 
 ## macOS
 
@@ -80,20 +74,9 @@ The Stow command is safe to rerun. It also migrates symlinks created by the prev
 
 ## Box agent host
 
-`box` is a dedicated remote machine for Herdr, coding agents, repositories, worktrees, builds, and private browser automation. It is not configured as a graphical workstation.
+The dedicated Box host keeps its destructive bootstrap, hardware configuration, services, security checks, audits, and recovery runbooks in the separate private `magoz/box` repository. That repository treats `~/.dotfiles/home` as an external package catalog and applies the Linux-safe subset without owning or duplicating these user configurations.
 
-Start with the detailed [Box runbook](box/README.md) and the [Framework Desktop platform notes](box/framework-desktop/README.md). The main entry points are:
-
-```sh
-cp box/config.example box/config.local
-sudo ./box/bootstrap --config box/config.local --preflight
-sudo ./box/bootstrap --config box/config.local --destroy-disk '<exact-serial>'
-
-./box/provision
-./box/verify
-```
-
-`box/bootstrap` is destructive and must only be run from the official Arch live ISO after reviewing the disk identity and read-only preflight. After the Box package phase has installed required system tools, `box/install` applies the Linux-safe dotfiles and package-local dependencies, including the portable Zsh and Starship configuration, generates completions for supported agent tools, and makes Zsh the operator's login shell. Full Box setup uses the safe, rerunnable `box/provision` command. Never run the macOS installer on the Box.
+Never run the macOS installer on Box.
 
 ## Working with Stow packages
 
@@ -113,7 +96,7 @@ stow --dir "$PWD/home" --target "$HOME" --delete nvim
 To add a package:
 
 1. Create `home/<package>/` using the same paths the files should have beneath `$HOME`.
-2. Add the package to `macos/stow`, `box/provision`, or both.
+2. Add the package to `macos/stow` and/or the appropriate machine-role installer.
 3. Run a Stow simulation before applying it.
 4. Keep credentials and runtime state out of the tracked package.
 
@@ -132,16 +115,14 @@ Run the focused repository checks after changing installation or Stow behavior:
 
 ```sh
 ./macos/tests/run
-./box/tests/run
 git diff --check
 ```
 
-The macOS test uses temporary home directories. It verifies both migration of legacy Stow links and preservation of unrelated links. The Box suite is non-destructive and covers configuration parsing, shell syntax, platform guards, storage path helpers, and Stow integration.
+The macOS test uses temporary home directories. It verifies both migration of legacy Stow links and preservation of unrelated links. Machine-role repositories test their own integration with this package catalog independently.
 
 ## Local and sensitive state
 
 Do not commit credentials, private keys, auth files, machine-local installer values, or runtime sessions.
 
-- `box/config.local` is ignored and contains the real machine and disk values.
 - Pi, OpenCode, Herdr, package-manager, and browser runtime state is excluded through `.gitignore` or package-local Stow ignore rules.
-- SSH private keys are never stored in this repository or copied between machines; Box bootstrap receives only a public-key file path, and GitHub authentication generates a separately revocable key directly on Box.
+- SSH private keys and machine-local infrastructure configuration are never stored in this repository or copied between machines.

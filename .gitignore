@@ -5,9 +5,6 @@
 __pycache__/
 *.py[cod]
 
-# Box host-local installer configuration
-box/config.local
-
 # herdr runtime state
 home/herdr/.config/herdr/.plugins.lock
 home/herdr/.config/herdr/session.json
