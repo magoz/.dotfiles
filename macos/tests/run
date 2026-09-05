@@ -38,6 +38,7 @@ HOME=$positive_home zsh -dfc '
   [[ ${aliases[box]} == "herdr --remote box --remote-keybindings server" ]]
 ' >/dev/null 2>&1
 [[ -L $positive_home/.config/starship.toml ]]
+[[ -e $positive_home/.config/vimium/vimium.css ]]
 grep -Eq '^[[:space:]]+starship \\$' "$MACOS_DIR/install"
 ! grep -Fq powerlevel10k "$MACOS_DIR/install"
 ! grep -Eiq 'iterm2|tmux|wezterm' "$MACOS_DIR/install" "$MACOS_DIR/stow"

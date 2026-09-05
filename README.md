@@ -35,6 +35,7 @@ Package groups include:
 - Agent tooling: `agents`, `herdr`, `opencode`, and `pi`
 - Development tools: `git`, `lazygit`, `nvim`, and `scripts`
 - Shell and terminals: `ghostty`, `starship`, and `zsh`
+- Browser customization: `vimium`
 - macOS UI: `aerospace`, `borders`, and `leaderkey`
 - Stow configuration: `stow`
 
