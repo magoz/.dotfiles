@@ -152,6 +152,45 @@ aligned with repository policy, but it is not by itself a merge-readiness claim.
 7. Treat accepted Conform/Learn/Tidy edits as task-owned only when they directly support the current
    work. Ask before including unrelated cleanup, and never stage it silently.
 
+## Visual proof (visible UI changes)
+
+The PR skill owns the evidence requirement and attachment lifecycle; browser skills own capture. Apply
+this step during draft creation/update and Ready, not only when the user explicitly asks for images.
+Skip it for changes with no visible UI impact. Pre-merge only audits existing evidence; it never
+captures or publishes new assets.
+
+1. Identify the changed UI and the smallest useful set of screenshots. Show the relevant states, such
+   as a dialog plus its expanded selector; include responsive or error states when changed. Load and
+   follow `agent-browser` for capture, or `browser-control` when an existing authenticated user browser
+   is needed. Do not duplicate browser setup instructions here.
+2. Capture the actual application from the intended checkout or a preview verified to serve that
+   revision. Record the source commit SHA or exact uncommitted patch digest, environment, viewport,
+   and demonstrated state. Use synthetic data and repository-approved safe environments. Screenshot
+   capture does not authorize unsafe database resets, production mutations, deployments, provider
+   calls, or authentication bypasses.
+3. Open and inspect every image before publication: confirm it demonstrates the change, is legible,
+   and contains no secrets or private user data. Never substitute mockups, generated images, or
+   DOM-edited approximations for actual application evidence. Screenshots prove appearance and the
+   captured state, not persistence, provider behavior, or a passing functional test.
+4. Prefer native GitHub image attachments when an authenticated upload path is already available.
+   `gh pr create/edit` accepts Markdown but does not upload native image attachments. When using the
+   CLI without that upload path, commit only the inspected PNGs on the PR branch in the repository's
+   approved screenshot location; use `docs/screenshots/` as a fallback only when repository policy
+   permits. These intentionally selected evidence files are task-owned, not unexplained generated
+   artifacts. Keep files small and descriptive; never commit whole browser/test output directories.
+   Include them before the normal staging/review gates, not as an unreviewed follow-up to a ready PR.
+   Do not create public gists or use unrelated image hosts to work around private-repository access.
+5. Embed the images with short captions in the managed PR body. For committed assets, use immutable
+   URLs such as `https://github.com/<owner>/<repo>/blob/<asset-sha>/<path>.png?raw=true`, resolving the
+   repository that owns the assets. Record the captured source revision separately from any later
+   screenshot-only commit. After publishing, verify the body contains rendered image elements and the
+   uploaded images are retrievable with the intended repository access; local paths are not attachments.
+6. On updates, recapture when the relevant UI code, assets, or configuration changes. Reuse existing
+   screenshots only when those inputs are unchanged, retaining their original provenance. If safe
+   capture or attachment is unavailable, record `blocked` with the reason and missing prerequisite;
+   never imply screenshots were attached. A draft may still be created with that disclosure. Missing
+   visual evidence blocks Ready when repository-required or change-critical, like other missing checks.
+
 ## Draft synchronization (`/skill:pr`)
 
 Draft synchronization publishes work in progress; it does not claim merge readiness. Draft state is
@@ -161,10 +200,11 @@ ready or auto-merge eligibility for an incompletely validated commit.
 
 1. Complete the Always-on preparation pass, then inspect staged, unstaged, and untracked paths. Infer
    the intended set from the current task and ask only when files are genuinely unrelated or
-   ambiguous.
+   ambiguous. For visible UI changes, complete Visual proof capture and select any task-owned PNGs
+   before staging; record blockers when capture is unavailable.
 2. Block publication hazards: tracked credentials or environment files, private keys, generated build
-   or test artifacts, unexplained binary/large files, merge markers, or unrelated changes. Apply any
-   stricter repository rules.
+   or test artifacts (except inspected Visual proof PNGs), unexplained binary/large files, merge
+   markers, or unrelated changes. Apply any stricter repository rules.
 3. Stage only task-owned paths and run `git diff --cached --check`. A draft may have incomplete tests,
    but its body must report checks honestly.
 4. Generate an accurate commit message from the task, repository convention, and diff. Commit when
@@ -189,6 +229,11 @@ Maintain generated content inside one block:
 
 ...
 
+## Visual proof
+
+- Capture: source SHA or patch digest, environment, viewport, and demonstrated state
+- Captioned image embeds, or `blocked` — reason and missing prerequisite
+
 ## Validation
 
 - `command` — passed, failed, or not run (reason)
@@ -207,7 +252,8 @@ Replace only this block on later runs. If an existing PR has no block, preserve 
 one. If a project-local predecessor left one clearly equivalent managed block, replace that block and
 normalize only its boundary markers rather than appending duplicate generated content. Never rewrite
 an existing title or text outside the block unless the user explicitly requests it. Record the
-reviewed head SHA when readiness evidence exists.
+reviewed head SHA when readiness evidence exists. Omit the Visual proof section for changes with no
+visible UI impact; keep visual evidence separate from functional validation claims.
 
 ## Ready workflow (`/skill:pr ready`)
 
@@ -237,7 +283,9 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
    safe and required. Record environment-dependent skips.
 4. Run end-to-end, integration, deployment-preview, migration, or infrastructure validation only when
    relevant and safe under repository policy. Missing evidence for a repository-required or
-   change-critical check blocks ready rather than being inferred as success.
+   change-critical check blocks ready rather than being inferred as success. For visible UI changes,
+   complete or refresh Visual proof and include any selected PNGs and capture provenance in the review
+   bundle before freezing it.
 5. Freeze the implementation patch before independent review:
    - write scope/specification, changed paths, exact binary patch, and validation evidence to a
      temporary directory outside the repository;
@@ -289,7 +337,8 @@ Before marking ready:
   tested commit SHA.
 - If no open PR exists, create a draft using Draft synchronization with the already validated commit
   and managed body.
-- Update the managed PR body with final evidence.
+- Update the managed PR body with final evidence, including applicable Visual proof. Verify image
+  embeds and uploaded assets after publication; report attachment failures as blocked, not complete.
 - Inspect required remote checks, review state, conflicts, and deployment status defined by repository
   or branch policy. Do not substitute remote checks for missing local evidence.
 - If all gates pass, run `gh pr ready` without another confirmation; invoking `ready` already granted
@@ -456,6 +505,8 @@ Report **ready** only when:
 - no blocker/high review finding remains and every medium finding is dispositioned;
 - applicable migration, deployment, integration, and end-to-end requirements are satisfied safely or
   block readiness;
+- visible UI changes have inspected, revision-bound screenshot proof or an explicit capture/attachment
+  blocker; missing repository-required or change-critical visual evidence blocks readiness;
 - repository-required or available formatting checks pass, or formatting is explicitly not applicable;
   the worktree contains no unreviewed change, and remote SHA matches evidence;
 - base drift, conflicts, pending required checks, and unresolved mandatory feedback are absent.
