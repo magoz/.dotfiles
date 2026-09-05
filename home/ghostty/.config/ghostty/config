@@ -8,7 +8,7 @@ window-padding-balance = true
 window-colorspace = display-p3
 
 keybind = cmd+t=unbind
-keybind = cmd+n=unbind
+keybind = cmd+n=new_window
 
 # Cmd+1..9 -> send Alt+1..9 (ESC-prefixed digit) to the pane. herdr maps
 # alt+1..9 to agent-panel rows (keys.indexed.agents = "alt" in herdr's
