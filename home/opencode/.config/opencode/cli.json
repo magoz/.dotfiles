@@ -11,7 +11,7 @@
   },
   "plugins": [
     {
-      "package": "./plugins/opencode-vim-compat/tui.js",
+      "package": "./plugins/opencode-vim-compat",
       "options": {
         "enabled": true,
         "vim_initial_mode": "normal",

@@ -21,6 +21,14 @@ for entrypoint in install stow; do
 done
 printf 'ok: entrypoints parse, expose help, and reject unknown arguments\n'
 
+# V2 discovers local plugin directories. A direct tui.js target can leave the
+# auto-discovered plugin running without these options (Enter becomes newline).
+jq -e '.plugins[] | select(.package == "./plugins/opencode-vim-compat") |
+  .options.vim_initial_mode == "normal" and .options.vim_enter_submit == true' \
+  "$REPO_ROOT/home/opencode/.config/opencode/cli.json" >/dev/null
+[[ -f $REPO_ROOT/home/opencode/.config/opencode/plugins/opencode-vim-compat/tui.js ]]
+printf 'ok: OpenCode Vim options target the plugin directory and enable Enter submission\n'
+
 # Keep completion generation and dependency installation offline and isolated.
 mkdir -p "$TEST_ROOT/bin"
 export ARCH_TEST_LOG=$TEST_ROOT/commands
