@@ -10,14 +10,12 @@ export ZDOTDIR="$HOME/.config/zsh"
 [[ ! -r "$ZDOTDIR/zsh-exports" ]] || source "$ZDOTDIR/zsh-exports"
 
 # ---------------------------------
-# -------- POWERLEVEL10K ----------
+# ------------- PROMPT ------------
 # ---------------------------------
-if [[ -r "$HOMEBREW_PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme" ]]; then
-  source "$HOMEBREW_PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme"
+if (( ! $+commands[starship] )); then
+  # Keep a usable prompt when provisioning has not installed Starship yet.
+  PROMPT='%F{cyan}%n@%m%f %F{blue}%~%f %# '
 fi
-
-# To customize the prompt, run `p10k configure` or edit this file.
-[[ ! -r "$ZDOTDIR/.p10k.zsh" ]] || source "$ZDOTDIR/.p10k.zsh"
 
 # ---------------------------------
 # ---------- HISTORY --------------
@@ -53,12 +51,19 @@ ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=244'
 # Configure every completion directory before initializing completion. Changing
 # fpath after compinit forces expensive .zcompdump rebuilds on every shell.
 typeset -U fpath
-fpath=(
-  "$ZDOTDIR/completion"
-  "$HOMEBREW_PREFIX/share/zsh/site-functions"
-  "$HOMEBREW_PREFIX/share/zsh-completions"
-  $fpath
-)
+completion_cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions"
+if [[ -n ${HOMEBREW_PREFIX:-} ]]; then
+  fpath=(
+    "$completion_cache"
+    "$ZDOTDIR/completion"
+    "$HOMEBREW_PREFIX/share/zsh/site-functions"
+    "$HOMEBREW_PREFIX/share/zsh-completions"
+    $fpath
+  )
+else
+  fpath=("$completion_cache" "$ZDOTDIR/completion" $fpath)
+fi
+unset completion_cache
 
 FIGNORE=DS_Store
 zstyle ':completion:*' list-colors ''
@@ -92,12 +97,24 @@ bindkey '^e' edit-command-line
 [[ ! -r "$ZDOTDIR/zsh-vim-mode" ]] || source "$ZDOTDIR/zsh-vim-mode"
 [[ ! -r "$ZDOTDIR/zsh-aliases" ]] || source "$ZDOTDIR/zsh-aliases"
 
+# Initialize Starship after custom ZLE widgets so it can preserve and wrap them.
+if (( $+commands[starship] )); then
+  eval "$(starship init zsh)"
+fi
+
 # ---------------------------------
 # ---------- PLUGINS --------------
 # ---------------------------------
-[[ ! -r "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] || \
-  source "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+if [[ -n ${HOMEBREW_PREFIX:-} ]]; then
+  autosuggestions="$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+  syntax_highlighting="$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+else
+  autosuggestions="/usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+  syntax_highlighting="/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
+
+[[ ! -r $autosuggestions ]] || source "$autosuggestions"
 
 # Syntax highlighting must be sourced last.
-[[ ! -r "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] || \
-  source "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+[[ ! -r $syntax_highlighting ]] || source "$syntax_highlighting"
+unset autosuggestions syntax_highlighting

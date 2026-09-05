@@ -1,61 +1,65 @@
-# Load private environment variables when present.
-if [[ -r "$HOME/.env" ]]; then
-  source "$HOME/.env"
-else
-  print -u2 "Warning: $HOME/.env file not found"
-fi
-
-# Homebrew. These are the stable values emitted by `brew shellenv`; keeping
-# them static avoids spawning brew and path_helper for every interactive shell.
-export HOMEBREW_PREFIX="/opt/homebrew"
-export HOMEBREW_CELLAR="$HOMEBREW_PREFIX/Cellar"
-export HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX"
-case ":${MANPATH:-}:" in
-  *":$HOMEBREW_PREFIX/share/man:"*) ;;
-  *) export MANPATH="$HOMEBREW_PREFIX/share/man:${MANPATH:-}" ;;
-esac
-case ":${INFOPATH:-}:" in
-  *":$HOMEBREW_PREFIX/share/info:"*) ;;
-  *) export INFOPATH="$HOMEBREW_PREFIX/share/info:${INFOPATH:-}" ;;
-esac
+# Load optional private environment variables when present.
+[[ ! -r "$HOME/.env" ]] || source "$HOME/.env"
 
 # Package managers.
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
 
-# Android Studio.
-export ANDROID_HOME="$HOME/Library/Android/sdk"
-
-# Keep PATH entries unique while preserving the order below. This file is
-# sourced from a function, so declare the tied parameters globally.
+# Keep PATH entries unique while preserving platform-specific locations.
 typeset -gU path PATH
-path=(
-  "$HOME/.local/bin"
-  "$HOME/.local/share/go/bin"
-  "$HOME/.rustup/toolchains/nightly-aarch64-apple-darwin/bin"
-  "$NPM_CONFIG_PREFIX/bin"
-  "$PNPM_HOME"
-  "$PNPM_HOME/bin"
-  "$HOMEBREW_PREFIX/bin"
-  "$HOMEBREW_PREFIX/sbin"
-  "$HOMEBREW_PREFIX/opt/postgresql@16/bin"
-  $path
-  "$ANDROID_HOME/emulator"
-  "$ANDROID_HOME/tools"
-  "$ANDROID_HOME/tools/bin"
-  "$ANDROID_HOME/platform-tools"
-  "./node_modules/.bin"
-)
+if [[ $OSTYPE == darwin* ]]; then
+  # Homebrew. These are the stable values emitted by `brew shellenv`; keeping
+  # them static avoids spawning brew and path_helper for every shell.
+  export HOMEBREW_PREFIX="/opt/homebrew"
+  export HOMEBREW_CELLAR="$HOMEBREW_PREFIX/Cellar"
+  export HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX"
+  case ":${MANPATH:-}:" in
+    *":$HOMEBREW_PREFIX/share/man:"*) ;;
+    *) export MANPATH="$HOMEBREW_PREFIX/share/man:${MANPATH:-}" ;;
+  esac
+  case ":${INFOPATH:-}:" in
+    *":$HOMEBREW_PREFIX/share/info:"*) ;;
+    *) export INFOPATH="$HOMEBREW_PREFIX/share/info:${INFOPATH:-}" ;;
+  esac
+
+  export ANDROID_HOME="$HOME/Library/Android/sdk"
+  path=(
+    "$HOME/.local/bin"
+    "$HOME/.local/share/go/bin"
+    "$HOME/.rustup/toolchains/nightly-aarch64-apple-darwin/bin"
+    "$NPM_CONFIG_PREFIX/bin"
+    "$PNPM_HOME"
+    "$PNPM_HOME/bin"
+    "$HOMEBREW_PREFIX/bin"
+    "$HOMEBREW_PREFIX/sbin"
+    "$HOMEBREW_PREFIX/opt/postgresql@16/bin"
+    $path
+    "$ANDROID_HOME/emulator"
+    "$ANDROID_HOME/tools"
+    "$ANDROID_HOME/tools/bin"
+    "$ANDROID_HOME/platform-tools"
+    "./node_modules/.bin"
+  )
+  export TERMINAL="iterm2"
+else
+  path=(
+    "$HOME/.local/bin"
+    "$HOME/.local/share/go/bin"
+    "$NPM_CONFIG_PREFIX/bin"
+    "$PNPM_HOME"
+    "$PNPM_HOME/bin"
+    $path
+  )
+fi
 export PATH
 
-# fnm must be initialized after Homebrew is on PATH.
+# fnm is used on macOS; Box uses the pinned system Node package.
 if (( $+commands[fnm] )); then
   eval "$(fnm env --use-on-cd --version-file-strategy=recursive --shell zsh)"
 fi
 
 export CLICOLOR=1
 export EDITOR="nvim"
-export TERMINAL="iterm2"
 # Check for Pi updates manually with `pi update`.
 export PI_SKIP_VERSION_CHECK=1
 unset BROWSER

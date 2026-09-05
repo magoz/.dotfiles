@@ -16,6 +16,7 @@ Configuration installed into a user home directory lives in GNU Stow packages un
 │   └── tests/
 └── box/                   Arch agent-host installation and operations
     ├── bootstrap
+    ├── install
     ├── provision
     ├── verify
     └── framework-desktop/
@@ -33,7 +34,7 @@ Package groups include:
 
 - Agent tooling: `agents`, `herdr`, `opencode`, and `pi`
 - Development tools: `git`, `lazygit`, `nvim`, and `scripts`
-- Shell and terminals: `ghostty`, `wezterm`, and `zsh`
+- Shell and terminals: `ghostty`, `starship`, `wezterm`, and `zsh`
 - macOS UI: `aerospace`, `borders`, and `leaderkey`
 - Stow configuration: `stow`
 
@@ -91,7 +92,7 @@ sudo ./box/bootstrap --config box/config.local --destroy-disk '<exact-serial>'
 ./box/verify
 ```
 
-`box/bootstrap` is destructive and must only be run from the official Arch live ISO after reviewing the disk identity and read-only preflight. Never run the macOS installer on the Box.
+`box/bootstrap` is destructive and must only be run from the official Arch live ISO after reviewing the disk identity and read-only preflight. After the Box package phase has installed required system tools, `box/install` applies the Linux-safe dotfiles and package-local dependencies, including the portable Zsh and Starship configuration, generates completions for supported agent tools, and makes Zsh the operator's login shell. Full Box setup uses the safe, rerunnable `box/provision` command. Never run the macOS installer on the Box.
 
 ## Working with Stow packages
 

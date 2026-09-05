@@ -7,6 +7,7 @@ HOME_PACKAGES=$REPO_ROOT/home
 
 packages=(
   stow
+  starship
   nvim
   wezterm
   ghostty
@@ -77,6 +78,10 @@ migrate_legacy_node() {
 
 echo "🔗 Running Stow for macOS..."
 
+# Keep shared XDG parents as real directories so runtime state created by one
+# tool cannot be written through a folded Stow package directory.
+mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/.local/share"
+
 for package in "${packages[@]}"; do
   migrate_legacy_node "$HOME_PACKAGES/$package" "$HOME" "$package"
 done
@@ -94,4 +99,5 @@ for package in "${packages[@]}"; do
   stow --dir "$HOME_PACKAGES" --target "$HOME" --restow "$package"
 done
 
+"$HOME/.local/bin/update-zsh-completions"
 echo "✅ Stow complete"

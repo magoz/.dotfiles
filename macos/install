@@ -45,7 +45,7 @@ brew install \
   eza \
   zoxide \
   fzf \
-  powerlevel10k \
+  starship \
   zsh-autosuggestions \
   zsh-syntax-highlighting \
   zsh-completions
@@ -150,3 +150,5 @@ fi
 # OpenCode 2 beta
 echo "🤖 Installing OpenCode 2"
 npm install -g @opencode-ai/cli@next
+
+"$HOME/.local/bin/update-zsh-completions"

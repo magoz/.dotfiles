@@ -1,0 +1,70 @@
+# Shared two-line prompt for macOS clients and the Box agent host.
+add_newline = true
+command_timeout = 500
+scan_timeout = 30
+
+format = """\
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_status\
+$cmd_duration\
+$line_break\
+$python\
+$character"""
+
+[username]
+format = "[$user]($style)"
+show_always = false
+style_root = "bold white"
+style_user = "bright-black"
+
+[hostname]
+format = "[@$hostname]($style) "
+ssh_only = true
+style = "bright-black"
+
+[directory]
+format = "[$path]($style)[$read_only]($read_only_style) "
+style = "blue"
+truncate_to_repo = false
+truncation_length = 4
+
+[git_branch]
+format = "[$branch]($style)"
+style = "bright-black"
+symbol = ""
+
+[git_status]
+ahead = ":⇡"
+behind = ":⇣"
+conflicted = "="
+deleted = "*"
+diverged = ":⇣⇡"
+format = "[$all_status$ahead_behind]($style) "
+modified = "*"
+renamed = "*"
+staged = "*"
+stashed = ""
+style = "bright-black"
+untracked = "*"
+up_to_date = ""
+
+[cmd_duration]
+format = " [$duration]($style)"
+min_time = 5000
+show_milliseconds = false
+style = "yellow"
+
+[python]
+format = "[($virtualenv)]($style) "
+style = "bright-black"
+
+[character]
+error_symbol = "[❯](red)"
+success_symbol = "[❯](magenta)"
+vimcmd_replace_one_symbol = "[❮](magenta)"
+vimcmd_replace_symbol = "[❮](magenta)"
+vimcmd_symbol = "[❮](magenta)"
+vimcmd_visual_symbol = "[❮](magenta)"

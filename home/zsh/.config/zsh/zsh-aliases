@@ -14,33 +14,38 @@ alias p=pnpm
 alias o=opencode2
 
 # EZA/LS
-alias ls='eza'
+(( $+commands[eza] )) && alias ls='eza'
 
 # ZOXIDE/CD
-eval "$(zoxide init zsh)"
-alias cd='z'
+if (( $+commands[zoxide] )); then
+  eval "$(zoxide init zsh)"
+  alias cd='z'
+fi
 
 # Common directories 
 alias dot='cd ~/.dotfiles'
 
-# Quicklook
-ql() {
-  qlmanage -p "$@" >&/dev/null
-}
+if [[ $OSTYPE == darwin* ]]; then
+  # Attach to the Box using its server-side keybindings and custom commands.
+  alias box='herdr --remote box --remote-keybindings server'
 
-# MARKDOWN
-# Markdown to Clipboard as rich text
-md() {
-  cat $1 | \
-  pandoc --from markdown --to html --ascii | \
-  textutil -convert rtf -stdin -stdout -format html | \
-  pbcopy -Prefer rtf
-}
+  # Quick Look.
+  ql() {
+    qlmanage -p "$@" >&/dev/null
+  }
 
-# Markdown to Clipboard as plain text
-md-plain() {
-  pandoc -f markdown -t plain $1 --wrap=preserve | pbcopy
-}
+  # Markdown to Clipboard as rich text.
+  md() {
+    pandoc --from markdown --to html --ascii "$1" | \
+      textutil -convert rtf -stdin -stdout -format html | \
+      pbcopy -Prefer rtf
+  }
+
+  # Markdown to Clipboard as plain text.
+  md-plain() {
+    pandoc -f markdown -t plain "$1" --wrap=preserve | pbcopy
+  }
+fi
 
 # ---------------------------------------------
 #               ORIGINAL CONFIG
@@ -59,8 +64,8 @@ alias mv='mv -i'
 alias rm='rm -i'
 
 # easier to read disk
-alias df='df -h'     # human-readable sizes
-alias free='free -m' # show sizes in MB
+alias df='df -h' # human-readable sizes
+(( $+commands[free] )) && alias free='free -m' # show sizes in MB
 
 # get top process eating memory
 alias psmem='ps auxf | sort -nr -k 4 | head -5'
