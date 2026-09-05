@@ -15,6 +15,7 @@
       "options": {
         "enabled": true,
         "vim_initial_mode": "normal",
+        "vim_enter_submit": true,
         "indicator": true
       }
     }
