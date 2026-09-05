@@ -18,6 +18,7 @@
         "gpt-5.6-luna-fast": { "limit": { "context": 500000, "input": 372000, "output": 128000 } },
         "gpt-5.6-terra": { "limit": { "context": 500000, "input": 372000, "output": 128000 } },
         "gpt-5.6-terra-fast": { "limit": { "context": 500000, "input": 372000, "output": 128000 } },
+        "gpt-6-astra": { "limit": { "context": 1050000, "input": 922000, "output": 128000 } },
       },
     },
   },

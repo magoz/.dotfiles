@@ -7,6 +7,13 @@
         "short": 272000,
         "full": 1050000
       }
+    },
+    "openai-codex/gpt-6-astra": {
+      "defaultProfile": "short",
+      "profiles": {
+        "short": 272000,
+        "full": 1050000
+      }
     }
   }
 }
