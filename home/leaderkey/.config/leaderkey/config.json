@@ -44,10 +44,10 @@
       "value" : "/Applications/Spotify.app"
     },
     {
-      "key" : "w",
-      "label" : "Wezterm",
+      "key" : "g",
+      "label" : "Ghostty",
       "type" : "application",
-      "value" : "/Applications/WezTerm.app"
+      "value" : "/Applications/Ghostty.app"
     },
     {
       "actions" : [

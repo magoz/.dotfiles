@@ -40,7 +40,7 @@ if [[ $OSTYPE == darwin* ]]; then
     "$ANDROID_HOME/platform-tools"
     "./node_modules/.bin"
   )
-  export TERMINAL="iterm2"
+  export TERMINAL="ghostty"
 else
   path=(
     "$HOME/.local/bin"

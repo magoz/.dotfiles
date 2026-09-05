@@ -5,9 +5,6 @@
 __pycache__/
 *.py[cod]
 
-# tmux
-home/tmux/.config/tmux/plugins
-
 # Box host-local installer configuration
 box/config.local
 
@@ -19,9 +16,6 @@ home/herdr/.config/herdr/release-notes.json
 
 # nvim
 home/nvim/.config/nvim/plugin/packer_compiled.lua
-
-# iterm2
-home/iterm2/.config/iterm2/AppSupport
 
 # zsh
 home/zsh/.config/zsh/.zcompcache

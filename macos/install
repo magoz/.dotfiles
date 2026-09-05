@@ -34,7 +34,6 @@ brew install \
   git \
   fnm \
   jq \
-  wezterm \
   ghostty \
   font-meslo-lg-nerd-font \
   neovim \

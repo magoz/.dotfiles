@@ -9,7 +9,6 @@ packages=(
   stow
   starship
   nvim
-  wezterm
   ghostty
   zsh
   git

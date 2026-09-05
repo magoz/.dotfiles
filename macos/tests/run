@@ -34,13 +34,19 @@ HOME=$positive_home zsh -dfc '
   [[ :$PATH: == *:/opt/homebrew/bin:* ]]
   [[ $ANDROID_HOME == "$HOME/Library/Android/sdk" ]]
   [[ $ZDOTDIR == "$HOME/.config/zsh" ]]
+  [[ $TERMINAL == ghostty ]]
   [[ ${aliases[box]} == "herdr --remote box --remote-keybindings server" ]]
 ' >/dev/null 2>&1
 [[ -L $positive_home/.config/starship.toml ]]
 grep -Eq '^[[:space:]]+starship \\$' "$MACOS_DIR/install"
 ! grep -Fq powerlevel10k "$MACOS_DIR/install"
+! grep -Eiq 'iterm2|tmux|wezterm' "$MACOS_DIR/install" "$MACOS_DIR/stow"
+[[ ! -e $REPO_ROOT/home/iterm2 ]]
+[[ ! -e $REPO_ROOT/home/tmux ]]
+[[ ! -e $REPO_ROOT/home/wezterm ]]
+[[ ! -e $REPO_ROOT/home/scripts/.local/bin/tmux-sessionizer ]]
 [[ ! -e $REPO_ROOT/home/scripts/.local/share/opencode ]]
-printf 'ok: macOS Zsh and Starship configuration is portable\n'
+printf 'ok: macOS Zsh, Ghostty, and Starship configuration is portable\n'
 
 negative_home=$TEST_ROOT/negative
 foreign_source=$TEST_ROOT/backup/${REPO_ROOT##*/}/nvim/.config/nvim
