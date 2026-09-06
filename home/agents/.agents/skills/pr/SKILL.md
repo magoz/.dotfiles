@@ -22,12 +22,15 @@ commands, branch conventions, deployment providers, or quality gates.
 | `/skill:pr`               | Prepare, commit, push, and create/update; new PRs start as drafts             |
 | `/skill:pr ready`         | Prepare, validate, push, review, and mark the PR ready                       |
 | `/skill:pr pre-merge [PR]` | Audit an exact remote PR head; never merge                                   |
-| `/skill:pr merge`         | Squash-merge if still open, then delete the remote branch and linked worktree |
+| `/skill:pr merge`         | Squash-merge if still open, delete the remote branch, clean up a matching worktree if present |
 
 A pre-merge PR argument may be a number or URL. With no argument, resolve the PR for the current
-branch. Merge mode always targets the current branch because its cleanup is tied to the current linked
-worktree. This is the final, explicitly invoked step after preparation/review; other modes never
-merge or clean up automatically. If the PR is already merged, skip Ready, Pre-merge, and the merge
+branch. In merge mode, infer the intended PR and repository from the conversation, supplied PR identity,
+branch/remotes, and known checkout paths; the current directory may belong to a different repository.
+Infer worktree cleanup separately: remove only a verified matching linked worktree, skip deletion when
+none exists, and ask the user when the repository, PR, or cleanup target remains unclear. Never delete
+an unrelated worktree or a primary checkout. Merge is the final, explicitly invoked step after
+preparation/review; other modes never merge or clean up automatically. If the PR is already merged, skip Ready, Pre-merge, and the merge
 request, then perform only guarded cleanup. A closed-but-unmerged PR is not eligible for cleanup.
 
 ## Authority
@@ -59,12 +62,14 @@ confirmation, narrating every Git step, or treating draft state as a problem.
   review artifacts outside the repository. All fetch, checkout, installation, and validation work
   occurs in temporary state; the current repository and GitHub state must remain unchanged.
 - `/skill:pr merge` authorizes the full Ready workflow, exact Pre-merge workflow, squash merge, guarded
-  source-branch deletion, linked-worktree removal, and local branch-ref deletion. For an already-merged
+  source-branch deletion, optional matching linked-worktree removal, and guarded local branch-ref
+  deletion. No matching linked worktree is a normal cleanup skip, not a merge blocker. For an already-merged
   PR, it authorizes cleanup only after verifying the merged PR and exact cleanup target. The invocation
   is the user's explicit authorization for those destructive cleanup steps after safety gates pass.
 
 Ask only when work contains genuinely unrelated files, intent or desired branch history remains
-ambiguous after inspection, a closed/merged PR cannot be handled safely, a destructive or credentialed
+ambiguous after inspection, the PR repository or worktree cleanup target is unclear, a closed/merged PR
+cannot be handled safely, a destructive or credentialed
 validation environment needs attestation, a required check cannot be satisfied, or a product,
 architecture, access-control, migration, or scope decision is needed. Routine commit messages, draft
 creation, pushes, rebases, history updates, managed-body updates, ready transitions, squash merge, and
@@ -119,7 +124,12 @@ Before choosing commands or gates:
 
 ## Preflight
 
-For every mode:
+For every mode, inspect the intended PR's repository, not necessarily the launch directory. In merge
+mode, resolve it using the inference rules below before choosing Git/GitHub command targets. Use
+explicit repository identities for GitHub calls and explicit verified checkout paths for Git commands;
+never apply the launch repository's guidance, branch refs, or worktree list to another repository's PR.
+For already-merged remote-only cleanup with no local checkout, skip local Git/runtime preflight checks;
+verify GitHub identity and the source push URL directly instead.
 
 1. Confirm repository root, current branch, worktree status, `git` availability, `gh auth status`, and
    the GitHub repository/default branch. Resolve the unambiguous GitHub push remote from the branch
@@ -374,12 +384,27 @@ Git state, or GitHub state.
 ## Merge workflow (`/skill:pr merge`)
 
 This mode is intentionally destructive after merge, but it must fail closed before the irreversible
-step. A normal run targets the current branch and its registered linked worktree. A recovery run may
-start from the primary or another surviving worktree that shares the receipt's validated common Git
-directory when the recorded target worktree is already absent.
+step. Resolve the intended PR and its repository independently of the launch directory. Prefer explicit
+PR identity and established task context, then verified branch/remotes and known checkout or workspace
+metadata. Inspect the intended repository's `git worktree list --porcelain`, not an unrelated current
+repository's list. Do not guess from a directory or branch name alone. If the PR, repository checkout,
+or matching worktree remains ambiguous, ask the user before acting.
 
-Before creating or resuming a receipt, acquire a repository-scoped discovery lock under the common Git
-directory. Under that lock, resolve the current PR for a normal run or enumerate receipt filenames
+A primary checkout is sufficient; a removable linked worktree is optional. For an already-merged PR
+with no known local checkout, verified GitHub/source-remote identity is sufficient for remote cleanup;
+record local cleanup as skipped. Never substitute the launch repository's Git directory. If no matching linked
+worktree exists, record worktree deletion as `skipped — no matching linked worktree` and continue with
+merge and remote-branch cleanup. Leave unrelated worktrees untouched, including the launch worktree if
+it belongs to another repository. Do not create a worktree just to remove it. Run Ready in the verified
+PR checkout on the PR branch, not the launch checkout or another branch; if no suitable checkout can
+be located for required readiness
+work, ask for its location rather than silently skipping gates. A recovery run may start from a
+surviving checkout sharing the receipt's validated common Git directory.
+
+Before creating or resuming a receipt, acquire a repository-scoped discovery lock under the intended
+repository's common Git directory, or a durable state directory outside all worktrees keyed by immutable
+repository identity for remote-only cleanup with no local checkout. Use that same location for the
+receipt. Under that lock, resolve the intended PR for a normal run or enumerate receipt filenames
 keyed by immutable repository/PR identity for recovery; do not trust receipt contents before locking
 the selected key. Acquire one exclusive, process-lifetime per-receipt lock before releasing discovery.
 Use OS-released advisory locks or equivalent exclusive primitives with verified stale-owner handling,
@@ -391,25 +416,31 @@ collected on this invocation. Already-merged evidence must include GitHub's merg
 merge commit, source repository/ref, and PR head SHA recorded at merge matching the cleanup target. Do not infer
 the earlier merge method or claim this workflow performed it. A `prepared` receipt with a lost merge
 response may use this cleanup-only path on a later explicit invocation after all identity checks pass.
-An eligible receipt matching either the exact target worktree or its proven absence resumes at the
-first incomplete milestone without requiring an open PR or attempting another merge.
+An eligible receipt matching either the exact target worktree, its proven absence, or a recorded
+no-worktree skip resumes at the first incomplete milestone without requiring an open PR or attempting
+another merge.
 
-1. Establish the cleanup target before changing anything:
-   - require a clean, registered linked worktree rather than the repository's primary checkout;
-   - require a non-default local branch with one unambiguous open or merged PR whose head branch and
-     source repository match the checked-out branch; stop for a closed-but-unmerged PR or ambiguity;
-   - require local `HEAD`, the local branch ref, and the PR head SHA (recorded at merge if already
-     merged) to match exactly;
-     a reused branch or additional local commits must never be discarded as already-merged work;
-   - enumerate all registered worktrees and require that only the recorded target has a symbolic
-     `HEAD` for the local branch, including checkouts created with `--ignore-other-worktrees`;
-   - record the worktree administrative ID, canonical path, bidirectional `.git`/`gitdir` mapping,
-     absolute common Git directory, primary checkout, GitHub source repository identity, pinned source
-     push URL, full branch ref, and expected head SHA;
+1. Establish PR identity and optional cleanup targets before changing anything:
+   - resolve one unambiguous open or merged PR and its source repository, non-default head branch,
+     and head SHA (recorded at merge if already merged); stop for a closed-but-unmerged PR;
+   - when a local checkout is known, enumerate the intended repository's registered worktrees,
+     including checkouts created with
+     `--ignore-other-worktrees`. Infer a linked target from repository identity, branch, head SHA,
+     and task context. If none matches, record a skip; if multiple candidates or conflicting evidence
+     remain, ask. A dirty or moved candidate is unsafe, not evidence that no worktree exists;
+   - for a selected linked target, require clean status, local `HEAD` and branch ref matching the PR
+     head, and no other worktree with a symbolic `HEAD` for that branch. Never remove a primary
+     checkout, unrelated worktree, reused branch, or additional local commits;
+   - record the intended repository's absolute common Git directory, primary checkout, GitHub source
+     repository identity, pinned source push URL, full source ref, and expected head SHA. Record the
+     linked target's administrative ID, canonical path, and bidirectional `.git`/`gitdir` mapping
+     when present; otherwise record a null worktree target and explicit skip reason. Record any local
+     branch cleanup candidate separately; it need not exist or be checked out for cleanup-only runs.
+     For remote-only cleanup, record null local repository/worktree/ref targets and the state directory;
    - reject symlink/path identity ambiguity, verify the source ref at the pinned URL, and verify the
      source branch is not default/protected. An absent remote ref is acceptable only for an already
-     merged PR; a present ref must still match its recorded head SHA. Stop before readiness work if
-     safe remote and local cleanup cannot be established.
+     merged PR; a present ref must still match its recorded head SHA. Unsafe candidates require a
+     question or a reported blocker, never forced cleanup; a verified no-worktree skip does not block.
 
    If GitHub confirms the PR is already merged, record the verified already-merged evidence and cleanup
    identities in a durable `merged` receipt using step 5's persistence rules, with merge provenance
@@ -427,12 +458,15 @@ first incomplete milestone without requiring an open PR or attempting another me
    changed, the evidence is stale: rerun the affected Ready/Pre-merge gates. Detect merge-queue
    requirements before the merge call and stop if a queue applies; this mode supports only an
    immediate squash merge and never enables auto-merge or enqueues a PR.
-5. Record a durable cleanup receipt under the common Git directory, outside the removable worktree.
+5. Record a durable cleanup receipt in the locked location established above, outside any removable
+   worktree (the intended repository's common Git directory, or remote-only durable state directory).
    Include repository/PR identity, reviewed base/head, source repository and pinned URL, remote/local
-   full refs, worktree administrative ID and path mappings, common Git directory, and lifecycle state.
+   full refs, optional worktree administrative ID and path mappings, common Git directory, and lifecycle
+   state. Record worktree and local-ref skips with reasons, never as successful deletions.
    Persist milestones crash-durably: write and sync a temporary file, atomically replace the receipt,
    then sync its parent directory before the next destructive step. Use `prepared`, `merged`,
-   `remote-deleted`, `worktree-removed`, and `local-ref-deleted`. Only a receipt containing the
+   `remote-deleted`, `worktree-removed` (or `worktree-skipped`), and `local-ref-deleted` (or
+   `local-ref-skipped`, including an already-absent ref). Only a receipt containing the
    verified `merged` milestone, with either `performed-squash` direct-response evidence or
    `observed-existing` GitHub evidence, may resume automatic cleanup or bypass the open-PR requirement.
    A `prepared` receipt alone never authorizes cleanup; a later explicit invocation must first verify
@@ -472,7 +506,17 @@ first incomplete milestone without requiring an open PR or attempting another me
    `--force-with-lease=<full-ref>:<head-sha>`. Treat an already absent live ref as success. Never use an
    unguarded deletion or retry against a moved ref. If deletion fails, retain local recovery state and
    report that merge succeeded but cleanup is incomplete.
-9. Re-enumerate every registered worktree and require that only the recorded target has a symbolic
+9. If no linked worktree was selected, persist `worktree-skipped` with its reason; do not invoke
+   worktree removal. For remote-only cleanup with no local checkout, also record `local-ref-skipped —
+   no local checkout` and proceed to step 11. Otherwise, for optional local-ref cleanup, re-enumerate
+   the intended repository's worktrees:
+   if the branch is checked out anywhere (including the primary checkout), leave it intact and record
+   `local-ref-skipped — checked out`. Do not switch or detach another checkout just to delete a ref.
+   If the local ref is absent, record that outcome; if present at the expected SHA and not checked out,
+   delete it using step 10's expected-old-SHA guard. If it moved, retain it and report the conflict.
+   Then proceed to step 11.
+
+   Otherwise, re-enumerate every registered worktree and require that only the recorded target has a symbolic
    `HEAD` for the local branch. Revalidate its administrative ID, exact registered/canonical path,
    bidirectional path mapping, clean status, checked-out head, and local branch ref. Git provides no
    atomic identity lock
@@ -494,8 +538,11 @@ first incomplete milestone without requiring an open PR or attempting another me
    the recorded worktree and its own administrative entry. If the transaction or removal fails, never
    retry with force.
 
-10. Recovery from either `remote-deleted` or `worktree-removed` must run from a surviving checkout with
-    the same validated common Git directory. When both the recorded target path and administrative
+10. Remote-only recovery revalidates GitHub/source-remote identity against its durable receipt and
+    retains the local cleanup skips. Other recovery from `remote-deleted`, `worktree-removed`, or
+    `worktree-skipped` must use a surviving checkout with the same validated common Git directory. For a null worktree target, retain the skip
+    and follow step 9's no-worktree path; do not infer a new deletion target during recovery.
+    For a recorded linked target, when both the recorded target path and administrative
     entry are absent, treat removal as proven even if a crash prevented its milestone write and
     durably advance to `worktree-removed`. Immediately before local ref deletion, re-enumerate every
     registered worktree and refuse deletion if any has a symbolic `HEAD` for that branch. If none does
@@ -503,7 +550,9 @@ first incomplete milestone without requiring an open PR or attempting another me
     already absent, mark it complete; if moved, retain it and report the conflict. This recovery path
     never recreates or removes another worktree.
 11. The final cleanup operation removes the durable receipt, syncs the receipt directory, and releases
-    its lock only after every guarded milestone succeeds. After its tool call, make no further
+    its lock only after every applicable guarded milestone succeeds or an explicitly allowed skip is
+    recorded. A no-worktree skip or retained checked-out local branch is not incomplete cleanup; unsafe
+    or ambiguous targets and failed deletions remain incomplete. After its tool call, make no further
     filesystem, Git, GitHub,
     validation, or subagent calls. Return the prepared final response directly so the session does not
     depend on a deleted working directory.
@@ -511,7 +560,7 @@ first incomplete milestone without requiring an open PR or attempting another me
 Report **squash-merged** only with the direct successful squash response; otherwise report **already
 merged** when GitHub confirms an existing merge, without asserting its method. Report the PR URL,
 reviewed base/head (or recorded head and merge evidence for cleanup-only runs), merge commit, remote
-branch deletion, local branch deletion, and worktree removal. Distinguish a successful merge with
+branch deletion, local branch deletion, and worktree removal (or explicit skip reasons). Distinguish a successful merge with
 incomplete cleanup from fully completed cleanup; never hide the durable receipt or residual recovery
 steps. For cleanup-only runs, mark readiness checks and reviews as not run (already merged), not passed.
 
