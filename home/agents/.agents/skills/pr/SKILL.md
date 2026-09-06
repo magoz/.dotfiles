@@ -17,16 +17,18 @@ commands, branch conventions, deployment providers, or quality gates.
 
 ## Modes
 
-| Invocation                 | Behavior                                                               |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `/skill:pr`                | Prepare, commit, push, and create/update; new PRs start as drafts      |
-| `/skill:pr ready`          | Prepare, validate, push, review, and mark the PR ready                 |
-| `/skill:pr pre-merge [PR]` | Audit an exact remote PR head; never merge                             |
-| `/skill:pr merge`          | Ready, audit, squash-merge, delete the branch, and remove its worktree |
+| Invocation                | Behavior                                                                   |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `/skill:pr`               | Prepare, commit, push, and create/update; new PRs start as drafts             |
+| `/skill:pr ready`         | Prepare, validate, push, review, and mark the PR ready                       |
+| `/skill:pr pre-merge [PR]` | Audit an exact remote PR head; never merge                                   |
+| `/skill:pr merge`         | Squash-merge if still open, then delete the remote branch and linked worktree |
 
 A pre-merge PR argument may be a number or URL. With no argument, resolve the PR for the current
 branch. Merge mode always targets the current branch because its cleanup is tied to the current linked
-worktree.
+worktree. This is the final, explicitly invoked step after preparation/review; other modes never
+merge or clean up automatically. If the PR is already merged, skip Ready, Pre-merge, and the merge
+request, then perform only guarded cleanup. A closed-but-unmerged PR is not eligible for cleanup.
 
 ## Authority
 
@@ -57,8 +59,9 @@ confirmation, narrating every Git step, or treating draft state as a problem.
   review artifacts outside the repository. All fetch, checkout, installation, and validation work
   occurs in temporary state; the current repository and GitHub state must remain unchanged.
 - `/skill:pr merge` authorizes the full Ready workflow, exact Pre-merge workflow, squash merge, guarded
-  source-branch deletion, linked-worktree removal, and local branch-ref deletion. The invocation is the
-  user's explicit authorization for those destructive cleanup steps after merge safety gates pass.
+  source-branch deletion, linked-worktree removal, and local branch-ref deletion. For an already-merged
+  PR, it authorizes cleanup only after verifying the merged PR and exact cleanup target. The invocation
+  is the user's explicit authorization for those destructive cleanup steps after safety gates pass.
 
 Ask only when work contains genuinely unrelated files, intent or desired branch history remains
 ambiguous after inspection, a closed/merged PR cannot be handled safely, a destructive or credentialed
@@ -124,9 +127,10 @@ For every mode:
    is verified as that remote. Verify any repository-declared runtime version.
 2. Confirm `pi-subagents` is available and user/project agent `pr-reviewer` is discoverable. If not,
    stop and suggest installing/configuring the dependency; do not silently downgrade independent
-   review.
+   review. Skip this dependency check for verified already-merged cleanup, which runs no review.
 3. Detect PR state before any GitHub write. Query open and closed/merged PRs for the head branch. Never
-   create a duplicate or reuse a closed/merged PR without asking.
+   create a duplicate or reuse a closed/merged PR without asking, except for verified already-merged
+   cleanup in `merge` mode. Match repository identity and head SHA, not merely a reused branch name.
 4. Resolve the base from an existing PR, otherwise from the remote default branch. Do not silently
    hardcode a different base.
 5. Establish intent from the conversation, linked issue, supplied plan/specification, commits, and
@@ -381,26 +385,38 @@ the selected key. Acquire one exclusive, process-lifetime per-receipt lock befor
 Use OS-released advisory locks or equivalent exclusive primitives with verified stale-owner handling,
 and fail closed on live contention. Hold the per-receipt lock through merge and all cleanup so
 concurrent invocations cannot duplicate requests or overwrite state. Under that lock, validate receipt
-content against GitHub and Git identities. Resume post-merge cleanup only when the receipt already
-contains authoritative success from this workflow's exact squash request. A `prepared` receipt whose PR
-was merged without that response remains unresolved because a concurrent merge method cannot be
-proven; retain it for manual disposition. An eligible receipt matching either the exact target
-worktree or its proven absence resumes at the first incomplete milestone without requiring an open PR
-or attempting another merge.
+content against GitHub and Git identities. Resume post-merge cleanup when the receipt contains either
+authoritative success from this workflow's exact squash request or verified already-merged evidence
+collected on this invocation. Already-merged evidence must include GitHub's merged state, merge time,
+merge commit, source repository/ref, and PR head SHA recorded at merge matching the cleanup target. Do not infer
+the earlier merge method or claim this workflow performed it. A `prepared` receipt with a lost merge
+response may use this cleanup-only path on a later explicit invocation after all identity checks pass.
+An eligible receipt matching either the exact target worktree or its proven absence resumes at the
+first incomplete milestone without requiring an open PR or attempting another merge.
 
 1. Establish the cleanup target before changing anything:
    - require a clean, registered linked worktree rather than the repository's primary checkout;
-   - require a non-default local branch with one unambiguous open PR whose head branch and repository
-     match the checked-out branch;
-   - require local `HEAD`, the local branch ref, and the remote PR head to match exactly;
+   - require a non-default local branch with one unambiguous open or merged PR whose head branch and
+     source repository match the checked-out branch; stop for a closed-but-unmerged PR or ambiguity;
+   - require local `HEAD`, the local branch ref, and the PR head SHA (recorded at merge if already
+     merged) to match exactly;
+     a reused branch or additional local commits must never be discarded as already-merged work;
    - enumerate all registered worktrees and require that only the recorded target has a symbolic
      `HEAD` for the local branch, including checkouts created with `--ignore-other-worktrees`;
    - record the worktree administrative ID, canonical path, bidirectional `.git`/`gitdir` mapping,
      absolute common Git directory, primary checkout, GitHub source repository identity, pinned source
      push URL, full branch ref, and expected head SHA;
    - reject symlink/path identity ambiguity, verify the source ref at the pinned URL, and verify the
-     source branch is not default/protected. Stop before readiness work if safe remote and local
-     cleanup cannot be established.
+     source branch is not default/protected. An absent remote ref is acceptable only for an already
+     merged PR; a present ref must still match its recorded head SHA. Stop before readiness work if
+     safe remote and local cleanup cannot be established.
+
+   If GitHub confirms the PR is already merged, record the verified already-merged evidence and cleanup
+   identities in a durable `merged` receipt using step 5's persistence rules, with merge provenance
+   `observed-existing` rather than `performed-squash`. Skip steps 2–7 and continue at step 8. Do not
+   commit, push, mark ready, rerun reviews, or request another merge on this path. If identity or merged
+   evidence cannot be verified, stop without deleting anything.
+
 2. Run the full Ready workflow. This includes Always-on preparation, repository validation,
    independent review, any required commit/push, managed-body update, and ready transition. Re-record
    the clean worktree state and exact local/remote head SHA after it completes.
@@ -417,9 +433,10 @@ or attempting another merge.
    Persist milestones crash-durably: write and sync a temporary file, atomically replace the receipt,
    then sync its parent directory before the next destructive step. Use `prepared`, `merged`,
    `remote-deleted`, `worktree-removed`, and `local-ref-deleted`. Only a receipt containing the
-   authoritative `merged` milestone from this workflow's direct successful squash response may resume
-   automatic cleanup or bypass the open-PR requirement. A `prepared` receipt after an ambiguous
-   response records context for manual disposition but never authorizes automatic cleanup.
+   verified `merged` milestone, with either `performed-squash` direct-response evidence or
+   `observed-existing` GitHub evidence, may resume automatic cleanup or bypass the open-PR requirement.
+   A `prepared` receipt alone never authorizes cleanup; a later explicit invocation must first verify
+   and persist already-merged evidence as described above.
 6. Confirm the repository permits squash merging. Use GitHub's immediate merge API rather than
    `gh pr merge`, because the latter may implicitly enqueue or enable auto-merge on queue-protected
    branches. Supply `merge_method=squash` and the reviewed head SHA as the server-side head
@@ -439,13 +456,16 @@ or attempting another merge.
 
 7. Treat only the direct response to this workflow's exact API request with `merged: true` as
    authoritative proof of the requested squash merge. Atomically persist that response, `mergedAt`,
-   and merge commit before advancing the receipt. After an ambiguous or lost response, query the PR
-   only to report current state; a later merged state does not prove this squash request won over a
-   concurrent merge. Do not advance cleanup automatically—retain the branch/worktree and `prepared`
-   receipt for manual disposition. If GitHub confirms the PR remains open and the request definitely
-   failed, a later invocation may rerun readiness/audit before another merge attempt.
+   merge commit, and `performed-squash` provenance before advancing the receipt. After an ambiguous or
+   lost response, query the PR only to report current state; a later merged state does not prove this
+   squash request won over a concurrent merge. Do not advance cleanup automatically in that run—retain
+   the branch/worktree and `prepared` receipt. A later explicit `/skill:pr merge` may verify an
+   already-merged PR and perform cleanup without claiming the earlier merge method. If GitHub confirms
+   the PR remains open and the request definitely failed, a later invocation may rerun readiness/audit
+   before another merge attempt.
 8. After confirmed merge, atomically delete the remote source branch only when it still points to the
-   reviewed head SHA. Revalidate that the pinned push URL still identifies the recorded source
+   receipt's expected head SHA (reviewed head, or verified head recorded at merge for cleanup-only).
+   Revalidate that the pinned push URL still identifies the recorded source
    repository; re-query the source repository's current default branch, protection, and applicable
    rulesets; and refuse deletion if the source branch is now default or protected. Query the exact full
    ref there, then push the deletion to that URL with mandatory
@@ -488,10 +508,12 @@ or attempting another merge.
     validation, or subagent calls. Return the prepared final response directly so the session does not
     depend on a deleted working directory.
 
-Report **merged** only when GitHub confirms the squash merge. Report the PR URL, reviewed base/head,
-merge commit, remote branch deletion, local branch deletion, and worktree removal. Distinguish a
-successful merge with incomplete cleanup from a fully completed merge; never hide the durable receipt
-or residual recovery steps.
+Report **squash-merged** only with the direct successful squash response; otherwise report **already
+merged** when GitHub confirms an existing merge, without asserting its method. Report the PR URL,
+reviewed base/head (or recorded head and merge evidence for cleanup-only runs), merge commit, remote
+branch deletion, local branch deletion, and worktree removal. Distinguish a successful merge with
+incomplete cleanup from fully completed cleanup; never hide the durable receipt or residual recovery
+steps. For cleanup-only runs, mark readiness checks and reviews as not run (already merged), not passed.
 
 ## Acceptance
 
