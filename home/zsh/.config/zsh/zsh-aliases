@@ -11,6 +11,8 @@ alias vim='nvim'
 alias p=pnpm
 
 # OPENCODE
+# The default command discovers the authenticated background service. Passing
+# its URL through --server bypasses that local service authentication.
 alias o=opencode2
 
 # EZA/LS

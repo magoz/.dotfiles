@@ -36,6 +36,7 @@ HOME=$positive_home zsh -dfc '
   [[ $ZDOTDIR == "$HOME/.config/zsh" ]]
   [[ $TERMINAL == ghostty ]]
   [[ ${aliases[box]} == "herdr --remote box --remote-keybindings server" ]]
+  [[ ${aliases[o]} == opencode2 ]]
 ' >/dev/null 2>&1
 [[ -L $positive_home/.config/starship.toml ]]
 [[ -e $positive_home/.config/vimium/vimium.css ]]
