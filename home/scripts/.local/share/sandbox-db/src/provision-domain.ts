@@ -4,6 +4,15 @@ export class ProvisionError extends Data.TaggedError("ProvisionError")<{
   readonly message: string
 }> {}
 
+export class VercelLinkRequired extends Data.TaggedError("VercelLinkRequired")<{
+  readonly directory: string
+  readonly reason: string
+}> {
+  get message() {
+    return `Vercel link required in ${this.directory}: ${this.reason}`
+  }
+}
+
 export class ProvisionProcessError extends Data.TaggedError("ProvisionProcessError")<{
   readonly command: string
   readonly exitCode: number | null
@@ -22,6 +31,7 @@ export type EnvConflictPolicy = "ask" | "error" | "overwrite" | "preserve"
 
 export interface ProvisionOptions {
   readonly repo: string
+  readonly checkVercelLink?: boolean
   readonly appDir?: string
   readonly source?: string
   readonly vercelProject?: string

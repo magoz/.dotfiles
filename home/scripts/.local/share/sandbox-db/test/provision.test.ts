@@ -252,6 +252,79 @@ test("an unlinked worktree reuses the shared sibling Vercel identity", async () 
   }
 })
 
+test("an unlinked explicit source falls back to a linked sibling without Vercel discovery", async () => {
+  const fixture = await setup(false, false, false, false)
+  await rm(join(fixture.primary, ".vercel/project.json"))
+  try {
+    await Effect.runPromise(provisionEnvironment({
+      ...options(fixture.repo), source: fixture.primary, skipInstall: true, database: false
+    }).pipe(Effect.provide(fixture.layer)))
+    expect(await readFile(join(fixture.repo, ".vercel/project.json"), "utf8")).toBe(
+      '{"projectId":"primary","orgId":"team"}\n'
+    )
+    expect(fixture.calls.some((call) => call.command === "vercel" && call.args[0] === "api")).toBe(false)
+  } finally { await rm(fixture.repo, { recursive: true, force: true }) }
+})
+
+test("conflicting sibling identities stop for selection instead of guessing remotely", async () => {
+  const fixture = await setup(false, false, false, false)
+  await rm(join(fixture.primary, ".vercel/project.json"))
+  const other = join(fixture.repo, "other")
+  await mkdir(join(other, ".vercel"), { recursive: true })
+  await writeFile(join(other, ".vercel/project.json"), '{"projectId":"other","orgId":"team"}')
+  const capture: ProvisionProcessService["capture"] = (command, args, runOptions) =>
+    command === "git" && args[2] === "worktree"
+      ? Effect.succeed({ stdout: `worktree ${fixture.sibling}\n\nworktree ${other}\n`, stderr: "" })
+      : fixture.capture(command, args, runOptions)
+  const layer = Layer.mergeAll(NodeContext.layer, Layer.succeed(ProvisionProcess, { capture, inherit: fixture.inherit }))
+  try {
+    await expect(Effect.runPromise(provisionEnvironment({
+      ...options(fixture.repo), source: fixture.primary, skipInstall: true
+    }).pipe(Effect.provide(layer)))).rejects.toThrow("different Vercel projects")
+    expect(fixture.calls.some((call) => call.command === "vercel")).toBe(false)
+  } finally { await rm(fixture.repo, { recursive: true, force: true }) }
+})
+
+test("Vercel preflight reuses an app-local sibling link without installs, env pulls or database work", async () => {
+  const fixture = await setup(false, false, false, false, false, false, false, false, "apps/web")
+  try {
+    await Effect.runPromise(provisionEnvironment({
+      ...options(fixture.repo), checkVercelLink: true
+    }).pipe(Effect.provide(fixture.layer)))
+    expect(JSON.parse(await readFile(join(fixture.directory, ".vercel/project.json"), "utf8")).projectId).toBe("primary")
+    expect(fixture.calls.every((call) => call.command === "git")).toBe(true)
+    await expect(readFile(join(fixture.directory, ".env.local"))).rejects.toThrow()
+    await expect(stat(join(fixture.repo, ".vercel/provision-env.lock"))).rejects.toThrow()
+  } finally { await rm(fixture.repo, { recursive: true, force: true }) }
+})
+
+test("Vercel preflight reports the selected app as a typed recovery condition without remote discovery", async () => {
+  const fixture = await setup(false, false, false, false, false, false, false, false, "apps/web")
+  for (const root of [fixture.primary, fixture.sibling]) await rm(join(root, "apps/web/.vercel/project.json"))
+  try {
+    const result = await Effect.runPromise(provisionEnvironment({
+      ...options(fixture.repo), checkVercelLink: true
+    }).pipe(Effect.either, Effect.provide(fixture.layer)))
+    expect(result._tag).toBe("Left")
+    if (result._tag === "Left") expect(result.left).toMatchObject({
+      _tag: "VercelLinkRequired", directory: fixture.directory,
+      reason: "no Vercel project link found for the selected app"
+    })
+    expect(fixture.calls.every((call) => call.command === "git")).toBe(true)
+    await expect(readFile(join(fixture.directory, ".env.local"))).rejects.toThrow()
+  } finally { await rm(fixture.repo, { recursive: true, force: true }) }
+})
+
+test("Vercel preflight rejects invalid existing identities rather than offering remote recovery", async () => {
+  const fixture = await setup()
+  try {
+    await expect(Effect.runPromise(provisionEnvironment({
+      ...options(fixture.repo), checkVercelLink: true
+    }).pipe(Effect.provide(fixture.layer)))).rejects.toThrow("invalid Vercel project identity")
+    expect(fixture.calls.every((call) => call.command === "git")).toBe(true)
+  } finally { await rm(fixture.repo, { recursive: true, force: true }) }
+})
+
 test("provisioning pulls both environments and creates independent database leases", async () => {
   const fixture = await setup()
   try {

@@ -61,7 +61,26 @@ provision-env --repo /path/to/worktree --database
 An unlinked worktree automatically reuses the Vercel identity when its linked
 sibling checkouts all identify the same project. `--source
 /path/to/linked-checkout` remains available as an explicit override when sibling
-checkouts intentionally use different Vercel projects.
+checkouts intentionally use different Vercel projects. An unlinked `--source`
+falls back to shared sibling identity rather than immediately failing.
+
+Pi's `create_worktree` preflights the source with
+`provision-env --check-vercel-link --non-interactive` **before** creating a
+worktree. This mode validates the selected app's local identity (or reuses an
+unambiguous sibling link), without installing dependencies, pulling env files,
+allocating databases, or contacting Vercel. Missing/ambiguous links emit a single
+JSON object on stderr and exit **3**:
+
+```json
+{"status":"vercel_link_required","directory":"/repo/apps/web","reason":"no Vercel project link found for the selected app"}
+```
+
+The current Pi agent owns remote discovery and linking: it inspects repository
+and Vercel evidence, links an unambiguous existing project/team without asking
+for routine permission, and retries the original request. It asks only when
+selection is uncertain or authentication/access is needed. Provisioning itself
+never infers a remote project or spawns an agent. Other failures retain exit 2;
+`--check-vercel-link` never runs the explicit `--vercel-project` link command.
 
 The profile is atomic:
 

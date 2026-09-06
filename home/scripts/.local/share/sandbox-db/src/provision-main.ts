@@ -19,6 +19,9 @@ const root = Command.make(
       Options.withDescription("target Git checkout (default: current directory)"),
       Options.withDefault(".")
     ),
+    checkVercelLink: Options.boolean("check-vercel-link").pipe(
+      Options.withDescription("check/reuse a local app link only; missing or ambiguous links emit JSON on stderr and exit 3 for agent recovery")
+    ),
     appDir: optionalText("app-dir", "checkout-relative app directory (default: package.json provisionEnv.appDir or '.')"),
     source: optionalText("source", "linked checkout to copy the selected app's .vercel/project.json from"),
     vercelProject: optionalText("vercel-project", "link explicitly to this Vercel project"),
@@ -56,6 +59,7 @@ const root = Command.make(
   (options) =>
     provisionEnvironment({
       repo: options.repo,
+      checkVercelLink: options.checkVercelLink,
       appDir: Option.getOrUndefined(options.appDir),
       source: Option.getOrUndefined(options.source),
       vercelProject: Option.getOrUndefined(options.vercelProject),
@@ -83,6 +87,11 @@ const MainLayer = Layer.mergeAll(NodeContext.layer, ProvisionProcessLive)
 
 Effect.suspend(() => cli(process.argv)).pipe(
   Effect.catchTags({
+    VercelLinkRequired: (error) => Console.error(JSON.stringify({
+      status: "vercel_link_required",
+      directory: error.directory,
+      reason: error.reason
+    })).pipe(Effect.zipRight(Effect.sync(() => { process.exitCode = 3 }))),
     ProvisionError: (error: ProvisionError) => failWith(error.message),
     ProvisionProcessError: (error: ProvisionProcessError) => failWith(error.message)
   }),

@@ -7,6 +7,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "typebox";
 import { WorktreeActionService } from "./manager-actions.ts";
+import { parseVercelLinkRequired, VERCEL_LINK_GUIDANCE } from "./vercel-link-recovery.ts";
 import { runWorktreeManager } from "./manager-command.ts";
 import { WorktreeManagerService, type ManagerCommandRunner } from "./manager-service.ts";
 
@@ -131,6 +132,7 @@ export function buildAgentRequest(input: WorktreeInput): string {
       `Use the exact branch name: ${input.branch}`,
       task ? `Kickoff task for the destination Pi: ${task}` : undefined,
       "Ask me before calling the tool if any other consequential setup detail is ambiguous.",
+      VERCEL_LINK_GUIDANCE,
     ]
       .filter(Boolean)
       .join("\n");
@@ -140,6 +142,7 @@ export function buildAgentRequest(input: WorktreeInput): string {
     "Create a new worktree using the create_worktree tool for the task below.",
     "Infer a concise conventional branch name from the task.",
     "If the appropriate branch name or worktree intent is genuinely ambiguous, ask me before calling the tool.",
+    VERCEL_LINK_GUIDANCE,
     `Task: ${input.prompt}`,
   ].join("\n");
 }
@@ -187,16 +190,46 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
     label: "Create worktree",
     description:
       "Create a Git worktree and Herdr workspace, provision its environment and database, " +
-      "start a fresh Pi there, and shut down this Pi after successful handoff.",
+      "start a fresh Pi there, and shut down this Pi after successful handoff. " +
+      "If Vercel linking needs agent action, returns vercel_link_required before creating anything; " +
+      "resolve the link proactively, then retry the same arguments.",
     promptSnippet: "Create and provision a Herdr worktree, then hand off to a fresh Pi session",
     promptGuidelines: [
       "Use create_worktree only when the user explicitly asks to start work in a new worktree; " +
         "infer a concise conventional branch when omitted, ask the user first when the choice is genuinely " +
         "ambiguous, and remember that a successful call terminates the current Pi session.",
+      VERCEL_LINK_GUIDANCE,
     ],
     parameters: WorktreeInput,
     async execute(_toolCallId, input, signal, onUpdate, ctx) {
       const resolved = resolveInput(input);
+      requireHerdr();
+      signal?.throwIfAborted();
+      const preflight = await pi.exec("provision-env", [
+        "--repo", ctx.cwd, "--check-vercel-link", "--non-interactive",
+      ], { signal, timeout: 30_000 });
+      signal?.throwIfAborted();
+      if (preflight.code !== 0 || preflight.killed) {
+        const required = preflight.code === 3 && !preflight.killed
+          ? parseVercelLinkRequired(preflight.stderr)
+          : undefined;
+        if (!required) {
+          throw new Error(`Vercel link preflight failed: ${preflight.stderr.trim() || preflight.stdout.trim() || `exit ${preflight.code}`}`);
+        }
+        return {
+          content: [{
+            type: "text",
+            text: [
+              "Vercel link needs agent action. No worktree or Herdr workspace was created; this Pi remains active.",
+              `App directory: ${JSON.stringify(required.directory)}`,
+              `Reason: ${required.reason}`,
+              VERCEL_LINK_GUIDANCE,
+              `Retry create_worktree with: ${JSON.stringify(resolved)}`,
+            ].join("\n"),
+          }],
+          details: { ...required, retry: resolved },
+        };
+      }
       onUpdate?.({
         content: [{ type: "text", text: `Creating and provisioning ${resolved.branch}…` }],
         details: {},

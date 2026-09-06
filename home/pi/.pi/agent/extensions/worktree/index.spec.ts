@@ -123,7 +123,7 @@ describe("worktree extension", () => {
       { cwd: "/repo", shutdown: vi.fn() },
     );
 
-    expect(exec.mock.calls[0]?.[1]).toContain("feat/reporting-exports");
+    expect(exec.mock.calls[1]?.[1]).toContain("feat/reporting-exports");
   });
 
   it("starts the shared CLI and shuts down only after success", async () => {
@@ -168,7 +168,80 @@ describe("worktree extension", () => {
     expect(result.terminate).toBe(true);
   });
 
-  it("keeps the source Pi alive when creation fails", async () => {
+  it("returns agent recovery before allocation and retries the same request after linking", async () => {
+    vi.stubEnv("HERDR_ENV", "1");
+    let tool: any;
+    const exec = vi.fn()
+      .mockResolvedValueOnce({ code: 3, stdout: "", stderr: JSON.stringify({
+        status: "vercel_link_required", directory: "/repo/apps/web", reason: "no Vercel project link found",
+      }) })
+      .mockResolvedValueOnce({ code: 0, stdout: "", stderr: "" })
+      .mockResolvedValueOnce({ code: 0, stdout: "ready", stderr: "" });
+    register({
+      registerCommand() {},
+      registerTool(value: unknown) { tool = value; },
+      exec,
+    } as never);
+    const input = { branch: "feat/reporting", prompt: "Implement reports", ttl: "3d", setup: ["pnpm db:push"] };
+    const shutdown = vi.fn();
+    const ctx = { cwd: "/repo", shutdown };
+    const signal = new AbortController().signal;
+    const result = await tool.execute("preflight", input, signal, undefined, ctx);
+    expect(exec).toHaveBeenCalledExactlyOnceWith("provision-env", [
+      "--repo", "/repo", "--check-vercel-link", "--non-interactive",
+    ], { signal, timeout: 30_000 });
+    expect(shutdown).not.toHaveBeenCalled();
+    expect(result.terminate).toBeUndefined();
+    expect(result.details).toEqual({
+      status: "vercel_link_required", directory: "/repo/apps/web",
+      reason: "no Vercel project link found", retry: input,
+    });
+    expect(result.content[0].text).toContain("without asking for permission");
+    expect(result.content[0].text).toContain("authentication/access");
+    expect(result.content[0].text).toContain("No worktree or Herdr workspace was created");
+    expect(tool.promptGuidelines.join(" ")).toContain("current Pi agent");
+
+    const retried = await tool.execute("retry", result.details.retry, signal, undefined, ctx);
+    expect(exec.mock.calls.map(([command]) => command)).toEqual(["provision-env", "provision-env", "worktree"]);
+    expect(exec.mock.calls[2]?.[1]).toEqual(buildArgs(input, "/repo"));
+    expect(retried.terminate).toBe(true);
+    expect(shutdown).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    { code: 3, stdout: "", stderr: "not JSON" },
+    { code: 3, stdout: "", stderr: '{"status":"vercel_link_required","directory":null,"reason":"missing"}' },
+    { code: 2, stdout: "", stderr: '{"status":"vercel_link_required","directory":"/repo","reason":"missing"}' },
+    { code: 0, killed: true, stdout: "", stderr: "timeout" },
+  ])("does not treat unknown or killed preflight results as permission to recover: %j", async (preflight) => {
+    vi.stubEnv("HERDR_ENV", "1");
+    let tool: any;
+    const exec = vi.fn().mockResolvedValue(preflight);
+    register({ registerCommand() {}, registerTool(value: unknown) { tool = value; }, exec } as never);
+    const shutdown = vi.fn();
+    await expect(tool.execute("call", { branch: "feat/test" }, undefined, undefined, { cwd: "/repo", shutdown }))
+      .rejects.toThrow("preflight failed");
+    expect(exec).toHaveBeenCalledOnce();
+    expect(shutdown).not.toHaveBeenCalled();
+  });
+
+  it("cancellation after preflight never creates a worktree", async () => {
+    vi.stubEnv("HERDR_ENV", "1");
+    let tool: any;
+    const controller = new AbortController();
+    const exec = vi.fn().mockImplementation(async () => {
+      controller.abort();
+      return { code: 0, stdout: "", stderr: "" };
+    });
+    register({ registerCommand() {}, registerTool(value: unknown) { tool = value; }, exec } as never);
+    const shutdown = vi.fn();
+    await expect(tool.execute("call", { branch: "feat/test" }, controller.signal, undefined, { cwd: "/repo", shutdown }))
+      .rejects.toThrow();
+    expect(exec).toHaveBeenCalledOnce();
+    expect(shutdown).not.toHaveBeenCalled();
+  });
+
+  it("keeps the source Pi alive when creation fails after a successful preflight", async () => {
     vi.stubEnv("HERDR_ENV", "1");
     let tool: any;
     register({
@@ -176,7 +249,9 @@ describe("worktree extension", () => {
       registerTool(value: unknown) {
         tool = value;
       },
-      exec: vi.fn().mockResolvedValue({ code: 2, stdout: "", stderr: "provisioning failed" }),
+      exec: vi.fn()
+        .mockResolvedValueOnce({ code: 0, stdout: "", stderr: "" })
+        .mockResolvedValueOnce({ code: 2, stdout: "", stderr: "provisioning failed" }),
     } as never);
 
     const shutdown = vi.fn();

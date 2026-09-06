@@ -47,7 +47,7 @@ explicit user security decision.
 
 - a running Herdr server with the Pi integration installed;
 - `git`, `bun`, `herdr`, `pi`, `vercel`, `provision-env`, and `sandbox-db` in `PATH`;
-- a source Git checkout linked to Vercel, or sibling checkouts sharing one Vercel identity;
+- a source Git checkout linked to Vercel, or sibling checkouts sharing one Vercel identity (Pi can resolve a missing link before creation);
 - ignored `.env.local`, `.env.test`, and `.vercel/` paths in the repository;
 - the project-local sandbox database profile expected by `provision-env`, or valid global `sandbox-db` authentication.
 
@@ -95,6 +95,15 @@ The structured `create_worktree` tool is also used by workflow skills. Its branc
 field is optional when a kickoff prompt is available. After the CLI verifies the
 destination Pi, the extension gracefully shuts down the source Pi. If creation or
 provisioning fails, the source stays alive.
+
+Before calling the CLI, `create_worktree` preflights the source app's Vercel
+identity through `provision-env --check-vercel-link --non-interactive`. When a
+link is missing, the tool returns the app directory and retry arguments to the
+current Pi agent **before allocating anything**. The agent investigates and links
+an unambiguous existing project/team proactively, then retries the same tool
+request. Only uncertain selection or missing authentication/access needs user
+input. Remote project discovery is agent-owned, not hard-coded in provisioning;
+no new Vercel project or deployment is created during linking.
 
 `implement-issue` uses the same tool and hands the destination Pi to the internal
 `implement-issue-worktree` continuation skill, so issue-driven and local creation

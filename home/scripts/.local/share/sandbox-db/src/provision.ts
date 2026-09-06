@@ -3,6 +3,7 @@ import { FileSystem, Path } from "@effect/platform"
 import { Cause, Console, Effect, Option, Schema } from "effect"
 import {
   ProvisionError,
+  VercelLinkRequired,
   type EnvConflictPolicy,
   type ProvisionOptions
 } from "./provision-domain"
@@ -244,8 +245,6 @@ const copyProjectIdentity = (repo: string, source: string, appDir: string) =>
     yield* ensureProvisionPaths(from, [".vercel/project.json"])
     const sourceProjectFile = path.join(from, ".vercel", "project.json")
     const sourceLinked = yield* fs.exists(sourceProjectFile).pipe(Effect.orElseSucceed(() => false))
-    if (!sourceLinked) return yield* fail(`source checkout is not linked to Vercel: ${from}`)
-
     const targetRemote = yield* gitOutput(repo, ["remote", "get-url", "origin"]).pipe(
       Effect.catchAll(() => Effect.succeed(""))
     )
@@ -258,6 +257,8 @@ const copyProjectIdentity = (repo: string, source: string, appDir: string) =>
     if (!(yield* gitSucceeds(repo, ["check-ignore", "-q", "--", ".vercel/project.json"]))) {
       return yield* fail("refusing to create .vercel/project.json because .vercel is not ignored")
     }
+
+    if (!sourceLinked) return false
 
     const targetDirectory = path.join(repo, ".vercel")
     const targetProjectFile = path.join(targetDirectory, "project.json")
@@ -272,6 +273,7 @@ const copyProjectIdentity = (repo: string, source: string, appDir: string) =>
       mapFileError("cannot protect Vercel project identity")
     )
     yield* Console.log(`provision-env: reused Vercel project identity from ${from}`)
+    return true
   })
 
 const readVercelIdentity = (projectFile: string) =>
@@ -314,7 +316,9 @@ const ensureVercelLink = (
     const projectFile = path.join(repo, ".vercel", "project.json")
     if (yield* fs.exists(projectFile).pipe(Effect.orElseSucceed(() => false))) return
 
-    if (source !== undefined) return yield* copyProjectIdentity(repo, source, appDir)
+    // An explicit but unlinked source is not a dead end. Validate it before
+    // trying sibling identities or asking the calling agent to resolve a link.
+    if (source !== undefined && (yield* copyProjectIdentity(repo, source, appDir))) return
 
     if (vercelProject !== undefined) {
       if (!(yield* gitSucceeds(repo, ["check-ignore", "-q", "--", ".vercel/project.json"]))) {
@@ -356,13 +360,17 @@ const ensureVercelLink = (
       if (new Set(identities).size === 1) {
         return yield* copyProjectIdentity(repo, candidates[0]!, appDir)
       }
-      return yield* fail(
-        "linked sibling checkouts use different Vercel projects; pass --source explicitly"
-      )
+      return yield* Effect.fail(new VercelLinkRequired({
+        directory: repo,
+        reason: "linked sibling checkouts use different Vercel projects; choose a linked --source explicitly"
+      }))
     }
-    return yield* fail(
-      "no Vercel project link found; link this checkout, pass --source, or pass --vercel-project"
-    )
+    return yield* Effect.fail(new VercelLinkRequired({
+      directory: source === undefined
+        ? repo
+        : yield* resolveAppDirectory(yield* resolveCheckout(source), appDir),
+      reason: "no Vercel project link found for the selected app"
+    }))
   })
 
 const writePrivately = (file: string, content: string) =>
@@ -607,6 +615,15 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
     const process = yield* ProvisionProcess
     const repo = yield* resolveCheckout(options.repo)
     const { appDir, directory } = yield* resolveProvisionTarget(repo, options.appDir)
+    // Preflight the source before create_worktree allocates anything. Local
+    // sibling identity reuse is allowed; remote discovery belongs to the agent.
+    if (options.checkVercelLink) {
+      yield* ensureProvisionPaths(directory, [".vercel/project.json"])
+      yield* ensureSecretPath(repo, path.join(appDir, ".vercel/project.json"))
+      yield* ensureVercelLink(directory, options.source, undefined, appDir, repo)
+      yield* readVercelIdentity(path.join(directory, ".vercel", "project.json"))
+      return
+    }
     const localRelative = path.join(appDir, ".env.local")
     const testRelative = path.join(appDir, ".env.test")
     const localEnvFile = path.join(directory, ".env.local")
