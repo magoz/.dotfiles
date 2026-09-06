@@ -22,6 +22,7 @@ export type EnvConflictPolicy = "ask" | "error" | "overwrite" | "preserve"
 
 export interface ProvisionOptions {
   readonly repo: string
+  readonly appDir?: string
   readonly source?: string
   readonly vercelProject?: string
   readonly database: boolean

@@ -86,6 +86,43 @@ can authenticate. Repository-owned schema preparation remains a separate step.
 Run it once for each database when the baseline does not already contain the
 required schema, and only use commands known to be safe for isolated databases.
 
+## Monorepo application target
+
+Set one provisioning target in the **checkout-root** `package.json`:
+
+```json
+{
+  "provisionEnv": { "appDir": "apps/web" }
+}
+```
+
+`provision-env --repo /path/to/worktree --database` now writes
+`apps/web/.env.local`, `apps/web/.env.test` and `apps/web/.vercel/project.json`.
+Vercel commands run in the selected app; dependency installation still uses the
+root lockfile. The `worktree` CLI needs no extra flag: it invokes `provision-env`,
+which reads this setting from the destination checkout.
+
+`--app-dir apps/web` overrides the package setting for a single invocation. With
+neither setting, existing single-app repositories keep the root (`.`) behavior.
+The app must already exist, contain `package.json`, and be reached without path
+traversal or symlink components. App env files and Vercel link paths also reject
+symlinks, including dangling links. Environment paths must still be untracked and
+Git-ignored. An explicit source checkout and automatic sibling discovery use
+**the same app-relative path**; they never fall back to another app or a stale
+root Vercel link. Link that app explicitly when migrating from an older layout.
+
+The Git lock and `default`/`test` lease slots remain keyed by the **checkout root**;
+this config selects one app, not a separate database pair for every workspace.
+Direct `sandbox-db create` calls do not read the package setting: pass
+`--config-env-file apps/web/.env.local` and the intended app-relative `--env-file`.
+Status, renew and release use paths recorded in the root-owned lease.
+
+Changing the app target does not copy, move or delete old env files. Reprovisioning
+pulls fresh values at the new location. Leases pointing at old env paths are
+replaced using the normal stale-lease policy; old branches remain until their TTL
+expires. Stop running apps before reprovisioning and restart afterward so they
+use the new files. No database schema/bootstrap command is run automatically.
+
 ## Global fallback configuration
 
 Global auth remains useful for repositories that share one dedicated sandbox
@@ -184,7 +221,7 @@ provision-env --database
 
 In order, the coordinator:
 
-1. validates the target Git checkout and ignored secret paths;
+1. validates the target Git checkout, configured application directory and ignored app secret paths;
 2. resolves any existing env-file conflict before making changes;
 3. installs dependencies from the committed frozen lockfile;
 4. reuses or creates the Vercel project link;

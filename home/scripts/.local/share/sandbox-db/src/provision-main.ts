@@ -19,7 +19,8 @@ const root = Command.make(
       Options.withDescription("target Git checkout (default: current directory)"),
       Options.withDefault(".")
     ),
-    source: optionalText("source", "linked checkout to copy .vercel/project.json from"),
+    appDir: optionalText("app-dir", "checkout-relative app directory (default: package.json provisionEnv.appDir or '.')"),
+    source: optionalText("source", "linked checkout to copy the selected app's .vercel/project.json from"),
     vercelProject: optionalText("vercel-project", "link explicitly to this Vercel project"),
     database: Options.boolean("database").pipe(
       Options.withDescription("allocate independent development and test databases")
@@ -55,6 +56,7 @@ const root = Command.make(
   (options) =>
     provisionEnvironment({
       repo: options.repo,
+      appDir: Option.getOrUndefined(options.appDir),
       source: Option.getOrUndefined(options.source),
       vercelProject: Option.getOrUndefined(options.vercelProject),
       database: options.database,
@@ -70,6 +72,7 @@ const root = Command.make(
   Command.withDescription(
     "Install dependencies, pull Vercel Development and test environments, and optionally provision two isolated databases.\n\n" +
     "Existing env files refresh from Vercel by default; use --env-conflict to preserve, reject, or prompt instead. Both paths must be ignored.\n" +
+    "For monorepos, set package.json provisionEnv.appDir or --app-dir. Env files and Vercel linking are app-local; installs and database lease identity remain checkout-rooted.\n" +
     "Repository-specific schema bootstrap remains a separate step.\n\n" +
     "Documentation: ~/.local/share/sandbox-db/README.md"
   )
