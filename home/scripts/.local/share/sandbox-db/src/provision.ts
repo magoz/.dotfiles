@@ -7,6 +7,7 @@ import {
   type ProvisionOptions
 } from "./provision-domain"
 import { ProvisionProcess } from "./provision-process"
+import { ensureProvisionPaths, resolveAppDirectory, resolveProvisionTarget } from "./provision-target"
 
 interface RollbackState {
   createdLocalEnv: boolean
@@ -234,11 +235,13 @@ const installDependencies = (repo: string) =>
     return yield* fail(`no supported lockfile found in ${repo}`)
   })
 
-const copyProjectIdentity = (repo: string, source: string) =>
+const copyProjectIdentity = (repo: string, source: string, appDir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
-    const from = yield* resolveCheckout(source)
+    const sourceRoot = yield* resolveCheckout(source)
+    const from = yield* resolveAppDirectory(sourceRoot, appDir)
+    yield* ensureProvisionPaths(from, [".vercel/project.json"])
     const sourceProjectFile = path.join(from, ".vercel", "project.json")
     const sourceLinked = yield* fs.exists(sourceProjectFile).pipe(Effect.orElseSucceed(() => false))
     if (!sourceLinked) return yield* fail(`source checkout is not linked to Vercel: ${from}`)
@@ -300,7 +303,9 @@ const readVercelIdentity = (projectFile: string) =>
 const ensureVercelLink = (
   repo: string,
   source: string | undefined,
-  vercelProject: string | undefined
+  vercelProject: string | undefined,
+  appDir: string,
+  checkout: string
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
@@ -309,7 +314,7 @@ const ensureVercelLink = (
     const projectFile = path.join(repo, ".vercel", "project.json")
     if (yield* fs.exists(projectFile).pipe(Effect.orElseSucceed(() => false))) return
 
-    if (source !== undefined) return yield* copyProjectIdentity(repo, source)
+    if (source !== undefined) return yield* copyProjectIdentity(repo, source, appDir)
 
     if (vercelProject !== undefined) {
       if (!(yield* gitSucceeds(repo, ["check-ignore", "-q", "--", ".vercel/project.json"]))) {
@@ -327,24 +332,29 @@ const ensureVercelLink = (
       ])
     }
 
-    const listed = yield* gitOutput(repo, ["worktree", "list", "--porcelain"])
+    const listed = yield* gitOutput(checkout, ["worktree", "list", "--porcelain"])
     const candidates: Array<string> = []
     for (const line of listed.split("\n")) {
       if (!line.startsWith("worktree ")) continue
       const candidate = line.slice("worktree ".length)
-      if (path.resolve(candidate) === repo) continue
-      const linked = yield* fs.exists(path.join(candidate, ".vercel", "project.json")).pipe(
+      if (path.resolve(candidate) === checkout) continue
+      const directory = path.join(candidate, appDir)
+      const linked = yield* fs.exists(path.join(directory, ".vercel", "project.json")).pipe(
         Effect.orElseSucceed(() => false)
       )
-      if (linked) candidates.push(candidate)
+      if (linked) {
+        yield* resolveAppDirectory(candidate, appDir)
+        yield* ensureProvisionPaths(directory, [".vercel/project.json"])
+        candidates.push(candidate)
+      }
     }
 
     if (candidates.length > 0) {
       const identities = yield* Effect.forEach(candidates, (candidate) =>
-        readVercelIdentity(path.join(candidate, ".vercel", "project.json"))
+        readVercelIdentity(path.join(candidate, appDir, ".vercel", "project.json"))
       )
       if (new Set(identities).size === 1) {
-        return yield* copyProjectIdentity(repo, candidates[0]!)
+        return yield* copyProjectIdentity(repo, candidates[0]!, appDir)
       }
       return yield* fail(
         "linked sibling checkouts use different Vercel projects; pass --source explicitly"
@@ -423,7 +433,8 @@ const LeaseCreateReport = Schema.parseJson(
 const createDatabaseLease = (
   repo: string,
   leaseName: "default" | "test",
-  envFile: ".env.local" | ".env.test",
+  envFile: string,
+  configEnvFile: string,
   label: string,
   ttl: string
 ) =>
@@ -436,7 +447,7 @@ const createDatabaseLease = (
       "--lease",
       leaseName,
       "--config-env-file",
-      ".env.local",
+      configEnvFile,
       "--env-file",
       envFile,
       "--label",
@@ -595,8 +606,11 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
     const path = yield* Path.Path
     const process = yield* ProvisionProcess
     const repo = yield* resolveCheckout(options.repo)
-    const localEnvFile = path.join(repo, ".env.local")
-    const testEnvFile = path.join(repo, ".env.test")
+    const { appDir, directory } = yield* resolveProvisionTarget(repo, options.appDir)
+    const localRelative = path.join(appDir, ".env.local")
+    const testRelative = path.join(appDir, ".env.test")
+    const localEnvFile = path.join(directory, ".env.local")
+    const testEnvFile = path.join(directory, ".env.test")
     const gitLockPath = yield* gitOutput(repo, ["rev-parse", "--git-path", "provision-env.lock"])
     const lockDirectory = path.resolve(repo, gitLockPath)
     yield* fs.makeDirectory(lockDirectory).pipe(
@@ -616,8 +630,9 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
 
     const operation = Effect.gen(function* () {
       if (!options.skipVercel || options.database) {
-        yield* ensureSecretPath(repo, ".env.local")
-        yield* ensureSecretPath(repo, ".env.test")
+        yield* ensureProvisionPaths(directory, [".env.local", ".env.test", ".vercel/project.json"])
+        yield* ensureSecretPath(repo, localRelative)
+        yield* ensureSecretPath(repo, testRelative)
       }
 
       const localEnvExists = yield* fs
@@ -650,8 +665,8 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
       if (!options.skipInstall) yield* installDependencies(repo)
 
       if (pullVercel) {
-        yield* ensureVercelLink(repo, options.source, options.vercelProject)
-        const temporaryDirectory = path.join(repo, ".vercel")
+        yield* ensureVercelLink(directory, options.source, options.vercelProject, appDir, repo)
+        const temporaryDirectory = path.join(directory, ".vercel")
         yield* fs.chmod(temporaryDirectory, 0o700).pipe(
           mapFileError("cannot protect Vercel staging directory")
         )
@@ -680,8 +695,8 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           mapFileError("cannot protect test staging file")
         )
 
-        const developmentExplicitKeys = yield* listExplicitVercelKeys(repo, "development")
-        const testExplicitKeys = yield* listExplicitVercelKeys(repo, options.testEnvironment)
+        const developmentExplicitKeys = yield* listExplicitVercelKeys(directory, "development")
+        const testExplicitKeys = yield* listExplicitVercelKeys(directory, options.testEnvironment)
 
         yield* Console.log("provision-env: pulling Vercel Development variables into .env.local")
         yield* process.inherit("vercel", [
@@ -692,7 +707,7 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           "development",
           "--yes",
           "--cwd",
-          repo,
+          directory,
           "--no-color"
         ])
         yield* sanitizePulledEnvironment(
@@ -717,7 +732,7 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
           options.testEnvironment,
           "--yes",
           "--cwd",
-          repo,
+          directory,
           "--no-color"
         ])
         yield* sanitizePulledEnvironment(
@@ -791,7 +806,8 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
         const defaultStatus = yield* createDatabaseLease(
           repo,
           "default",
-          ".env.local",
+          localRelative,
+          localRelative,
           `${label}-development`,
           options.ttl
         )
@@ -802,7 +818,8 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
         const testStatus = yield* createDatabaseLease(
           repo,
           "test",
-          ".env.test",
+          testRelative,
+          localRelative,
           `${label}-test`,
           options.ttl
         )
@@ -813,6 +830,7 @@ export const provisionEnvironment = (options: ProvisionOptions) =>
       yield* Console.log("")
       yield* Console.log("provision-env: ready")
       yield* Console.log(`  repo:       ${repo}`)
+      yield* Console.log(`  app:        ${directory}`)
       yield* Console.log(`  install:    ${options.skipInstall ? "skipped" : "complete"}`)
       yield* Console.log(
         `  vercel env: ${pullVercel ? ".env.local + .env.test" : options.skipVercel ? "skipped" : "preserved"}`

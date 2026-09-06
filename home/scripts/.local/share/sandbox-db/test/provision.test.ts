@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { NodeContext } from "@effect/platform-node"
 import { Effect, Layer } from "effect"
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { provisionEnvironment, stripPulledEnvironment } from "../src/provision"
@@ -30,19 +30,28 @@ const setup = async (
   failStatusVerification = false,
   concurrentEnvChange = false,
   failRelease = false,
-  existingTest = false
+  existingTest = false,
+  appDir = ".",
+  leaseAppDir = appDir
 ) => {
   const repo = await mkdtemp(join(tmpdir(), "provision-env-"))
   const primary = join(repo, "primary")
   const sibling = join(repo, "sibling")
   await writeFile(join(repo, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n")
+  // The Git lock stays at checkout scope, independently of the app staging directory.
   await mkdir(join(repo, ".vercel"), { recursive: true })
-  if (targetLinked) await writeFile(join(repo, ".vercel", "project.json"), "{}\n")
+  const directory = join(repo, appDir)
+  for (const root of [repo, primary, sibling]) {
+    await mkdir(join(root, appDir, ".vercel"), { recursive: true })
+    if (appDir !== ".") {
+      await writeFile(join(root, "package.json"), JSON.stringify({ provisionEnv: { appDir } }))
+      await writeFile(join(root, appDir, "package.json"), '{"name":"web"}\n')
+    }
+  }
+  if (targetLinked) await writeFile(join(directory, ".vercel", "project.json"), "{}\n")
   const projectIdentity = '{"projectId":"primary","orgId":"team"}\n'
-  await mkdir(join(primary, ".vercel"), { recursive: true })
-  await writeFile(join(primary, ".vercel", "project.json"), projectIdentity)
-  await mkdir(join(sibling, ".vercel"), { recursive: true })
-  await writeFile(join(sibling, ".vercel", "project.json"), projectIdentity)
+  await writeFile(join(primary, appDir, ".vercel", "project.json"), projectIdentity)
+  await writeFile(join(sibling, appDir, ".vercel", "project.json"), projectIdentity)
   const calls: Array<Call> = []
 
   const capture: ProvisionProcessService["capture"] = (command, args, options: RunOptions = {}) => {
@@ -111,11 +120,11 @@ const setup = async (
       if (failTestDatabase && leaseName === "test") {
         return Effect.fail(processFailure("sandbox-db create test"))
       }
-      const status =
-        (existingDefault && leaseName === "default") ||
+      const existing = (existingDefault && leaseName === "default") ||
         (existingTest && leaseName === "test")
-          ? "reused"
-          : "created"
+      const sameTarget = args[args.indexOf("--env-file") + 1] ===
+        join(leaseAppDir, leaseName === "test" ? ".env.test" : ".env.local")
+      const status = existing && sameTarget ? "reused" : "created"
       return Effect.gen(function* () {
         const envIndex = args.indexOf("--env-file")
         const envFile = join(repo, args[envIndex + 1]!)
@@ -186,7 +195,7 @@ const setup = async (
         }
         if (concurrentEnvChange && args.includes("test")) {
           yield* Effect.promise(() =>
-            writeFile(join(repo, ".env.local"), "CONCURRENT_CHANGE=keep\n", { mode: 0o600 })
+            writeFile(join(directory, ".env.local"), "CONCURRENT_CHANGE=keep\n", { mode: 0o600 })
           )
         }
       })
@@ -198,7 +207,7 @@ const setup = async (
     NodeContext.layer,
     Layer.succeed(ProvisionProcess, { capture, inherit })
   )
-  return { repo, primary, sibling, calls, layer }
+  return { repo, directory, primary, sibling, calls, layer, capture, inherit }
 }
 
 const options = (repo: string) => ({
@@ -673,6 +682,212 @@ test("rollback preserves reused leases and restores existing env files", async (
     expect(releases).toHaveLength(0)
     expect(await readFile(join(fixture.repo, ".env.local"), "utf8")).toBe(localContent)
     expect(await readFile(join(fixture.repo, ".env.test"), "utf8")).toBe(testContent)
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+const monorepoSetup = (failTestDatabase = false, targetLinked = true) =>
+  setup(failTestDatabase, false, false, targetLinked, false, false, false, false, "apps/web")
+
+const argument = (call: Call, flag: string) => call.args[call.args.indexOf(flag) + 1]
+
+test("monorepo config provisions app envs but installs and owns leases at the checkout root", async () => {
+  const fixture = await monorepoSetup()
+  const rootEnvironment = "DATABASE_URL=postgres://legacy-root\n"
+  try {
+    await writeFile(join(fixture.repo, ".env.local"), rootEnvironment)
+    await writeFile(join(fixture.repo, ".env.test"), rootEnvironment)
+    await Effect.runPromise(provisionEnvironment(options(fixture.repo)).pipe(Effect.provide(fixture.layer)))
+
+    const installs = fixture.calls.filter(call => call.command === "pnpm")
+    expect(installs[0]?.args).toEqual(["--dir", fixture.repo, "install", "--frozen-lockfile"])
+    for (const call of fixture.calls.filter(call => call.command === "vercel")) {
+      expect(argument(call, "--cwd")).toBe(fixture.directory)
+    }
+    const leases = fixture.calls.filter(call => call.command === "sandbox-db" && call.args[0] === "create")
+    expect(leases).toHaveLength(2)
+    for (const call of leases) {
+      expect(argument(call, "--worktree")).toBe(fixture.repo)
+      expect(argument(call, "--config-env-file")).toBe("apps/web/.env.local")
+    }
+    expect(leases.map(call => argument(call, "--env-file"))).toEqual([
+      "apps/web/.env.local", "apps/web/.env.test"
+    ])
+    for (const [file, lease] of [[".env.local", "default"], [".env.test", "test"]]) {
+      const content = await readFile(join(fixture.directory, file!), "utf8")
+      expect(content).toContain(`DATABASE_URL=postgres://sandbox-${lease}`)
+      expect(content).not.toContain("postgres://vercel")
+      expect((await stat(join(fixture.directory, file!))).mode & 0o777).toBe(0o600)
+      expect(await readFile(join(fixture.repo, file!), "utf8")).toBe(rootEnvironment)
+    }
+    await expect(stat(join(fixture.repo, ".vercel", "provision-env.lock"))).rejects.toThrow()
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("monorepo linking uses the same app in siblings, never their root link", async () => {
+  const fixture = await monorepoSetup(false, false)
+  try {
+    await mkdir(join(fixture.primary, ".vercel"), { recursive: true })
+    await writeFile(join(fixture.primary, ".vercel", "project.json"), '{"projectId":"wrong-app","orgId":"team"}')
+    await Effect.runPromise(provisionEnvironment(options(fixture.repo)).pipe(Effect.provide(fixture.layer)))
+    expect(await readFile(join(fixture.directory, ".vercel", "project.json"), "utf8")).toBe(
+      '{"projectId":"primary","orgId":"team"}\n'
+    )
+    await expect(stat(join(fixture.repo, ".vercel", "project.json"))).rejects.toThrow()
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("explicit source linking selects its app-local identity", async () => {
+  const fixture = await monorepoSetup(false, false)
+  try {
+    await Effect.runPromise(provisionEnvironment({
+      ...options(fixture.repo), source: fixture.primary
+    }).pipe(Effect.provide(fixture.layer)))
+    expect(await readFile(join(fixture.directory, ".vercel", "project.json"), "utf8")).toContain('"projectId":"primary"')
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("app-dir flag overrides repository config without changing checkout identity", async () => {
+  const fixture = await monorepoSetup()
+  try {
+    await writeFile(join(fixture.repo, "package.json"), '{"provisionEnv":{"appDir":"missing"}}')
+    await Effect.runPromise(provisionEnvironment({
+      ...options(fixture.repo), appDir: "apps/web"
+    }).pipe(Effect.provide(fixture.layer)))
+    expect(await readFile(join(fixture.directory, ".env.local"), "utf8")).toContain("DATABASE_URL=")
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("monorepo rollback restores the app env pair without touching root files", async () => {
+  const fixture = await monorepoSetup(true)
+  try {
+    for (const file of [".env.local", ".env.test"]) {
+      await writeFile(join(fixture.repo, file), "ROOT=untouched\n")
+      await writeFile(join(fixture.directory, file), "APP=original\n")
+    }
+    await expect(Effect.runPromise(provisionEnvironment({
+      ...options(fixture.repo), envConflict: "overwrite"
+    }).pipe(Effect.provide(fixture.layer)))).rejects.toThrow("sandbox-db create test")
+    for (const file of [".env.local", ".env.test"]) {
+      expect(await readFile(join(fixture.repo, file), "utf8")).toBe("ROOT=untouched\n")
+      expect(await readFile(join(fixture.directory, file), "utf8")).toBe("APP=original\n")
+    }
+    const releases = fixture.calls.filter(call => call.command === "sandbox-db" && call.args[0] === "release")
+    expect(releases).toHaveLength(1)
+    expect(argument(releases[0]!, "--worktree")).toBe(fixture.repo)
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("monorepo secret checks use checkout-relative app paths before external work", async () => {
+  const fixture = await monorepoSetup()
+  try {
+    const capture: ProvisionProcessService["capture"] = (command, args, options) =>
+      command === "git" && args.includes("check-ignore") && args.includes("apps/web/.env.local")
+        ? Effect.fail(processFailure("git check-ignore"))
+        : fixture.capture(command, args, options)
+    const layer = Layer.mergeAll(NodeContext.layer, Layer.succeed(ProvisionProcess, {
+      capture, inherit: fixture.inherit
+    }))
+    await expect(Effect.runPromise(provisionEnvironment(options(fixture.repo)).pipe(
+      Effect.provide(layer)
+    ))).rejects.toThrow("not git-ignored")
+    expect(fixture.calls.some(call => call.command === "vercel" || call.command === "sandbox-db" || call.command === "pnpm")).toBe(false)
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("invalid app directories and symlink traversal fail before external work", async () => {
+  const fixture = await monorepoSetup()
+  try {
+    await symlink(fixture.directory, join(fixture.repo, "web-link"))
+    for (const appDir of ["", "/tmp", "../escape", "apps/../web", "apps//web", "apps\\web", "missing", "web-link"]) {
+      await expect(Effect.runPromise(provisionEnvironment({
+        ...options(fixture.repo), appDir
+      }).pipe(Effect.provide(fixture.layer)))).rejects.toThrow()
+    }
+    expect(fixture.calls.some(call => call.command !== "git")).toBe(false)
+    await expect(stat(join(fixture.repo, ".vercel", "provision-env.lock"))).rejects.toThrow()
+  } finally {
+    await rm(fixture.repo, { recursive: true, force: true })
+  }
+})
+
+test("app-local secret and Vercel symlinks fail before external work, including dangling links", async () => {
+  for (const file of [".env.local", ".env.test", ".vercel", ".vercel/project.json"]) {
+    for (const dangling of [false, true]) {
+      const fixture = await monorepoSetup()
+      try {
+        const destination = join(fixture.repo, "link-destination")
+        if (!dangling) {
+          if (file === ".vercel") await mkdir(destination)
+          else await writeFile(destination, "DO_NOT_READ_OR_CHANGE\n")
+        }
+        const target = join(fixture.directory, file)
+        await rm(target, { recursive: true, force: true })
+        await symlink(destination, target)
+        await expect(Effect.runPromise(provisionEnvironment(options(fixture.repo)).pipe(
+          Effect.provide(fixture.layer)
+        ))).rejects.toThrow("provisioning path")
+        expect(fixture.calls.some(call => call.command !== "git")).toBe(false)
+        if (!dangling && file !== ".vercel") {
+          expect(await readFile(destination, "utf8")).toBe("DO_NOT_READ_OR_CHANGE\n")
+        }
+      } finally {
+        await rm(fixture.repo, { recursive: true, force: true })
+      }
+    }
+  }
+})
+
+test("root-path leases are replaced at app paths; migration rollback only releases the new lease", async () => {
+  for (const failTestDatabase of [false, true]) {
+    const fixture = await setup(failTestDatabase, true, false, true, false, false, false, true, "apps/web", ".")
+    try {
+      for (const file of [".env.local", ".env.test"]) {
+        await writeFile(join(fixture.repo, file), "DATABASE_URL=postgres://legacy-root\n")
+      }
+      const run = Effect.runPromise(provisionEnvironment(options(fixture.repo)).pipe(Effect.provide(fixture.layer)))
+      if (failTestDatabase) await expect(run).rejects.toThrow("sandbox-db create test")
+      else await run
+      for (const file of [".env.local", ".env.test"]) {
+        expect(await readFile(join(fixture.repo, file), "utf8")).toBe("DATABASE_URL=postgres://legacy-root\n")
+        if (failTestDatabase) await expect(stat(join(fixture.directory, file))).rejects.toThrow()
+        else expect(await readFile(join(fixture.directory, file), "utf8")).toContain("postgres://sandbox-")
+      }
+      const leases = fixture.calls.filter(call => call.command === "sandbox-db" && call.args[0] === "create")
+      expect(leases).toHaveLength(2)
+      expect(leases.every(call => argument(call, "--worktree") === fixture.repo)).toBe(true)
+      const releases = fixture.calls.filter(call => call.command === "sandbox-db" && call.args[0] === "release")
+      expect(releases).toHaveLength(failTestDatabase ? 1 : 0)
+      if (failTestDatabase) expect(argument(releases[0]!, "--lease")).toBe("default")
+    } finally {
+      await rm(fixture.repo, { recursive: true, force: true })
+    }
+  }
+})
+
+test("malformed repository provisioning config fails rather than silently writing at root", async () => {
+  const fixture = await setup()
+  try {
+    for (const content of ['{"provisionEnv":{"appDir":42}}', '{"provisionEnv":{}}', '{broken']) {
+      await writeFile(join(fixture.repo, "package.json"), content)
+      await expect(Effect.runPromise(provisionEnvironment(options(fixture.repo)).pipe(
+        Effect.provide(fixture.layer)
+      ))).rejects.toThrow("invalid package.json")
+    }
+    expect(fixture.calls.some(call => call.command !== "git")).toBe(false)
   } finally {
     await rm(fixture.repo, { recursive: true, force: true })
   }
