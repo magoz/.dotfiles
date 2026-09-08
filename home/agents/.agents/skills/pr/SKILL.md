@@ -61,9 +61,9 @@ confirmation, narrating every Git step, or treating draft state as a problem.
 - `/skill:pr pre-merge` authorizes read-only Git/GitHub inspection plus an isolated temporary clone and
   review artifacts outside the repository. All fetch, checkout, installation, and validation work
   occurs in temporary state; the current repository and GitHub state must remain unchanged.
-- `/skill:pr merge` authorizes the full Ready workflow, exact Pre-merge workflow, squash merge, guarded
+- `/skill:pr merge` authorizes evidence-aware readiness and pre-merge checks, squash merge, guarded
   source-branch deletion, optional matching linked-worktree removal, and guarded local branch-ref
-  deletion. No matching linked worktree is a normal cleanup skip, not a merge blocker. For an already-merged
+  deletion. Reuse valid existing evidence; it does not request a fresh full audit. No matching linked worktree is a normal cleanup skip, not a merge blocker. For an already-merged
   PR, it authorizes cleanup only after verifying the merged PR and exact cleanup target. The invocation
   is the user's explicit authorization for those destructive cleanup steps after safety gates pass.
 
@@ -102,11 +102,38 @@ run` or `blocked`, never `passed`.
 - Preserve draft state except in `ready` mode. Never push an incompletely validated new head to an
   existing ready PR, and always preserve human-authored PR content.
 - Stop for unapproved product, architecture, access-control, data, migration, or scope decisions.
-- Merge only in `/skill:pr merge`, only by squash, and only after unchanged-head Ready and Pre-merge
-  gates pass. Never use administrator bypass, enable auto-merge, enter a merge queue, or fall back to
+- Merge only in `/skill:pr merge`, only by squash, and only after applicable readiness evidence and
+  the final remote-state gate pass. Existing evidence can satisfy these gates under Evidence reuse. Never use administrator bypass, enable auto-merge, enter a merge queue, or fall back to
   merge-commit or rebase strategies.
 - Never remove a primary checkout, dirty worktree, mismatched worktree, or branch/ref that moved after
   validation. Cleanup uses exact-path and expected-SHA guards and never uses forced worktree removal.
+
+## Evidence reuse and proportional work
+
+Start every invocation by checking what is already established. A lifecycle transition is not a
+reason to repeat work.
+
+- If the relevant code, configuration, dependencies, environment assumptions, and review requirements
+  are unchanged, reuse recorded checks, independent reviews, and screenshots. Verify their target
+  SHA/digest and current GitHub state; do not rerun them merely because the user now says `ready` or
+  `merge`.
+- If the head changed, inspect the delta from the last validated/reviewed target. Invalidate only
+  evidence affected by that delta. A small, understood change (for example a timeout adjustment with
+  a clock-based regression) ordinarily needs focused tests and relevant static checks, not another
+  full build, DB reset, browser suite, screenshot capture, temporary clone, or three-axis review.
+  Reuse unaffected review evidence and explicitly record what the parent checked in the delta.
+- Run new independent review for substantive or risky unreviewed behavior, or when repository policy
+  requires it. Review the affected scope/axis; do not automatically re-review the entire PR.
+- Missing, failed, stale, or unverifiable required evidence still blocks readiness. Never claim old
+  evidence directly tested a newer commit: record its original target and the reason it remains
+  applicable, together with delta validation.
+- An explicit request for a fresh/full audit runs that audit. Otherwise, `merge` means finish the
+  merge and cleanup, not restart Ready and then repeat Ready again in an isolated clone.
+- Pending optional deployment checks are not readiness requirements. Wait only for repository-required
+  or change-critical checks; disclose optional pending checks without inventing extra gates.
+- Keep orchestration proportional: use the existing session evidence and a bounded merge/cleanup
+  operation. Do not create bespoke lock daemons, supervisor protocols, or review infrastructure for
+  a routine merge. Retain expected-SHA, clean-worktree, identity, and durable-recovery safeguards.
 
 ## Repository discovery
 
@@ -148,8 +175,10 @@ verify GitHub identity and the source push URL directly instead.
 
 ## Always-on preparation (`/skill:pr` and `/skill:pr ready`)
 
-Run this pass before staging or committing in either mutation mode. It keeps every published update
-aligned with repository policy, but it is not by itself a merge-readiness claim.
+Run this pass for new or changed work before staging or committing in either mutation mode. Reuse
+completed preparation for unchanged content; do not rerun Conform/Learn/Tidy solely for a lifecycle
+transition. It keeps every published update aligned with repository policy, but it is not by itself
+a merge-readiness claim.
 
 1. Resolve the intended changed paths and perform Repository discovery for their owning areas.
 2. Load and follow `conform` in mutation mode for intended implementation, test, and behavior-bearing
@@ -186,12 +215,13 @@ captures or publishes new assets.
    and contains no secrets or private user data. Never substitute mockups, generated images, or
    DOM-edited approximations for actual application evidence. Screenshots prove appearance and the
    captured state, not persistence, provider behavior, or a passing functional test.
-4. Prefer native GitHub image attachments when an authenticated upload path is already available.
-   `gh pr create/edit` accepts Markdown but does not upload native image attachments. When using the
-   CLI without that upload path, commit only the inspected PNGs on the PR branch in the repository's
-   approved screenshot location; use `docs/screenshots/` as a fallback only when repository policy
-   permits. These intentionally selected evidence files are task-owned, not unexplained generated
-   artifacts. Keep files small and descriptive; never commit whole browser/test output directories.
+4. Prefer native GitHub image attachments. GitHub CLI v2.99.0+ supports uploading local images and
+   videos with the repeatable `--attach` flag on `gh pr create/edit/comment`, using existing CLI
+   authentication and repository write access. Check the installed command's help before declaring
+   uploads unavailable. If native upload is genuinely unavailable, commit only the inspected PNGs on
+   the PR branch in the repository's approved screenshot location; use `docs/screenshots/` as a
+   fallback only when repository policy permits. These intentionally selected evidence files are
+   task-owned, not unexplained generated artifacts. Keep files small and descriptive; never commit whole browser/test output directories.
    Include them before the normal staging/review gates, not as an unreviewed follow-up to a ready PR.
    Do not create public gists or use unrelated image hosts to work around private-repository access.
 5. Embed the images with short captions in the managed PR body. For committed assets, use immutable
@@ -275,7 +305,7 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
 
 ### 1. Establish the review target
 
-- Complete the Always-on preparation pass.
+- Apply Evidence reuse first; complete only missing or invalidated preparation and checks.
 - Resolve the full prepared diff against the current remote base, including confirmed uncommitted
   files when present.
 - Refresh Repository discovery for any areas added during preparation.
@@ -305,7 +335,9 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
      temporary directory outside the repository;
    - compute the patch digest with `git hash-object --stdin` over the exact binary diff;
    - do not edit while reviewers inspect it.
-6. Launch `pr-reviewer` in fresh context for two parallel axes:
+6. When independent review is missing or invalidated, launch `pr-reviewer` in fresh context for the
+   required axes below. Reuse unaffected reviews; a focused low-risk delta does not automatically
+   require another full two-axis pass:
    - **Standards**, with the `conform` skill supplied and explicit `--check`/no-edit instructions;
    - **Spec**, with the exact requirements and no inherited implementation rationale.
      Give both the frozen bundle through `reads`. Omit reviewer acceptance gates and project-file
@@ -326,8 +358,9 @@ The Always-on preparation pass already runs Learn and Tidy once. After implement
 3. Format changed documentation/agent files with repository tooling and run the narrowest relevant
    documentation, formatting, stale-reference, and link checks.
 4. Freeze one complete bundle containing the stabilized implementation patch, documentation patch,
-   scope, changed paths, and validation evidence. Launch a fresh **Knowledge** `pr-reviewer` with
-   `learn` and `tidy` supplied in `--check`/no-edit mode.
+   scope, changed paths, and validation evidence. If Knowledge review is missing or invalidated,
+   launch a fresh **Knowledge** `pr-reviewer` with `learn` and `tidy` supplied in `--check`/no-edit
+   mode. Otherwise retain the existing Knowledge result.
 5. When agent instructions, executable config, or other behavior-bearing tooling guidance changed,
    also run fresh Standards and Spec axes against that complete bundle. Tool and capability policy is
    not documentation-only merely because it is written in Markdown.
@@ -363,23 +396,22 @@ Before marking ready:
 This mode is audit-only and must not edit project files, commits, branches, the current repository's
 Git state, or GitHub state.
 
-1. Resolve PR identity through read-only local inspection and GitHub queries, then create an isolated
-   temporary clone outside the repository. Fetch and check out the exact current remote base and PR
-   head SHAs only inside that clone. Perform all dependency installation and validation there, and
-   remove temporary state after reporting. Never fetch into or validate in the current repository.
+1. Resolve PR identity and exact remote base/head with read-only Git/GitHub inspection. Apply
+   Evidence reuse: use existing valid checks and reviews instead of automatically cloning,
+   installing, rerunning suites, or spawning reviewers.
 2. Require the current remote base to be an ancestor of the PR head; otherwise report base drift and
    stop rather than rebasing or merging automatically.
 3. Inspect draft state, mergeability/conflicts, review decision, required status rollup, unresolved
-   review threads, and repository-required deployment or merge-queue state. An absent check is not a
-   pass when repository policy requires that evidence.
-4. Re-run the final deterministic repository commands against the exact head in the isolated checkout.
-   Apply all repository safety contracts; report unsafe or unavailable required checks as missing
-   evidence.
-5. Freeze the exact base-to-head patch and run fresh Standards, Spec, and Knowledge reviewer passes.
-   The Knowledge axis receives complete implementation context so it can detect missing durable
-   guidance, not only review documentation that already exists.
-6. Report `ready`, `not ready`, or `blocked by missing evidence`, bound to exact base/head SHAs. Never
-   merge.
+   review threads, and repository-required deployment or merge-queue state. An absent required check
+   is not a pass; an optional pending check is not automatically a blocker.
+4. Only when required validation is missing/stale, or the user explicitly requests a fresh/full audit,
+   create an isolated temporary clone and run the needed checks there. Do not copy this work into a
+   second full validation pass. All fetch/install/validation work for this read-only mode stays in
+   temporary state, never the current repository; remove the owned temporary clone afterward.
+5. Reuse applicable Standards, Spec, and Knowledge reviews. Run only missing or invalidated axes;
+   explicit full audits run all three against the exact base-to-head patch.
+6. Report `ready`, `not ready`, or `blocked by missing evidence`, bound to exact base/head SHAs,
+   distinguishing reused evidence from newly executed checks. Never merge.
 
 ## Merge workflow (`/skill:pr merge`)
 
@@ -448,11 +480,13 @@ another merge.
    commit, push, mark ready, rerun reviews, or request another merge on this path. If identity or merged
    evidence cannot be verified, stop without deleting anything.
 
-2. Run the full Ready workflow. This includes Always-on preparation, repository validation,
-   independent review, any required commit/push, managed-body update, and ready transition. Re-record
-   the clean worktree state and exact local/remote head SHA after it completes.
-3. Run the complete Pre-merge workflow against that exact remote head in isolated temporary state. It
-   must report `ready`; `not ready` or missing evidence stops the merge.
+2. Apply Evidence reuse to Ready. If preparation, checks, and reviews are already sufficient, do not
+   run them again. For a changed head, inspect and validate only the affected delta, escalating to
+   broader checks/review when warranted. Update managed evidence only as needed; verify clean state
+   and exact local/remote head. Mark a draft ready only once applicable gates are satisfied.
+3. Run the lightweight Pre-merge remote-state gate against that head, reusing the readiness evidence
+   from step 2. Do not automatically create an isolated clone or run another test/review cycle.
+   Missing required evidence blocks merge; request a fresh/full audit only when actually needed.
 4. Immediately before merging, re-query base/head SHAs, draft state, mergeability, required checks,
    reviews, unresolved threads, and repository-required deployment or queue state. If the base or head
    changed, the evidence is stale: rerun the affected Ready/Pre-merge gates. Detect merge-queue
