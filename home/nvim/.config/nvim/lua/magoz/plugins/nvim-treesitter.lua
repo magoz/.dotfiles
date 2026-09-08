@@ -1,6 +1,8 @@
 return {
 	{
 		"nvim-treesitter/nvim-treesitter",
+		-- The main branch rewrite no longer provides nvim-treesitter.configs.
+		branch = "master",
 		event = { "BufReadPre", "BufNewFile" },
 		build = ":TSUpdate",
 		dependencies = {
