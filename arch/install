@@ -23,7 +23,7 @@ fi
 
 export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
 export PATH="$HOME/.local/bin:$NPM_CONFIG_PREFIX/bin:$PATH"
-for tool in git stow bun node npm jq nvim starship zsh pnpm; do
+for tool in git stow bun node npm jq nvim tree-sitter starship zsh pnpm; do
   command -v "$tool" >/dev/null || {
     printf 'error: missing %s; install the Arch prerequisites in README.md\n' "$tool" >&2
     exit 1

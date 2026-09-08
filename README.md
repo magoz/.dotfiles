@@ -84,7 +84,7 @@ On an already installed Arch system, install the development dependencies separa
 
 ```sh
 sudo pacman -Syu --needed base-devel bat bun curl eza fd fzf git github-cli jq \
-  lazygit neovim nodejs-lts-krypton npm pnpm ripgrep starship stow tealdeer \
+  lazygit neovim nodejs-lts-krypton npm pnpm ripgrep starship stow tealdeer tree-sitter-cli \
   zoxide zsh zsh-autosuggestions zsh-syntax-highlighting
 ```
 
@@ -124,6 +124,15 @@ The dedicated Box host keeps its destructive bootstrap, hardware configuration, 
 
 For the portable user environment, use `~/.dotfiles/arch/install`. For the complete Box-specific dotfiles selection and login-shell setup, use `~/.box/install`. Neither is destructive system provisioning. Never run the macOS installer on Box.
 
+## Neovim
+
+The Treesitter configuration uses the rewritten `main` branch and requires Neovim
+**0.12+**, Tree-sitter CLI **0.26.1+** (not the npm package), a C compiler, `curl`,
+and `tar`. The platform dependency lists include the CLI. Parsers install
+asynchronously into `~/.local/share/nvim/site`; run `:TSUpdate` after updating the
+plugin. Syntax selection uses native Neovim mappings: `<C-space>` expands and
+Backspace shrinks a visual selection.
+
 ## Working with Stow packages
 
 Preview one package without changing `$HOME`:
@@ -156,6 +165,13 @@ The `home/scripts` package installs command launchers and their source under `~/
 - [`worktree`](home/scripts/.local/share/worktree/README.md) creates provisioned Herdr worktrees and hands off to fresh Pi sessions.
 
 ## Validation
+
+After installing the configured Neovim plugins and parsers, run the offline
+Treesitter regression checks from the repository root:
+
+```sh
+nvim --headless -u NONE -l tests/nvim-treesitter.lua
+```
 
 Run the focused repository checks after changing installation or Stow behavior:
 

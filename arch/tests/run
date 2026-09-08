@@ -32,7 +32,7 @@ printf 'ok: OpenCode Vim options target the plugin directory and enable Enter su
 # Keep completion generation and dependency installation offline and isolated.
 mkdir -p "$TEST_ROOT/bin"
 export ARCH_TEST_LOG=$TEST_ROOT/commands
-for tool in herdr opencode2 pnpm npm bun pi nvim; do
+for tool in herdr opencode2 pnpm npm bun pi nvim tree-sitter; do
   cat >"$TEST_ROOT/bin/$tool" <<'EOF'
 #!/usr/bin/env bash
 printf '%s %s\n' "${0##*/}" "$*" >>"$ARCH_TEST_LOG"
