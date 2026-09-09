@@ -36,5 +36,8 @@
     "anthropic/claude-fable-5-1",
     "openai-codex/gpt-6-astra"
   ],
-  "hideThinkingBlock": false
+  "hideThinkingBlock": false,
+  "terminal": {
+    "hyperlinks": true
+  }
 }
