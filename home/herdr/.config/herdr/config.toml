@@ -114,5 +114,10 @@ type = "shell"
 command = "herdr workspace focus 4 >/dev/null"
 description = "space 4"
 
+# Herdr 0.8.2 uses this key; newer versions retain it as a legacy alias.
+# Enable on both the remote server and the client running inside Ghostty.
+[experimental]
+kitty_graphics = true
+
 [advanced]
 scrollback_limit_bytes = 52428800

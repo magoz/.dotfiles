@@ -38,6 +38,8 @@
   ],
   "hideThinkingBlock": false,
   "terminal": {
-    "hyperlinks": true
+    "hyperlinks": true,
+    "showImages": true,
+    "images": "kitty"
   }
 }
