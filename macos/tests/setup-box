@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MACOS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+TEST_ROOT=$(mktemp -d)
+trap 'rm -rf "$TEST_ROOT"' EXIT
+mkdir -p "$TEST_ROOT/bin" "$TEST_ROOT/home"
+export HOME=$TEST_ROOT/home
+export CALLS=$TEST_ROOT/calls PROFILES=$TEST_ROOT/profiles
+export PATH=$TEST_ROOT/bin:$PATH
+unset HERDR_ENV SSH_CONNECTION SSH_TTY
+
+cat >"$TEST_ROOT/bin/uname" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "${TEST_OS:-Darwin}"
+EOF
+cat >"$TEST_ROOT/bin/ssh" <<'EOF'
+#!/usr/bin/env bash
+printf 'ssh %s\n' "$*" >>"$CALLS"
+exit "${SSH_EXIT:-0}"
+EOF
+cat >"$TEST_ROOT/bin/herdr" <<'EOF'
+#!/usr/bin/env bash
+printf 'herdr %s\n' "$*" >>"$CALLS"
+case "$*" in
+  'machine list --json') cat "$PROFILES" ;;
+  'machine add box --label Box') exit "${ADD_EXIT:-0}" ;;
+  'machine enable saved-id') ;;
+  'config check') exit "${CONFIG_EXIT:-0}" ;;
+  *) exit 91 ;;
+esac
+EOF
+chmod +x "$TEST_ROOT/bin/"*
+
+reset() { : >"$CALLS"; printf '[]\n' >"$PROFILES"; }
+run_setup() { bash "$MACOS_DIR/setup-box" "$@" >"$TEST_ROOT/output" 2>&1; }
+reject() { if run_setup "$@"; then printf 'expected setup failure\n' >&2; exit 1; fi; }
+absent() { if grep "$@"; then printf 'unexpected command or output\n' >&2; exit 1; fi; }
+no_mutation() { absent -Eq 'herdr machine (add|enable)' "$CALLS"; }
+
+reset
+run_setup --help
+[[ ! -s $CALLS ]]
+reject --unknown
+TEST_OS=Linux reject
+HERDR_ENV=1 reject
+SSH_CONNECTION=remote reject
+SSH_TTY=/dev/pts/1 reject
+[[ ! -s $CALLS ]]
+printf 'ok: Mac setup rejects unsupported/nested invocation without side effects\n'
+
+reset
+SSH_EXIT=255 reject
+no_mutation
+reset
+CONFIG_EXIT=1 reject
+no_mutation
+for malformed in '' '{}' '[] []'; do
+  reset
+  printf '%s\n' "$malformed" >"$PROFILES"
+  reject
+  no_mutation
+done
+reset
+printf '[{"id":"a"}]\n' >"$PROFILES"
+reject
+no_mutation
+printf 'ok: failed SSH/config and malformed catalogs cannot change machines\n'
+
+reset
+run_setup
+grep -Fxq 'ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 box true' "$CALLS"
+grep -Fxq 'herdr machine add box --label Box' "$CALLS"
+absent -Eq -- '--handoff|server stop|StrictHostKeyChecking=no' "$CALLS"
+reset
+ADD_EXIT=1 reject
+absent -Fq 'Run `herdr`' "$TEST_ROOT/output"
+printf 'ok: new machine setup preserves SSH checks and Herdr approval/failure\n'
+
+reset
+printf '[{"id":"saved-id","label":"Build host","target":"box","session":"default","enabled":true}]\n' >"$PROFILES"
+run_setup
+run_setup
+no_mutation
+printf '[{"id":"saved-id","label":"Build host","target":"box","session":"default","enabled":false}]\n' >"$PROFILES"
+run_setup
+grep -Fxq 'herdr machine enable saved-id' "$CALLS"
+absent -Fq 'herdr machine add' "$CALLS"
+printf 'ok: existing profiles are reused by target/session, not derived IDs\n'
+
+reset
+printf '[{"id":"other","label":"Box","target":"other","session":"default","enabled":true}]\n' >"$PROFILES"
+reject
+no_mutation
+reset
+printf '[{"id":"a","label":"Box","target":"box","session":"named","enabled":true}]\n' >"$PROFILES"
+reject
+no_mutation
+reset
+printf '[{"id":"a","label":"A","target":"box","session":"default","enabled":true},{"id":"b","label":"B","target":"box","session":"default","enabled":true}]\n' >"$PROFILES"
+reject
+no_mutation
+printf 'ok: label collisions and duplicate profiles require operator resolution\n'

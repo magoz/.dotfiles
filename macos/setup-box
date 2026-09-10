@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: ./macos/setup-box
+
+Register the existing SSH host `box` as a saved Herdr machine on this Mac.
+Run once per Mac, from a normal local terminal after ./macos/install.
+
+Prerequisites: Herdr 0.9+, jq, Tailscale connected, and working key-based SSH.
+This command preserves SSH configuration and keys. Authenticate and approve
+Box's verified host key with `ssh box` first. Background Herdr connections
+must work without an SSH password or key-passphrase prompt (use ssh-add).
+
+Existing default-session profiles are reused; disabled profiles are enabled.
+Herdr asks before installing/replacing a remote server. Replacement stops its
+pane processes: decline until running work is finished. No handoff is requested.
+EOF
+}
+
+fail() { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+case ${1:-} in
+  --help|-h) usage; exit 0 ;;
+  '') ;;
+  *) fail "unknown argument: $1 (see --help)" ;;
+esac
+[[ $# -eq 0 ]] || fail "unexpected arguments (see --help)"
+[[ $(uname -s) == Darwin ]] || fail "run this command on your Mac, not on Box"
+[[ ${HERDR_ENV:-0} != 1 && -z ${SSH_CONNECTION:-} && -z ${SSH_TTY:-} ]] || \
+  fail "run from a normal local Mac terminal, outside Herdr and SSH"
+
+for tool in herdr jq ssh; do
+  command -v "$tool" >/dev/null 2>&1 || fail "$tool is missing; run ./macos/install first"
+done
+
+profiles=$(herdr machine list --json) || fail "cannot list machines; install Herdr 0.9+ using your package manager"
+jq -es 'length == 1 and (.[0] | type == "array" and all(.[];
+  (.id | type == "string" and length > 0) and
+  (.label | type == "string") and (.target | type == "string") and
+  (.session | type == "string") and (.enabled | type == "boolean")))' \
+  <<<"$profiles" >/dev/null || fail "unexpected Herdr machine list format; no profiles changed"
+matches=$(jq '[.[] | select(.target == "box" and .session == "default")]' <<<"$profiles")
+count=$(jq 'length' <<<"$matches")
+[[ $count -le 1 ]] || fail "multiple Box default-session profiles; inspect herdr machine list before retrying"
+if [[ $count == 0 ]] && jq -e 'any(.[]; .label == "Box")' <<<"$profiles" >/dev/null; then
+  fail "label Box already belongs to another target/session; inspect herdr machine list (nothing changed)"
+fi
+
+# Never accept a host key or fall back to interactive SSH authentication silently.
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 box true || \
+  fail "SSH is not ready. Connect Tailscale, configure Host box (see README), run ssh box to verify its identity, and load your key with ssh-add; then retry"
+herdr config check
+
+if [[ $count == 1 ]]; then
+  id=$(jq -r '.[0].id' <<<"$matches")
+  if [[ $(jq -r '.[0].enabled' <<<"$matches") == false ]]; then
+    herdr machine enable "$id"
+  fi
+  printf 'Reusing existing Box profile: %s\n' "$id"
+else
+  # Keep Herdr in charge of interactive install/replacement approval.
+  herdr machine add box --label "Box"
+fi
+
+printf '\nRun `herdr` for Local + Box, or `box` for remote-only access.\n'
+printf 'Select a machine in the sidebar. Reload local config with Ctrl+T, then R.\n'
+printf 'If Box shows Attention, run `box` in a local terminal and follow its prompts.\n'

@@ -7,6 +7,8 @@ REPO_ROOT=$(cd "$MACOS_DIR/.." && pwd -P)
 TEST_ROOT=$(mktemp -d)
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
+bash "$SCRIPT_DIR/setup-box"
+
 positive_home=$TEST_ROOT/positive
 mkdir -p "$positive_home/.config"
 legacy_source=$REPO_ROOT/nvim/.config/nvim

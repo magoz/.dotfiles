@@ -152,3 +152,4 @@ echo "🤖 Installing OpenCode 2"
 npm install -g @opencode-ai/cli@next
 
 "$HOME/.local/bin/update-zsh-completions"
+printf '\nFor Local + Box in Herdr, run ./macos/setup-box from a local Mac terminal.\n'

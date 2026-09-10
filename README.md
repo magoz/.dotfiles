@@ -130,19 +130,59 @@ The macOS `box` alias remains a direct attach to Box's default session, using
 its server-side keybindings and custom commands. It does not open a combined
 Local/Box window.
 
-For the combined window, use Herdr **0.9+** and register Box once on each Mac,
-from an ordinary local terminal (not a pane inside Herdr):
+For the combined window, use Herdr **0.9+**. Run the following from an ordinary
+local Mac terminal, not inside Herdr or SSH:
 
 ```sh
-brew update && brew upgrade herdr # for the Homebrew install used by macos/install
-herdr machine add box --label "Box"
+cd ~/.dotfiles
+git pull
+./macos/stow # or ./macos/install for the full workstation setup
+brew update && brew upgrade herdr # Homebrew installs; direct installs use herdr update
+./macos/setup-box
 herdr
 ```
 
-For a direct-install client, use `herdr update` instead of Homebrew. Setup may
-ask to upgrade Box's server. **Replacing the old server stops its pane processes**;
-finish running work before approving, or decline and migrate later. Do not rely
-on experimental handoff for preserving agents.
+[`macos/setup-box`](macos/setup-box) checks SSH and Herdr config, registers Box's
+default session, and reuses an existing profile (enabling it if disabled). It does
+not duplicate profiles, overwrite SSH settings/keys, or migrate named sessions.
+It runs separately from the installer because remote server replacement requires
+an attended decision. **Replacing an old server stops its pane processes**;
+finish running work before approving, or decline and migrate later. Experimental
+handoff is not requested. If a saved machine shows Attention, run `box` from a
+local terminal, follow Herdr's prompts, then restart the combined client.
+
+### First connection from a new Mac
+
+Skip these steps if `ssh box` already works without a password prompt:
+
+1. Install the Tailscale Mac app, sign in to the approved tailnet, and connect.
+   Enrollment, access policy, and SSH key authorization are attended steps; neither
+   installer copies private keys or bypasses authentication.
+2. Configure the existing `Host box` entry in `~/.ssh/config`, or add one if absent,
+   **before any `Host *` defaults**. Do not create a competing duplicate entry:
+
+   ```sshconfig
+   Host box
+     HostName box
+     User magoz
+   ```
+
+   `HostName box` uses Tailscale MagicDNS. Use the verified full tailnet hostname
+   instead if short-name resolution is unavailable. If multiple SSH keys exist,
+   add this Mac's authorized `IdentityFile` and `IdentitiesOnly yes` to the entry;
+   keep the private key on this Mac. Box's public-key authorization is managed
+   through the private Box repo, not the public dotfiles.
+3. Run `ssh box`, verify its host-key fingerprint through a trusted path, then
+   exit back to the Mac. Load passphrase-protected keys with `ssh-add` so Herdr's
+   background connections do not require prompts.
+4. Run `./macos/setup-box`. Its SSH check requires an already trusted host key and
+   non-interactive authentication; a failure changes no Herdr profiles.
+
+Host provisioning and Mac trust for HTTPS development URLs are documented in the
+private `magoz/box` repo (`README.md` and `remote-development.md`). Neither Box's
+`provision` nor its `install` runs on the Mac.
+
+### Daily use
 
 Select **Local** or **Box** in the sidebar. Both Macs connect to the same Box
 session, workspaces, and running agents; each client's selected tab can differ.
@@ -216,7 +256,7 @@ Run the focused repository checks after changing installation or Stow behavior:
 git diff --check
 ```
 
-The platform tests use temporary home directories to verify legacy-link migration and preservation of unrelated configuration. Arch tests also cover desktop/runtime preservation, conflict preflight, Linux Zsh startup, and a mocked dependency installation on an unprivileged Arch host. Machine-role repositories test their own integration with this package catalog independently.
+The platform tests use temporary home directories to verify legacy-link migration and preservation of unrelated configuration. Mac tests also exercise Box onboarding with mocked SSH/Herdr, including duplicate profiles, authentication failures, and approval failures. Arch tests also cover desktop/runtime preservation, conflict preflight, Linux Zsh startup, and a mocked dependency installation on an unprivileged Arch host. Machine-role repositories test their own integration with this package catalog independently.
 
 ## Local and sensitive state
 
