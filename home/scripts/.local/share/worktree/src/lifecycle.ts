@@ -1,6 +1,6 @@
 import { Console, Effect, Either } from "effect"
 import { type CreateOptions, type CreatedEnvironment, WorktreeError } from "./domain"
-import { defaultWorktreePath, resolveBase, resolveRepository } from "./git"
+import { defaultWorktreePath, requireNewBranch, resolveBase, resolveRepository } from "./git"
 import {
   agentNameFor,
   createHerdrWorktree,
@@ -49,6 +49,7 @@ const processEnvShell = () => process.env.SHELL || "/bin/sh"
 export const createEnvironment = (options: CreateOptions) =>
   Effect.gen(function* () {
     const source = yield* resolveRepository(options.repo)
+    if (options.base === undefined) yield* requireNewBranch(source, options.branch)
     const base = yield* resolveBase(source, options.base)
     const destinationPath = options.path ?? (yield* defaultWorktreePath(source, options.branch))
     const resolvedOptions = { ...options, path: destinationPath }

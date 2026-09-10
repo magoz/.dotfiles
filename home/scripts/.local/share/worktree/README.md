@@ -57,13 +57,28 @@ explicit user security decision.
 worktree create \
   --repo /path/to/source-checkout \
   --branch feat/reporting \
-  --base origin/main \
   --prompt "Implement the reporting workflow"
 ```
 
 `--repo` defaults to the current directory. When `--base` is omitted, the CLI
-uses `origin/HEAD` when configured, then tries `origin/main`, `main`,
-`origin/master`, and `master`, and finally falls back to `HEAD`.
+fetches **origin's live default-branch tip** before creating anything and passes
+that immutable commit SHA to Herdr. It does not trust local `origin/HEAD`,
+`origin/main`, `main`, or `HEAD`. Missing/unreachable origin or an invalid remote
+HEAD stops creation; there is no stale-local fallback. An existing destination
+branch is rejected in this mode rather than silently reusing its old history.
+
+The fetch uses a unique temporary ref, removed afterward, so concurrent fetches
+cannot overwrite its base through shared `FETCH_HEAD`. It leaves local branches
+and remote-tracking refs alone and works with renamed defaults and narrow fetch
+refspecs. Freshness means the tip observed by that successful fetch; later remote
+commits do not change the pinned creation base.
+
+Use `--base <branch|tag|commit|revision>` only for an intentional base override.
+Explicit bases are validated locally and used **without fetching**, preserving
+historical or offline choices. Naming the destination with `--branch` does not
+opt out of freshness. In Pi, describe the alternate starting point in the task;
+the agent supplies `base` only for that request (or a workflow's freshly verified
+immutable SHA), never as a workaround for a failed fetch.
 
 By default, the CLI places the checkout beside the primary repository using
 `<repo>-<branch-slug>`, even when invoked from another linked worktree:
@@ -162,7 +177,7 @@ guess repository-specific schema or seed operations.
 
 In order, `worktree create`:
 
-1. resolves the source Git checkout, primary repository, base ref, and sibling checkout path;
+1. resolves the source Git checkout, requires a new destination branch and fetches/pins origin's current default tip unless `--base` is explicit, then resolves the sibling checkout path;
 2. calls `herdr worktree create --path ...`, which creates both the checkout and its grouped Herdr workspace;
 3. resolves the workspace's initial root pane;
 4. runs `provision-env --database --non-interactive`, failing safely on unexpected existing env files, pulling Development and `test` Vercel variables, removing deployment-only metadata and integration database URLs, and creating independent database leases for both;

@@ -15,6 +15,8 @@ interface Call {
 
 const createFake = (
   options: {
+    failFetch?: boolean
+    existingBranch?: boolean
     failProvision?: boolean
     failFocus?: boolean
     startErrorCode?: "cli:agent:start:timeout" | "agent_pane_busy"
@@ -28,7 +30,18 @@ const createFake = (
     if (command === "git" && args.includes("--show-toplevel")) {
       return Effect.succeed({ stdout: "/repo\n", stderr: "" })
     }
+    if (command === "git" && args.includes("fetch")) {
+      if (options.failFetch) return Effect.fail(new ProcessError({
+        command: "git fetch", exitCode: 1, stdout: "", stderr: "network unavailable"
+      }))
+      return Effect.succeed({ stdout: "", stderr: "" })
+    }
     if (command === "git" && args.includes("--verify")) {
+      if (args.at(-1)?.startsWith("refs/heads/") && !options.existingBranch) {
+        return Effect.fail(new ProcessError({
+          command: "git rev-parse", exitCode: 1, stdout: "", stderr: "missing branch"
+        }))
+      }
       return Effect.succeed({ stdout: "abc123\n", stderr: "" })
     }
     if (command === "git" && args.includes("--git-common-dir")) {
@@ -210,6 +223,40 @@ test("agent names are valid, deterministic, and bounded", () => {
   expect(name).toMatch(/^[a-z][a-z0-9-]{0,31}$/)
   expect(name.length).toBeLessThanOrEqual(32)
   expect(name).toBe(agentNameFor("Feature/A Very Long Branch Name With Symbols!", "wABC123"))
+})
+
+test("default creation fetches and pins the base before allocating Herdr resources", async () => {
+  const fake = createFake()
+  const created = await Effect.runPromise(createEnvironment({
+    repo: "/repo", branch: "feat/feature", ttl: "7d", setupCommands: []
+  }).pipe(Effect.provide(fake.layer)))
+  expect(created.base).toBe("abc123")
+  const fetchIndex = fake.calls.findIndex((call) => call.command === "git" && call.args.includes("fetch"))
+  const createIndex = fake.calls.findIndex((call) => call.command === "herdr")
+  expect(fetchIndex).toBeGreaterThanOrEqual(0)
+  expect(createIndex).toBeGreaterThan(fetchIndex)
+  expect(fake.calls[createIndex]?.args).toContain("abc123")
+})
+
+for (const failure of ["fetch", "existing branch"] as const) {
+  test(`${failure} failure allocates no Herdr or provisioning resources`, async () => {
+    const fake = createFake({ failFetch: failure === "fetch", existingBranch: failure === "existing branch" })
+    await expect(Effect.runPromise(createEnvironment({
+      repo: "/repo", branch: "feat/feature", ttl: "7d", setupCommands: []
+    }).pipe(Effect.provide(fake.layer)))).rejects.toThrow(
+      failure === "fetch" ? "refusing a stale local base" : "branch already exists"
+    )
+    expect(fake.calls.every((call) => call.command === "git")).toBe(true)
+  })
+}
+
+test("explicit base creation does not fetch", async () => {
+  const fake = createFake({ failFetch: true })
+  await Effect.runPromise(createEnvironment({
+    repo: "/repo", branch: "feat/feature", base: "release/v1", ttl: "7d", setupCommands: []
+  }).pipe(Effect.provide(fake.layer)))
+  expect(fake.calls.some((call) => call.args.includes("fetch"))).toBe(false)
+  expect(fake.calls.find((call) => call.command === "herdr")?.args).toContain("release/v1")
 })
 
 test("the lifecycle provisions before setup and starts one fresh Pi", async () => {

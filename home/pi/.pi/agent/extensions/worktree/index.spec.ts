@@ -46,6 +46,17 @@ describe("worktree extension", () => {
     ]);
   });
 
+  it("keeps default creation on the CLI's fresh-base path and explains override intent", () => {
+    for (const input of [{ prompt: "Add exports" }, { branch: "feat/exports" }]) {
+      expect(buildArgs(input, "/repo")).not.toContain("--base");
+      expect(buildAgentRequest(input)).toContain("omit base to fetch origin's current default branch");
+      expect(buildAgentRequest(input)).toContain("A destination branch name alone is not a base override");
+    }
+    let tool: any;
+    register({ registerCommand() {}, registerTool(value: unknown) { tool = value; } } as never);
+    expect(tool.promptGuidelines.join(" ")).toContain("Never bypass a failed fetch");
+  });
+
   it("infers a conventional branch when the slash command contains only a task", () => {
     expect(parseCommand("Add reporting exports")).toEqual({ prompt: "Add reporting exports" });
     expect(inferBranch("Add reporting exports")).toBe("feat/reporting-exports");

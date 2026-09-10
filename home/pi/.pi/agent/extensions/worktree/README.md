@@ -5,6 +5,17 @@ interactive `/worktrees` dashboard. The dashboard combines Git worktree state
 with Herdr workspaces, Pi agents, provisioned environments, and sandbox database
 leases without reading or displaying secret environment values.
 
+## Fresh default base
+
+`/worktree` and dashboard creation leave `base` unset by default. The shared CLI
+fetches origin's live default tip, pins its commit SHA, and refuses creation if
+the fetch fails or the destination branch already exists. No local-ref fallback
+is allowed. An explicit destination branch name does not override the base.
+
+Set `base` only for an explicitly requested alternate branch or point in time,
+or a workflow's freshly verified immutable SHA. Explicit bases are validated
+locally without fetching; never supply one merely to bypass a failed fetch.
+
 ## Agent-owned Vercel linking
 
 Before allocating a worktree, `create_worktree` runs

@@ -20,7 +20,7 @@ const create = Command.make(
     ),
     base: optionalText(
       "base",
-      "base ref for a new branch (default: origin default, main/master, then HEAD)"
+      "explicit base override, used without fetching (default: freshly fetched origin HEAD)"
     ),
     path: optionalText("path", "explicit worktree checkout path"),
     label: optionalText("label", "Herdr workspace, database, and Pi session label"),
