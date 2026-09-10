@@ -1,7 +1,8 @@
 onboarding = false
 
 [terminal]
-default_shell = "/usr/bin/zsh"
+# Use SHELL so local macOS and remote Linux panes use their own shell path.
+default_shell = ""
 shell_mode = "login"
 
 [theme]
@@ -16,14 +17,13 @@ tab_bar_position = "bottom"
 
 agent_panel_sort = "priority"
 
-# Default rows are [["state_icon", "workspace", "tab"], ["agent"]], which never
-# renders reported state labels. Adding state_text surfaces the pi-subagents
-# label (e.g. "⏳ 1 subagent (general)") published by
-# home/pi/.pi/agent/extensions/herdr-pi-subagents-status.ts.
+# Herdr 0.9+: identify agents across Local and saved SSH machines.
+# state_text surfaces the pi-subagents label (e.g. "⏳ 1 subagent (general)")
+# published by home/pi/.pi/agent/extensions/herdr-pi-subagents-status.ts.
 [ui.sidebar.agents]
 row_gap = 0
 rows = [
-  ["state_icon", "workspace", "tab"],
+  ["state_icon", "machine", "workspace", "tab"],
   ["agent", "state_text"],
 ]
 

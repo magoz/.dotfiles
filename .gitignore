@@ -6,6 +6,7 @@ __pycache__/
 *.py[cod]
 
 # herdr runtime state
+home/herdr/.config/herdr/client/
 home/herdr/.config/herdr/.plugins.lock
 home/herdr/.config/herdr/session.json
 home/herdr/.config/herdr/session-history.json

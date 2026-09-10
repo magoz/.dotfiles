@@ -124,6 +124,41 @@ The dedicated Box host keeps its destructive bootstrap, hardware configuration, 
 
 For the portable user environment, use `~/.dotfiles/arch/install`. For the complete Box-specific dotfiles selection and login-shell setup, use `~/.box/install`. Neither is destructive system provisioning. Never run the macOS installer on Box.
 
+## Herdr: Local and Box in one window
+
+The macOS `box` alias remains a direct attach to Box's default session, using
+its server-side keybindings and custom commands. It does not open a combined
+Local/Box window.
+
+For the combined window, use Herdr **0.9+** and register Box once on each Mac,
+from an ordinary local terminal (not a pane inside Herdr):
+
+```sh
+brew update && brew upgrade herdr # for the Homebrew install used by macos/install
+herdr machine add box --label "Box"
+herdr
+```
+
+For a direct-install client, use `herdr update` instead of Homebrew. Setup may
+ask to upgrade Box's server. **Replacing the old server stops its pane processes**;
+finish running work before approving, or decline and migrate later. Do not rely
+on experimental handoff for preserving agents.
+
+Select **Local** or **Box** in the sidebar. Both Macs connect to the same Box
+session, workspaces, and running agents; each client's selected tab can differ.
+The combined UI uses the viewing Mac's theme and keybindings. `box` remains
+available whenever you want the previous remote-only workflow. Closing a client
+or disconnecting leaves the remote server running; stopping the server does not.
+
+The shared `home/herdr/.config/herdr/config.toml` includes machine labels in the
+agent sidebar and requires Herdr 0.9+. Apply this config on each Mac and reload
+client config with **Ctrl+T, then R**.
+
+Saved machine profiles and selection live under Herdr's `client/` state directory
+and are excluded from Git and Stow. Register Box separately on each Mac; do not
+copy runtime state between them. `herdr machine list` shows saved profile IDs;
+`herdr machine disable <profile-id>` disconnects one without stopping its agents.
+
 ## Neovim
 
 The Treesitter configuration uses the rewritten `main` branch and requires Neovim
