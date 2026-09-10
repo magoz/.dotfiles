@@ -6,19 +6,17 @@ import type {
   ReadonlyFooterDataProvider,
 } from "@earendil-works/pi-coding-agent";
 import { getCapabilities, hyperlink, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { SubscriptionUsageTracker } from "./subscription-usage.ts";
 
 const POLL_INTERVAL_MS = 3_000;
 const PR_REFRESH_INTERVAL_MS = 60_000;
-const LIVE_UPDATE_INTERVAL_MS = 200;
-const SUBSCRIPTION_REFRESH_INTERVAL_MS = 2 * 60_000;
-const SUBSCRIPTION_TICK_INTERVAL_MS = 60_000;
-const CHARS_PER_ESTIMATED_TOKEN = 4;
 // The footer polls git constantly; --no-optional-locks keeps it from taking
 // .git/index.lock and racing the user's own git commands in the same repo.
 const GIT_READONLY = ["--no-optional-locks"];
 // Extension statuses that would only add noise to the footer.
 const HIDDEN_STATUS_KEYS = new Set(["pi-vimmode", "mcp", "context-budget"]);
+// pi-multi-account's account/quota status is rendered inline on the metrics
+// line instead of as its own row.
+const INLINE_STATUS_KEY = "multi-account-quota";
 
 // Terminal-controlled text such as paths and branch names must not be allowed
 // to inject escape sequences into the TUI.
@@ -64,20 +62,6 @@ function columns(left: string, right: string, width: number) {
   return truncateToWidth(`${fittedLeft}${" ".repeat(gap)}${fittedRight}`, width);
 }
 
-function sessionCost(ctx: ExtensionContext) {
-  let cost = 0;
-  for (const entry of ctx.sessionManager.getBranch()) {
-    if (entry.type === "message" && entry.message.role === "assistant") {
-      cost += entry.message.usage.cost.total;
-    }
-  }
-  return cost;
-}
-
-function estimateTokens(characters: number) {
-  return Math.ceil(characters / CHARS_PER_ESTIMATED_TOKEN);
-}
-
 function safeHttpUrl(value: string) {
   if (/[\u0000-\u001f\u007f-\u009f]/.test(value)) return null;
   try {
@@ -97,35 +81,11 @@ interface GitState {
 export default function dashboardFooter(pi: ExtensionAPI) {
   let requestRender: (() => void) | undefined;
   let pollTimer: ReturnType<typeof setInterval> | undefined;
-  let subscriptionRefreshTimer: ReturnType<typeof setInterval> | undefined;
-  let subscriptionTickTimer: ReturnType<typeof setInterval> | undefined;
   let generation = 0;
-  const subscriptionUsage = new SubscriptionUsageTracker(() => requestRender?.());
   const activeGitRefreshes = new Set<number>();
   let queriedPrBranch: string | null = null;
   let lastPrQueryAt = 0;
   let git: GitState = { branch: null, changedFiles: 0, pullRequest: null };
-  let tokensPerSecond: number | null = null;
-
-  let streamStartedAt: number | null = null;
-  let lastDeltaAt: number | null = null;
-  let streamedCharacters = 0;
-  let firstDeltaCharacters = 0;
-  let deltaCount = 0;
-  let sawToolCall = false;
-  let runTokens = 0;
-  let runStreamMs = 0;
-  let lastLiveUpdate = 0;
-
-  function resetMessageTracking() {
-    streamStartedAt = null;
-    lastDeltaAt = null;
-    streamedCharacters = 0;
-    firstDeltaCharacters = 0;
-    deltaCount = 0;
-    sawToolCall = false;
-    lastLiveUpdate = 0;
-  }
 
   async function refreshGit(ctx: ExtensionContext, forcePullRequest = false) {
     const refreshGeneration = generation;
@@ -220,30 +180,6 @@ export default function dashboardFooter(pi: ExtensionAPI) {
     }
   }
 
-  function stopSubscriptionUsage() {
-    if (subscriptionRefreshTimer) clearInterval(subscriptionRefreshTimer);
-    if (subscriptionTickTimer) clearInterval(subscriptionTickTimer);
-    subscriptionRefreshTimer = undefined;
-    subscriptionTickTimer = undefined;
-    subscriptionUsage.stop();
-  }
-
-  function startSubscriptionUsage(ctx: ExtensionContext) {
-    stopSubscriptionUsage();
-    if (ctx.mode !== "tui") return;
-    void subscriptionUsage.refresh(ctx);
-    subscriptionRefreshTimer = setInterval(
-      () => void subscriptionUsage.refresh(ctx),
-      SUBSCRIPTION_REFRESH_INTERVAL_MS,
-    );
-    subscriptionRefreshTimer.unref?.();
-    subscriptionTickTimer = setInterval(
-      () => requestRender?.(),
-      SUBSCRIPTION_TICK_INTERVAL_MS,
-    );
-    subscriptionTickTimer.unref?.();
-  }
-
   function install(ctx: ExtensionContext) {
     if (ctx.mode !== "tui") return;
 
@@ -264,13 +200,16 @@ export default function dashboardFooter(pi: ExtensionAPI) {
             : formatTokens(usage.tokens);
           const context =
             `${contextTokens} / ${contextWindow ? formatTokens(contextWindow) : "?"} (${contextPercent}%)`;
-          const cost = `$${sessionCost(ctx).toFixed(2)}`;
-          const speed = tokensPerSecond === null ? "— tok/s" : `${Math.round(tokensPerSecond)} tok/s`;
-          const subscription = subscriptionUsage.getText();
-          const metrics = [context, cost, speed, subscription].filter(Boolean).join(" · ");
           const modelLabel = model
             ? `${sanitize(model.provider)}/${sanitize(model.id)} · ${model.reasoning ? pi.getThinkingLevel() : "off"}`
             : "no model";
+
+          const statuses = footerData.getExtensionStatuses();
+          // Already themed by pi-multi-account; only the separator is muted.
+          const inlineStatus = statuses.get(INLINE_STATUS_KEY)?.replace(/\n+/g, " ").trim();
+          const metrics = inlineStatus
+            ? `${theme.fg("muted", `${context} · `)}${inlineStatus}`
+            : theme.fg("muted", context);
 
           const fileLabel = git.changedFiles === 1 ? "file" : "files";
           let gitLabel = git.branch
@@ -286,12 +225,11 @@ export default function dashboardFooter(pi: ExtensionAPI) {
 
           const lines = [
             columns(theme.fg("text", modelLabel), theme.fg("muted", formatDirectory(ctx.cwd)), width),
-            columns(theme.fg("muted", metrics), theme.fg("muted", gitLabel), width),
+            columns(metrics, theme.fg("muted", gitLabel), width),
           ];
 
-          const statuses = footerData.getExtensionStatuses();
           for (const [key, text] of Array.from(statuses.entries()).sort(([a], [b]) => a.localeCompare(b))) {
-            if (HIDDEN_STATUS_KEYS.has(key)) continue;
+            if (key === INLINE_STATUS_KEY || HIDDEN_STATUS_KEYS.has(key)) continue;
             for (const line of text.split("\n")) {
               lines.push(truncateToWidth(line, width, theme.fg("dim", "...")));
             }
@@ -315,86 +253,11 @@ export default function dashboardFooter(pi: ExtensionAPI) {
     git = { branch: null, changedFiles: 0, pullRequest: null };
     queriedPrBranch = null;
     lastPrQueryAt = 0;
-    tokensPerSecond = null;
-    runTokens = 0;
-    runStreamMs = 0;
-    resetMessageTracking();
     install(ctx);
-    startSubscriptionUsage(ctx);
   });
 
-  pi.on("model_select", (_event, ctx) => {
-    requestRender?.();
-    if (ctx.mode === "tui") void subscriptionUsage.refresh(ctx);
-  });
-
+  pi.on("model_select", () => requestRender?.());
   pi.on("thinking_level_select", () => requestRender?.());
-
-  pi.on("agent_start", () => {
-    runTokens = 0;
-    runStreamMs = 0;
-    tokensPerSecond = null;
-    resetMessageTracking();
-    requestRender?.();
-  });
-
-  pi.on("message_start", (event) => {
-    if (event.message.role === "assistant") resetMessageTracking();
-  });
-
-  pi.on("message_update", (event) => {
-    if (event.message.role !== "assistant") return;
-    const streamEvent = event.assistantMessageEvent;
-    if (streamEvent.type === "toolcall_delta") {
-      sawToolCall = true;
-      return;
-    }
-    if (streamEvent.type !== "text_delta" && streamEvent.type !== "thinking_delta") return;
-    if (!streamEvent.delta) return;
-
-    const now = Date.now();
-    if (streamStartedAt === null) {
-      streamStartedAt = now;
-      firstDeltaCharacters = streamEvent.delta.length;
-    }
-    lastDeltaAt = now;
-    streamedCharacters += streamEvent.delta.length;
-    deltaCount += 1;
-
-    const elapsedMs = now - streamStartedAt;
-    const charactersAfterFirst = streamedCharacters - firstDeltaCharacters;
-    if (
-      deltaCount >= 2 &&
-      elapsedMs > 0 &&
-      charactersAfterFirst > 0 &&
-      now - lastLiveUpdate >= LIVE_UPDATE_INTERVAL_MS
-    ) {
-      lastLiveUpdate = now;
-      tokensPerSecond = estimateTokens(charactersAfterFirst) / (elapsedMs / 1_000);
-      requestRender?.();
-    }
-  });
-
-  pi.on("message_end", (event) => {
-    if (event.message.role !== "assistant") return;
-    sawToolCall ||= event.message.content.some((block) => block.type === "toolCall");
-
-    if (streamStartedAt !== null && streamedCharacters > 0) {
-      const streamMs = (lastDeltaAt ?? streamStartedAt) - streamStartedAt;
-      const firstTokens = estimateTokens(firstDeltaCharacters);
-      const streamedTokens = !sawToolCall && event.message.usage.output > 0
-        ? Math.max(0, event.message.usage.output - firstTokens)
-        : Math.max(0, estimateTokens(streamedCharacters) - firstTokens);
-      if (deltaCount >= 2 && streamMs >= 50 && streamedTokens > 0) {
-        runTokens += streamedTokens;
-        runStreamMs += streamMs;
-        tokensPerSecond = runTokens / (runStreamMs / 1_000);
-      }
-    }
-    resetMessageTracking();
-    requestRender?.();
-  });
-
   pi.on("turn_end", () => requestRender?.());
   pi.on("agent_settled", () => requestRender?.());
 
@@ -409,7 +272,6 @@ export default function dashboardFooter(pi: ExtensionAPI) {
     generation += 1;
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = undefined;
-    stopSubscriptionUsage();
     requestRender = undefined;
     if (ctx.mode === "tui") ctx.ui.setFooter(undefined);
   });
