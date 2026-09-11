@@ -2,7 +2,7 @@
 name: web-researcher
 description: Researches current information on the public web
 tools: websearch, webfetch
-subagentOnlyExtensions: /Users/magoz/.pi/agent/extensions/web-tools/index.ts
+subagentOnlyExtensions: /home/magoz/.pi/agent/extensions/web-tools/index.ts
 thinking: medium
 systemPromptMode: replace
 inheritProjectContext: false
