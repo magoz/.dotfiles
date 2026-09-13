@@ -6,17 +6,16 @@ import type {
   ReadonlyFooterDataProvider,
 } from "@earendil-works/pi-coding-agent";
 import { getCapabilities, hyperlink, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { SubscriptionUsageTracker } from "./subscription-usage.ts";
 
 const POLL_INTERVAL_MS = 3_000;
 const PR_REFRESH_INTERVAL_MS = 60_000;
+const SUBSCRIPTION_TICK_INTERVAL_MS = 60_000;
 // The footer polls git constantly; --no-optional-locks keeps it from taking
 // .git/index.lock and racing the user's own git commands in the same repo.
 const GIT_READONLY = ["--no-optional-locks"];
 // Extension statuses that would only add noise to the footer.
 const HIDDEN_STATUS_KEYS = new Set(["pi-vimmode", "mcp", "context-budget"]);
-// pi-multi-account's account/quota status is rendered inline on the metrics
-// line instead of as its own row.
-const INLINE_STATUS_KEY = "multi-account-quota";
 
 // Terminal-controlled text such as paths and branch names must not be allowed
 // to inject escape sequences into the TUI.
@@ -81,6 +80,8 @@ interface GitState {
 export default function dashboardFooter(pi: ExtensionAPI) {
   let requestRender: (() => void) | undefined;
   let pollTimer: ReturnType<typeof setInterval> | undefined;
+  let subscriptionTimer: ReturnType<typeof setInterval> | undefined;
+  const subscriptionUsage = new SubscriptionUsageTracker(() => requestRender?.());
   let generation = 0;
   const activeGitRefreshes = new Set<number>();
   let queriedPrBranch: string | null = null;
@@ -205,10 +206,10 @@ export default function dashboardFooter(pi: ExtensionAPI) {
             : "no model";
 
           const statuses = footerData.getExtensionStatuses();
-          // Already themed by pi-multi-account; only the separator is muted.
-          const inlineStatus = statuses.get(INLINE_STATUS_KEY)?.replace(/\n+/g, " ").trim();
-          const metrics = inlineStatus
-            ? `${theme.fg("muted", `${context} · `)}${inlineStatus}`
+          const subscription = subscriptionUsage.getText(theme)
+            ?? (model?.provider === "xai" ? theme.fg("muted", "Grok quota unavailable") : undefined);
+          const metrics = subscription
+            ? `${theme.fg("muted", `${context} · `)}${subscription}`
             : theme.fg("muted", context);
 
           const fileLabel = git.changedFiles === 1 ? "file" : "files";
@@ -229,7 +230,7 @@ export default function dashboardFooter(pi: ExtensionAPI) {
           ];
 
           for (const [key, text] of Array.from(statuses.entries()).sort(([a], [b]) => a.localeCompare(b))) {
-            if (key === INLINE_STATUS_KEY || HIDDEN_STATUS_KEYS.has(key)) continue;
+            if (HIDDEN_STATUS_KEYS.has(key)) continue;
             for (const line of text.split("\n")) {
               lines.push(truncateToWidth(line, width, theme.fg("dim", "...")));
             }
@@ -254,12 +255,30 @@ export default function dashboardFooter(pi: ExtensionAPI) {
     queriedPrBranch = null;
     lastPrQueryAt = 0;
     install(ctx);
+    if (subscriptionTimer) clearInterval(subscriptionTimer);
+    subscriptionTimer = undefined;
+    subscriptionUsage.stop();
+    if (ctx.mode === "tui") {
+      void subscriptionUsage.refresh(ctx);
+      // Countdown updates are cheap; the tracker independently throttles HTTP.
+      subscriptionTimer = setInterval(() => {
+        requestRender?.();
+        void subscriptionUsage.refresh(ctx);
+      }, SUBSCRIPTION_TICK_INTERVAL_MS);
+      subscriptionTimer.unref?.();
+    }
   });
 
-  pi.on("model_select", () => requestRender?.());
+  pi.on("model_select", (_event, ctx) => {
+    if (ctx.mode === "tui") void subscriptionUsage.refresh(ctx);
+    requestRender?.();
+  });
   pi.on("thinking_level_select", () => requestRender?.());
   pi.on("turn_end", () => requestRender?.());
-  pi.on("agent_settled", () => requestRender?.());
+  pi.on("agent_settled", (_event, ctx) => {
+    requestRender?.();
+    if (ctx.mode === "tui") void subscriptionUsage.refresh(ctx);
+  });
 
   pi.on("input", (_event, ctx) => {
     void refreshGit(ctx);
@@ -272,6 +291,9 @@ export default function dashboardFooter(pi: ExtensionAPI) {
     generation += 1;
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = undefined;
+    if (subscriptionTimer) clearInterval(subscriptionTimer);
+    subscriptionTimer = undefined;
+    subscriptionUsage.stop();
     requestRender = undefined;
     if (ctx.mode === "tui") ctx.ui.setFooter(undefined);
   });

@@ -15,11 +15,12 @@
     "npm:pi-mcp-adapter",
     "npm:pi-context-budget@0.1.2",
     "git:github.com/joelhooks/pi-until@7c90bdc90291321f60130984e479bc4a844a7d50",
-    "npm:pi-multi-account@1.21.3"
+    {
+      "source": "npm:pi-multi-account@1.21.3",
+      "extensions": []
+    }
   ],
-  "extensions": [
-    "-extensions/anthropic-auth/index.ts"
-  ],
+  "extensions": [],
   "piVimMode": {
     "ui": {
       "status": {
@@ -38,12 +39,14 @@
   "enabledModels": [
     "openai-codex/gpt-5.6-sol",
     "anthropic/claude-fable-5-1",
-    "openai-codex/gpt-6-astra"
+    "openai-codex/gpt-6-astra",
+    "xai/grok-4.6",
+    "opencode-go/muse-spark-1.3-contributor"
   ],
   "hideThinkingBlock": false,
   "terminal": {
     "hyperlinks": true,
-    "showImages": true,
+    "showImages": false,
     "images": "kitty"
   }
 }
