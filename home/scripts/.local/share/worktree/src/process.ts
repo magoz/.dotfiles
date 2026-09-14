@@ -5,6 +5,8 @@ import { ProcessError } from "./domain"
 export interface RunOptions {
   readonly cwd?: string
   readonly env?: NodeJS.ProcessEnv
+  /** Keep inherited child output off a machine-readable stdout channel. */
+  readonly stdoutToStderr?: boolean
 }
 
 export interface ProcessResult {
@@ -32,24 +34,26 @@ const displayCommand = (command: string, args: ReadonlyArray<string>) =>
 
 const detached = process.platform !== "win32"
 
-const terminateProcessTree = (child: ReturnType<typeof spawn>) => {
-  if (child.pid === undefined) return undefined
+const terminateProcessTree = (child: ReturnType<typeof spawn>): Promise<void> => {
+  const pid = child.pid
+  if (pid === undefined) return Promise.resolve()
   const signal = (name: NodeJS.Signals) => {
     try {
-      if (detached) process.kill(-child.pid!, name)
+      if (detached) process.kill(-pid, name)
       else child.kill(name)
     } catch {
-      // The process may have exited between the state check and the signal.
+      // The leader may exit while resistant descendants still own the group.
     }
   }
   signal("SIGTERM")
-  const timer = setTimeout(() => signal("SIGKILL"), 2_000)
-  timer.unref()
-  return timer
+  // Referenced AND awaited: interruption cannot exit the CLI before SIGKILL.
+  return new Promise((resolve) => {
+    setTimeout(() => { signal("SIGKILL"); resolve() }, 2_000)
+  })
 }
 
 const capture: ProcessService["capture"] = (command, args, options = {}) =>
-  Effect.async<ProcessResult, ProcessError>((resume, signal) => {
+  Effect.async<ProcessResult, ProcessError>((resume) => {
     const child = spawn(command, [...args], {
       cwd: options.cwd,
       env: options.env ?? process.env,
@@ -64,14 +68,8 @@ const capture: ProcessService["capture"] = (command, args, options = {}) =>
     const finish = (effect: Effect.Effect<ProcessResult, ProcessError>) => {
       if (settled) return
       settled = true
-      signal.removeEventListener("abort", abort)
       resume(effect)
     }
-    const abort = () => {
-      terminateProcessTree(child)
-    }
-
-    signal.addEventListener("abort", abort, { once: true })
     child.stdout.setEncoding("utf8")
     child.stderr.setEncoding("utf8")
     child.stdout.on("data", (chunk: string) => {
@@ -108,30 +106,25 @@ const capture: ProcessService["capture"] = (command, args, options = {}) =>
         )
       )
     })
+    return Effect.promise(() => terminateProcessTree(child))
   })
 
 const inherit: ProcessService["inherit"] = (command, args, options = {}) =>
-  Effect.async<void, ProcessError>((resume, signal) => {
+  Effect.async<void, ProcessError>((resume) => {
     const child = spawn(command, [...args], {
       cwd: options.cwd,
       env: options.env ?? process.env,
       shell: false,
       detached,
-      stdio: "inherit"
+      stdio: options.stdoutToStderr ? ["inherit", 2, 2] : "inherit"
     })
     let settled = false
 
     const finish = (effect: Effect.Effect<void, ProcessError>) => {
       if (settled) return
       settled = true
-      signal.removeEventListener("abort", abort)
       resume(effect)
     }
-    const abort = () => {
-      terminateProcessTree(child)
-    }
-
-    signal.addEventListener("abort", abort, { once: true })
     child.on("error", (error) => {
       finish(
         Effect.fail(
@@ -160,6 +153,7 @@ const inherit: ProcessService["inherit"] = (command, args, options = {}) =>
         )
       )
     })
+    return Effect.promise(() => terminateProcessTree(child))
   })
 
 export const ProcessLive = Layer.succeed(Process, { capture, inherit })

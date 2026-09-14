@@ -9,6 +9,7 @@
         "@effect/platform-bun": "^0.89.0",
         "@openauthjs/openauth": "^0.4.3",
         "@opencode-ai/plugin": "1.4.7",
+        "@plannotator/opencode": "0.27.14",
         "effect": "^3.21.0",
       },
     },
@@ -85,6 +86,8 @@
     "@parcel/watcher-win32-ia32": ["@parcel/watcher-win32-ia32@2.5.6", "", { "os": "win32", "cpu": "ia32" }, "sha512-k35yLp1ZMwwee3Ez/pxBi5cf4AoBKYXj00CZ80jUz5h8prpiaQsiRPKQMxoLstNuqe2vR4RNPEAEcjEFzhEz/g=="],
 
     "@parcel/watcher-win32-x64": ["@parcel/watcher-win32-x64@2.5.6", "", { "os": "win32", "cpu": "x64" }, "sha512-hbQlYcCq5dlAX9Qx+kFb0FHue6vbjlf0FrNzSKdYK2APUf7tGfGxQCk2ihEREmbR6ZMc0MVAD5RIX/41gpUzTw=="],
+
+    "@plannotator/opencode": ["@plannotator/opencode@0.27.14", "", {}, "sha512-YGgxio134/WyNPIEAkbFm9wg++e6eynYULlTOW/2sXN8SLXVvPjr1TeC/PdABK9xL9PZiDwQzW4sFQ4oVgjWMQ=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.0.0-beta.3", "", {}, "sha512-0ifF3BjA1E8SY9C+nUew8RefNOIq0cDlYALPty4rhUm8Rrl6tCM8hBT4bhGhx7I7iXD0uAgt50lgo8dD73ACMw=="],
 

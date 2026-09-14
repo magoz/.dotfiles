@@ -38,12 +38,16 @@ HOME=$positive_home zsh -dfc '
   [[ $ZDOTDIR == "$HOME/.config/zsh" ]]
   [[ $TERMINAL == ghostty ]]
   [[ ${aliases[box]} == "herdr --remote box --remote-keybindings server" ]]
-  [[ ${aliases[o]} == opencode2 ]]
+  [[ ${aliases[o]} == opencode ]]
 ' >/dev/null 2>&1
 [[ -L $positive_home/.config/starship.toml ]]
 [[ -e $positive_home/.config/vimium/vimium.css ]]
 grep -Eq '^[[:space:]]+starship \\$' "$MACOS_DIR/install"
 ! grep -Fq powerlevel10k "$MACOS_DIR/install"
+bash -n "$MACOS_DIR/install"
+grep -Fxq 'npm uninstall --global --ignore-scripts @opencode-ai/cli' "$MACOS_DIR/install"
+grep -Fxq 'npm install --global --allow-scripts=@opencode/cli @opencode/cli' "$MACOS_DIR/install"
+! grep -Eq '@opencode-ai/cli@(beta|next)' "$MACOS_DIR/install"
 ! grep -Eiq 'iterm2|tmux|wezterm' "$MACOS_DIR/install" "$MACOS_DIR/stow"
 [[ ! -e $REPO_ROOT/home/iterm2 ]]
 [[ ! -e $REPO_ROOT/home/tmux ]]

@@ -32,13 +32,13 @@ printf 'ok: OpenCode Vim options target the plugin directory and enable Enter su
 # Keep completion generation and dependency installation offline and isolated.
 mkdir -p "$TEST_ROOT/bin"
 export ARCH_TEST_LOG=$TEST_ROOT/commands
-for tool in herdr opencode2 pnpm npm bun pi nvim tree-sitter; do
+for tool in herdr opencode pnpm npm bun pi nvim tree-sitter; do
   cat >"$TEST_ROOT/bin/$tool" <<'EOF'
 #!/usr/bin/env bash
 printf '%s %s\n' "${0##*/}" "$*" >>"$ARCH_TEST_LOG"
 case "${0##*/} $*" in
   'npm --version') printf '11.16.0\n' ;;
-  'herdr completion zsh'|'opencode2 --completions zsh'|'pnpm completion zsh')
+  'herdr completion zsh'|'opencode --completions zsh'|'pnpm completion zsh')
     printf '#compdef %s\n' "${0##*/}"
     ;;
 esac
@@ -46,6 +46,15 @@ EOF
   chmod +x "$TEST_ROOT/bin/$tool"
 done
 export PATH="$TEST_ROOT/bin:$PATH"
+
+mkdir -p "$XDG_CACHE_HOME/zsh/completions"
+printf '#compdef opencode2\n' >"$XDG_CACHE_HOME/zsh/completions/_opencode2"
+"$REPO_ROOT/home/zsh/.local/bin/update-zsh-completions"
+[[ $(<"$XDG_CACHE_HOME/zsh/completions/_opencode") == '#compdef opencode' ]]
+[[ ! -e $XDG_CACHE_HOME/zsh/completions/_opencode2 ]]
+"$REPO_ROOT/home/zsh/.local/bin/update-zsh-completions"
+[[ $(<"$XDG_CACHE_HOME/zsh/completions/_opencode") == '#compdef opencode' ]]
+printf 'ok: completions migrate to opencode and regenerate safely\n'
 
 positive_home=$TEST_ROOT/positive
 mkdir -p "$positive_home/.config/ghostty" "$positive_home/.config/hypr" "$positive_home/.pi/agent/sessions"
@@ -75,7 +84,7 @@ HOME=$positive_home zsh -dfc '
   [[ -z ${HOMEBREW_PREFIX:-} ]]
   [[ $ZDOTDIR == "$HOME/.config/zsh" ]]
   [[ :$PATH: == *:$HOME/.local/share/npm/bin:* ]]
-  [[ ${aliases[o]} == opencode2 ]]
+  [[ ${aliases[o]} == opencode ]]
 ' >/dev/null 2>&1
 printf 'ok: repeated Stow is safe and Linux Zsh loads\n'
 
@@ -118,7 +127,12 @@ if [[ -f /etc/arch-release && $EUID -ne 0 ]]; then
   [[ $(git config --global core.excludesFile) == "$REPO_ROOT/home/git/.config/git/ignore" ]]
   [[ $(git config --global pull.ff) == only ]]
   grep -Fq 'npm install --global --ignore-scripts @earendil-works/pi-coding-agent' "$ARCH_TEST_LOG"
-  grep -Fq 'npm install --global --allow-scripts=@opencode-ai/cli @opencode-ai/cli@beta' "$ARCH_TEST_LOG"
+  grep -Fq 'npm uninstall --global --ignore-scripts @opencode-ai/cli' "$ARCH_TEST_LOG"
+  grep -Fq 'npm install --global --allow-scripts=@opencode/cli @opencode/cli' "$ARCH_TEST_LOG"
+  uninstall_line=$(grep -nFx 'npm uninstall --global --ignore-scripts @opencode-ai/cli' "$ARCH_TEST_LOG" | cut -d: -f1)
+  install_line=$(grep -nFx 'npm install --global --allow-scripts=@opencode/cli @opencode/cli' "$ARCH_TEST_LOG" | cut -d: -f1)
+  [[ $uninstall_line -lt $install_line ]]
+  grep -Fq "bun $REPO_ROOT/home/opencode/.config/opencode/scripts/install-plannotator.mjs" "$ARCH_TEST_LOG"
   grep -Fq 'nvim --headless +Lazy! sync +qa' "$ARCH_TEST_LOG"
   printf 'ok: mocked installer installs dependencies and preserves Git identity/authentication\n'
 else

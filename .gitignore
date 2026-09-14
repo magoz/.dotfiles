@@ -20,6 +20,7 @@ home/zsh/.config/zsh/.zcompcache
 
 # opencode
 home/opencode/.config/opencode/node_modules/
+home/opencode/.config/opencode/bin/
 home/opencode/.config/opencode/plugins/*/node_modules/
 home/opencode/.config/opencode/service.json
 home/opencode/.config/opencode/service-*.json

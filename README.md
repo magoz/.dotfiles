@@ -106,7 +106,7 @@ git pull
 ./arch/install
 ```
 
-The installer applies shell, Starship, Neovim, LazyGit, agents, and scripts; installs user-local npm 11.16.0, Pi, OpenCode 2 beta, and package/plugin dependencies; and refreshes completions. It sets portable Git workflow defaults and the tracked ignore file while preserving your existing Git identity and credential helpers. It does not install the macOS Git configuration.
+The installer applies shell, Starship, Neovim, LazyGit, agents, and scripts; installs user-local npm 11.16.0, Pi, stable OpenCode 2 (`@opencode/cli`), and package/plugin dependencies; and refreshes completions. It sets portable Git workflow defaults and the tracked ignore file while preserving your existing Git identity and credential helpers. It does not install the macOS Git configuration.
 
 To apply configuration only (no dependency installation or Git changes):
 
@@ -117,6 +117,28 @@ To apply configuration only (no dependency installation or Git changes):
 Neither command changes the login shell, runs system provisioning, manages services, or touches Hyprland, Ghostty, or other desktop configuration. Omarchy retains ownership of its desktop. Existing conflicting files or unrelated symlinks are reported rather than overwritten; review and back up any configuration you explicitly want to replace before rerunning. Known links from the old root-level package layout are migrated automatically.
 
 Start the configured shell with `exec zsh -l`. Selecting Zsh as your default login shell is a separate, deliberate choice.
+
+### OpenCode 2 migration
+
+Both installers remove the old `@opencode-ai/cli` preview and install stable `@opencode/cli`. The `o` alias now runs `opencode`; `opencode2` remains a compatibility command. To migrate only OpenCode on an existing setup:
+
+```sh
+export NPM_CONFIG_PREFIX="$HOME/.local/share/npm"
+export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+npm uninstall --global --ignore-scripts @opencode-ai/cli
+npm install --global --allow-scripts=@opencode/cli @opencode/cli
+~/.local/bin/update-zsh-completions
+exec zsh -l
+```
+
+These npm commands use npm 11.16+ (installed by `arch/install`). System-managed V1 installations are left untouched; the user-local npm bin directory must precede them in `PATH`. Check `command -v opencode` and `opencode --version` after restarting your shell. The legacy `opencode-ai` npm package is V1, not the V2 upgrade target.
+
+### OpenCode assessment alongside Pi
+
+OpenCode 2.0.3 now has additive Herdr, pane-local worktree handoff/management,
+native delegation, shared-skill adapters, Plannotator, `until`, and `/quota` wiring.
+Shared worktree creation still defaults to Pi; OpenCode requires `--agent opencode`.
+See [assessment setup, safety restrictions and remaining live checks](home/opencode/.config/opencode/ASSESSMENT.md).
 
 ## Box agent host
 

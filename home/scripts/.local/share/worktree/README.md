@@ -1,8 +1,9 @@
 # worktree
 
 `worktree` creates one Git worktree through Herdr, provisions it for local
-development, and launches a fresh named Pi session in the new Herdr workspace.
-Every entry point calls the same CLI so the lifecycle stays identical.
+development, and launches a fresh agent in the new Herdr workspace. Pi remains
+the default; `--agent opencode` explicitly selects the additive OpenCode assessment.
+Existing Pi entry points are unchanged and continue to use Pi.
 
 ## Pi-only quick start
 
@@ -45,8 +46,8 @@ explicit user security decision.
 
 ## Requirements
 
-- a running Herdr server with the Pi integration installed;
-- `git`, `bun`, `herdr`, `pi`, `vercel`, `provision-env`, and `sandbox-db` in `PATH`;
+- a running Herdr server with the selected harness integration installed;
+- `git`, `bun`, `herdr`, `vercel`, `provision-env`, and `sandbox-db` in `PATH`, plus `pi` (default) or `opencode` for the selected harness;
 - a source Git checkout linked to Vercel, or sibling checkouts sharing one Vercel identity (Pi can resolve a missing link before creation);
 - ignored `.env.local`, `.env.test`, and `.vercel/` paths in the repository;
 - the project-local sandbox database profile expected by `provision-env`, or valid global `sandbox-db` authentication.
@@ -59,6 +60,39 @@ worktree create \
   --branch feat/reporting \
   --prompt "Implement the reporting workflow"
 ```
+
+### Harness selection and machine-readable results
+
+`--agent pi|opencode` is validated before any Git, Herdr, or provisioning commands.
+Omitting it is exactly equivalent to `--agent pi`; existing Pi launch arguments
+and the default human-readable success summary remain unchanged.
+
+```sh
+worktree create --agent opencode --branch feat/oc-assessment \
+  --prompt "Assess the reporting workflow" --json
+```
+
+OpenCode starts with `herdr agent start NAME --kind opencode --pane ID --timeout
+120000`, without Pi's `-- --name LABEL` arguments. Both harnesses use the same
+fetch, Vercel/environment/database provisioning, setup, readiness verification,
+and single kickoff path. OpenCode authentication, permissions, and project trust
+must already be usable or be resolved interactively; the CLI does not approve or
+bypass them.
+
+`--json` emits one success object on stdout, with `source`, `branch`, `base`,
+`path`, `workspaceId`, `paneId`, `agentName`, `agentKind`, and `warnings` fields.
+Progress, warnings, and provisioning/setup stdout and stderr go to stderr.
+Creation/validation failures exit nonzero with stderr diagnostics and no success
+object; callers must check the exit status, not just parse stdout. Help/version
+are ordinary CLI informational output, not this creation-result interface.
+`agentName` is the requested Herdr alias (not an OpenCode session ID); after timeout
+recovery the alias may be unavailable, so use `paneId` to address the agent.
+
+OpenCode's `dotfiles-tools` plugin launches this CLI through the invoking TUI's
+pane-local environment, never the shared server's environment. Source-session
+shutdown is deliberately manual after a successful ownership handoff.
+**Do not use Pi's `/worktrees` retirement on OpenCode assessment worktrees:** its
+agent checks currently see only Pi. Use the additive mixed-agent manager below.
 
 `--repo` defaults to the current directory. When `--base` is omitted, the CLI
 fetches **origin's live default-branch tip** before creating anything and passes
@@ -182,8 +216,8 @@ In order, `worktree create`:
 3. resolves the workspace's initial root pane;
 4. runs `provision-env --database --non-interactive`, failing safely on unexpected existing env files, pulling Development and `test` Vercel variables, removing deployment-only metadata and integration database URLs, and creating independent database leases for both;
 5. runs every explicit `--setup` command;
-6. starts a fresh named Pi session without a task attached;
-7. verifies Pi is interactive in the destination pane;
+6. starts a fresh selected agent (Pi by default) without a task attached;
+7. verifies the agent's kind, alias, destination pane, and explicit interactive readiness;
 8. submits the kickoff task as the fresh session's first prompt;
 9. focuses the destination workspace.
 
@@ -198,14 +232,20 @@ and database leases created by that invocation. After Herdr has created the chec
 worktree, branch, and workspace on later failure so the exact state can be
 inspected and resumed. It never force-removes a checkout or deletes a branch.
 
-Herdr waits for Pi to become interactive before submitting the kickoff through
-`agent prompt`, avoiding both lost terminal input and false launch timeouts when
-Pi immediately enters a working state. Only Herdr's structured startup-timeout
-error is recoverable, and only when Pi is already detected as idle or working in
-the exact destination pane. Blocked startup—such as Pi's trust selector—never
-receives the kickoff as terminal input. A later workspace-focus failure is
-reported as a warning while the command still exits successfully, allowing Pi
-adapters to shut down the source instead of leaving two active sessions.
+The CLI verifies the selected harness is interactive before submitting the kickoff
+through `agent prompt`, avoiding lost terminal input and false launch timeouts
+when the agent immediately enters a working state. Only Herdr's structured
+startup-timeout error is recoverable, and only after a single pane lookup confirms
+the matching kind, exact pane, `interactive_ready: true`, no pending launch, and
+an idle or working status. Normal startup also verifies the named alias. Missing
+kind/readiness evidence fails closed, including for Pi; older Herdr responses
+that only report an idle/working status are no longer enough to recover a timeout.
+Blocked startup—such as Pi's trust selector—never receives kickoff terminal input.
+There are no launch or prompt retries. A failed prompt acknowledgement can mean the
+task was accepted: inspect the preserved destination rather than resubmitting
+blindly. A later workspace-focus failure is reported as a warning while the
+command still exits successfully, allowing Pi adapters to shut down the source
+instead of leaving two active sessions.
 
 ## Development
 
@@ -215,3 +255,50 @@ bun install
 bun test
 bun run typecheck
 ```
+
+## Mixed-agent management (additive)
+
+`worktree-manage` is a headless, JSON-only manager for **both Pi and OpenCode**:
+
+```sh
+worktree-manage list --cwd /canonical/source
+worktree-manage plan --cwd /canonical/source --path /canonical/target --workspace WORKSPACE_ID
+worktree-manage renew --cwd /canonical/source --path /canonical/target --workspace WORKSPACE_ID --ttl 7d
+worktree-manage retire --cwd /canonical/source --path /canonical/target --workspace WORKSPACE_ID --confirm /canonical/target --expect-plan TOKEN_FROM_PLAN
+```
+
+Retirement keeps the Git branch by default. Optional `--delete-branch` uses only
+`git branch -d`; squash-merged/unmerged branches are retained and reported, never
+forced. Required `--expect-plan` pins the confirmed repository, branch, HEAD and
+lease IDs. Optional `--expect-releases test,default` additionally checks lease names
+(`--expect-releases ''` for none). Run inside the intended Herdr pane; no implicit
+current-directory target. Protected/default leases are refused before any release.
+
+The existing **Pi dashboard cannot see OpenCode agents**. Use this manager (or
+OpenCode `/worktrees`) for mixed assessment worktrees. Pi defaults/files unchanged.
+
+Inventory uses explicit Herdr `worktree list --cwd`, workspace/agent lists, Git
+status, and sandbox-db lease records. It never reads environment files or prints
+raw command responses/errors. Unknown identities/statuses fail closed. Retirement
+requires the canonical exact linked checkout and workspace; primary, detached,
+prunable, current/subdirectory, dirty, unavailable and active/blocked/unknown-agent
+targets are refused. All agent kinds are considered. Both default/test plus any
+extra recorded leases are checked before deletion; live/missing leases are released
+through sandbox-db before Herdr removes the workspace and checkout. Full checks
+repeat before each release and immediately before removal. Commands have bounded
+60-second deadlines; cancellation waits for descendant SIGKILL cleanup.
+
+Mutation journals live in `~/.local/state/worktree-manager`: private directory,
+mode-0600 append-only receipts synced **before** irreversible commands. Completed
+receipts are archived as `*.complete.jsonl`, permitting later operations. An active
+receipt blocks another mutation of that target. On failure/interruption, inspect
+its pending/completed steps and independently reconcile Git, Herdr and sandbox-db
+state before manually archiving the receipt. **Never blindly retry or delete a
+receipt to bypass an unknown outcome.** No automatic rollback or force-reset helper.
+Read-only inspection remains available. Prior successful releases cannot be undone.
+
+Checks are snapshots, not cross-system locks: an external actor can change agent,
+Git, workspace or lease state in the final command gap. Avoid concurrent changes
+to a retirement target. Idle/done agents may be closed by an explicitly confirmed
+retirement; the source checkout/workspace remains open. Ignored provisioning files
+are not treated as Git dirt. Unknown extra harnesses conservatively block retirement.

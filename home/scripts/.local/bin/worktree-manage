@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Additive mixed-agent manager; existing worktree/Pi defaults stay unchanged.
+set -euo pipefail
+entry="${XDG_DATA_HOME:-$HOME/.local/share}/worktree/src/manage-main.ts"
+if ! command -v bun >/dev/null 2>&1 || [[ ! -f "$entry" ]]; then
+  echo 'worktree-manage: bun and installed worktree scripts required' >&2
+  exit 127
+fi
+exec bun "$entry" "$@"

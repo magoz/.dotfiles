@@ -55,11 +55,14 @@ if [[ $(npm --version) != 11.16.0 ]]; then
 fi
 [[ $(npm --version) == 11.16.0 ]] || { printf 'error: npm 11.16.0 is required\n' >&2; exit 1; }
 npm install --global --ignore-scripts @earendil-works/pi-coding-agent
-npm install --global --allow-scripts=@opencode-ai/cli @opencode-ai/cli@beta
+# Stable V2 owns both opencode and opencode2; remove the old preview first.
+npm uninstall --global --ignore-scripts @opencode-ai/cli
+npm install --global --allow-scripts=@opencode/cli @opencode/cli
 
 bun install --cwd "$HOME_PACKAGES/scripts/.local/share/sandbox-db"
 bun install --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
-bun install --cwd "$HOME_PACKAGES/opencode/.config/opencode"
+bun install --ignore-scripts --cwd "$HOME_PACKAGES/opencode/.config/opencode"
+bun "$HOME_PACKAGES/opencode/.config/opencode/scripts/install-plannotator.mjs"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-anthropic-auth"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-vim-compat"
 npm ci --omit=dev --prefix "$HOME_PACKAGES/pi/.pi"

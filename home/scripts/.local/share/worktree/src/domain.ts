@@ -1,4 +1,4 @@
-import { Data, Schema } from "effect"
+import { Data, Effect, Schema } from "effect"
 
 export class WorktreeError extends Data.TaggedError("WorktreeError")<{
   readonly message: string
@@ -72,7 +72,19 @@ export const AgentInfoResponse = Schema.Struct({
   })
 })
 
+export const AgentKind = Schema.Literal("pi", "opencode")
+export type AgentKind = typeof AgentKind.Type
+
+export const agentDisplayName = (kind: AgentKind) => kind === "pi" ? "Pi" : "OpenCode"
+
+export const resolveAgentKind = (kind: unknown) =>
+  Schema.decodeUnknown(AgentKind)(kind === undefined ? "pi" : kind).pipe(
+    // Also validate programmatic callers before allocating any resources.
+    Effect.mapError(() => new WorktreeError({ message: "agent must be pi or opencode" }))
+  )
+
 export interface CreateOptions {
+  readonly agent?: AgentKind
   readonly repo: string
   readonly branch: string
   readonly base?: string
@@ -91,5 +103,6 @@ export interface CreatedEnvironment {
   readonly workspaceId: string
   readonly paneId: string
   readonly agentName: string
+  readonly agentKind: AgentKind
   readonly warnings: ReadonlyArray<string>
 }

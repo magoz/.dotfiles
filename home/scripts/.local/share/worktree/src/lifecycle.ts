@@ -1,12 +1,12 @@
 import { Console, Effect, Either } from "effect"
-import { type CreateOptions, type CreatedEnvironment, WorktreeError } from "./domain"
+import { type CreateOptions, type CreatedEnvironment, WorktreeError, agentDisplayName, resolveAgentKind } from "./domain"
 import { defaultWorktreePath, requireNewBranch, resolveBase, resolveRepository } from "./git"
 import {
   agentNameFor,
   createHerdrWorktree,
   findRootPane,
   focusWorkspace,
-  startPi
+  startAgent
 } from "./herdr"
 import { Process } from "./process"
 
@@ -48,6 +48,8 @@ const processEnvShell = () => process.env.SHELL || "/bin/sh"
 
 export const createEnvironment = (options: CreateOptions) =>
   Effect.gen(function* () {
+    const agentKind = yield* resolveAgentKind(options.agent)
+    const agentLabel = agentDisplayName(agentKind)
     const source = yield* resolveRepository(options.repo)
     if (options.base === undefined) yield* requireNewBranch(source, options.branch)
     const base = yield* resolveBase(source, options.base)
@@ -81,19 +83,19 @@ export const createEnvironment = (options: CreateOptions) =>
     )
 
     const agentName = agentNameFor(options.branch, workspaceId)
-    yield* Console.log(`worktree: starting Pi as ${agentName}`)
-    yield* startPi(pane.pane_id, agentName, label, options.prompt).pipe(
+    yield* Console.log(`worktree: starting ${agentLabel} as ${agentName}`)
+    yield* startAgent(agentKind, pane.pane_id, agentName, label, options.prompt).pipe(
       Effect.mapError((error) =>
         new WorktreeError({
           message:
-            `Pi startup failed; preserved ready worktree ${destination} and Herdr workspace ${workspaceId}\n` +
+            `${agentLabel} startup failed; preserved ready worktree ${destination} and Herdr workspace ${workspaceId}\n` +
             error.message
         })
       )
     )
 
-    // Herdr waits for the fresh Pi to become interactive before submitting the
-    // kickoff, avoiding false startup timeouts while Pi immediately begins work.
+    // Submit the kickoff only after verifying the selected harness is interactive.
+    // Launch and prompt are never blindly retried.
     const warnings: Array<string> = []
     const focused = yield* Effect.either(focusWorkspace(workspaceId))
     if (Either.isLeft(focused)) {
@@ -109,6 +111,7 @@ export const createEnvironment = (options: CreateOptions) =>
       workspaceId,
       paneId: pane.pane_id,
       agentName,
+      agentKind,
       warnings
     } satisfies CreatedEnvironment
   })

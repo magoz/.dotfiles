@@ -1,16 +1,7 @@
 ---
-description: Check preemptive compaction status
+description: Explain native OpenCode compaction (legacy alias)
 ---
 
-Check if preemptive compaction is enabled and view current settings.
-
-Usage: /pcompact-status
-
-Shows:
-- Enabled/disabled state
-- Trigger threshold (80%)
-- Context limit
-- Cooldown period
-- Active compactions
-
-$ARGUMENTS
+This legacy alias has no custom preemptive-compaction plugin behind it.
+Explain that OpenCode uses native automatic compaction (`compaction.auto`) and
+`/compact` for manual compaction. Do not invent thresholds, cooldowns or status.

@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { adapt, body, digest } from './server.js';
+const expected = JSON.parse(await readFile(new URL('./sources.json', import.meta.url)));
+const sharedRoot = new URL('../../../../../agents/.agents/skills/', import.meta.url);
+for (const [id, hash] of Object.entries(expected)) test(`canonical ${id} digest is reviewed; OpenCode-only overlay`, async () => {
+  const source = await readFile(new URL(`${id}/SKILL.md`, sharedRoot), 'utf8');
+  const content = body(source);
+  assert.equal(digest(content), hash, 'Canonical policy changed: review adapter before updating sources.json');
+  const skill = { id, location: `/shared/${id}/SKILL.md`, content };
+  const result = adapt(skill, expected, ['/shared']);
+  assert.match(result.content, /OpenCode assessment runtime adapter/);
+  assert.match(result.content, /native subagent/);
+  assert.match(result.content, /source TUI/);
+  assert.equal(skill.content, content);
+  assert.equal(adapt({ ...skill, location: `/project/${id}/SKILL.md` }, expected, ['/shared']), undefined);
+  assert.equal(adapt({ ...skill, content: content + '\nchanged' }, expected, ['/shared']).autoinvoke, false);
+  assert.equal(adapt({ ...skill, content: result.content }, expected, ['/shared']).autoinvoke, false, 'A forged/copied adapter header must not bypass source drift');
+});

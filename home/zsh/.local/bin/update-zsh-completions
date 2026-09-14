@@ -30,5 +30,7 @@ write_completion() {
 }
 
 write_completion herdr herdr completion zsh
-write_completion opencode2 opencode2 --completions zsh
+write_completion opencode opencode --completions zsh
+# Drop the completion generated for the retired preview command.
+rm -f "$completion_dir/_opencode2"
 write_completion pnpm pnpm completion zsh

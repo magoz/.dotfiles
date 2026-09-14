@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Create a provisioned Herdr worktree and launch a fresh Pi session.",
+  "description": "Create and manage provisioned Herdr worktrees; Pi default, OpenCode opt-in.",
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit"

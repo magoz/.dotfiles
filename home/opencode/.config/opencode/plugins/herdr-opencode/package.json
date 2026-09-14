@@ -1,0 +1,6 @@
+{
+  "name": "dotfiles-herdr-opencode",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./server.js", "./server": "./server.js", "./tui": "./tui.js" }
+}

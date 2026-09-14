@@ -6,7 +6,10 @@ import {
   WorktreeCreatedResponse,
   WorktreeError,
   type ProcessError,
-  type CreateOptions
+  type CreateOptions,
+  type AgentKind,
+  agentDisplayName,
+  resolveAgentKind
 } from "./domain"
 import { Process } from "./process"
 
@@ -74,7 +77,7 @@ export const agentNameFor = (branch: string, workspaceId: string) => {
   return `wt-${prefix.slice(0, Math.max(1, 28 - suffix.length))}-${suffix}`.slice(0, 32)
 }
 
-const verifyReadyAgent = (agentName: string, paneId: string) =>
+const verifyReadyAgent = (kind: AgentKind, agentName: string, paneId: string) =>
   Effect.gen(function* () {
     const process = yield* Process
     const response = yield* process.capture("herdr", ["agent", "get", agentName])
@@ -83,11 +86,12 @@ const verifyReadyAgent = (agentName: string, paneId: string) =>
     if (
       agent.pane_id !== paneId ||
       agent.name !== agentName ||
+      agent.agent !== kind ||
       agent.interactive_ready !== true ||
       agent.launch_pending === true
     ) {
       return yield* Effect.fail(
-        new WorktreeError({ message: `Pi agent ${agentName} is not ready in pane ${paneId}` })
+        new WorktreeError({ message: `${agentDisplayName(kind)} agent ${agentName} is not ready in pane ${paneId}` })
       )
     }
   })
@@ -105,7 +109,7 @@ const isAgentStartTimeout = (error: ProcessError | WorktreeError) => {
   return false
 }
 
-const verifyDetectedPi = (paneId: string) =>
+const verifyDetectedAgent = (kind: AgentKind, paneId: string) =>
   Effect.gen(function* () {
     const process = yield* Process
     const response = yield* process.capture("herdr", ["agent", "get", paneId])
@@ -113,22 +117,26 @@ const verifyDetectedPi = (paneId: string) =>
     const agent = decoded.result.agent
     if (
       agent.pane_id !== paneId ||
-      agent.agent !== "pi" ||
+      agent.agent !== kind ||
+      agent.interactive_ready !== true ||
+      agent.launch_pending === true ||
       !["idle", "working"].includes(agent.agent_status ?? "")
     ) {
       return yield* Effect.fail(
-        new WorktreeError({ message: `Pi was not detected in pane ${paneId}` })
+        new WorktreeError({ message: `${agentDisplayName(kind)} was not detected ready in pane ${paneId}` })
       )
     }
   })
 
-export const startPi = (
+export const startAgent = (
+  requestedKind: AgentKind,
   paneId: string,
   agentName: string,
   sessionName: string,
   prompt?: string
 ) =>
   Effect.gen(function* () {
+    const kind = yield* resolveAgentKind(requestedKind)
     const process = yield* Process
     const launch = process
       .capture("herdr", [
@@ -136,24 +144,23 @@ export const startPi = (
         "start",
         agentName,
         "--kind",
-        "pi",
+        kind,
         "--pane",
         paneId,
         "--timeout",
         "120000",
-        "--",
-        "--name",
-        sessionName
+        ...(kind === "pi" ? ["--", "--name", sessionName] : [])
       ])
       .pipe(
         Effect.flatMap((started) =>
           decodeJson(AgentStartedResponse, started.stdout, "agent start")
         ),
         Effect.flatMap((decoded) =>
-          decoded.result.agent.pane_id === paneId
+          decoded.result.agent.pane_id === paneId &&
+          (decoded.result.agent.agent === undefined || decoded.result.agent.agent === kind)
             ? Effect.void
             : Effect.fail(
-                new WorktreeError({ message: "Herdr started Pi in an unexpected pane" })
+                new WorktreeError({ message: `Herdr started ${agentDisplayName(kind)} in an unexpected pane or with an unexpected kind` })
               )
         )
       )
@@ -162,19 +169,27 @@ export const startPi = (
       Effect.as(false),
       Effect.catchAll((startError) =>
         isAgentStartTimeout(startError)
-          ? verifyDetectedPi(paneId).pipe(
+          ? verifyDetectedAgent(kind, paneId).pipe(
               Effect.as(true),
               Effect.catchAll(() => Effect.fail(startError))
             )
           : Effect.fail(startError)
       )
     )
-    if (!recoveredFromTimeout) yield* verifyReadyAgent(agentName, paneId)
+    if (!recoveredFromTimeout) yield* verifyReadyAgent(kind, agentName, paneId)
 
     if (prompt?.trim()) {
       yield* process.capture("herdr", ["agent", "prompt", paneId, prompt.trim()])
     }
   })
+
+/** Compatibility entry point: Pi still receives its exact session-name argv. */
+export const startPi = (
+  paneId: string,
+  agentName: string,
+  sessionName: string,
+  prompt?: string
+) => startAgent("pi", paneId, agentName, sessionName, prompt)
 
 export const focusWorkspace = (workspaceId: string) =>
   Effect.gen(function* () {

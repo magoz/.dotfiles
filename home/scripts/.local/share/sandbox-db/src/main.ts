@@ -65,7 +65,7 @@ const timestamp = (offsetSeconds = 0) =>
 const slugify = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "worktree"
 
-const report = (json: boolean, payload: Record<string, string | number>) => {
+const report = (json: boolean, payload: Record<string, string | number | boolean>) => {
   if (json) return Console.log(JSON.stringify(payload, null, 2))
   const width = Math.max(...Object.keys(payload).map((key) => key.length))
   const lines = Object.entries(payload).map(([key, value]) => `${key.padEnd(width)}  ${value}`)
@@ -590,6 +590,10 @@ const status = Command.make(
       const branch = yield* getBranch(config, lease.value.branchId)
       yield* report(json, {
         status: Option.isSome(branch) ? "live" : "missing",
+        // Read-only release eligibility: consumers can check EVERY lease before
+        // deleting any. The release command still repeats its own guardrails.
+        releasable: lease.value.branchName.startsWith(BRANCH_PREFIX) &&
+          (Option.isNone(branch) || (branch.value.default !== true && branch.value.protected !== true)),
         lease: lease.value.leaseName,
         branch_name: lease.value.branchName,
         branch_id: lease.value.branchId,

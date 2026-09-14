@@ -1,7 +1,12 @@
 {
   "name": "opencode-global-config",
   "private": true,
+  "scripts": {
+    "test:native": "python3 tests/native-smoke.py",
+    "test": "node --test tests/*.test.mjs plugins/opencode-anthropic-auth/index.test.mjs plugins/dotfiles-tools/test/*.test.js plugins/skill-adapters/*.test.js plugins/subscription-usage/*.test.js && bun test plugins/worktree-manager/tui.test.js"
+  },
   "dependencies": {
+    "@plannotator/opencode": "0.27.14",
     "@effect/platform": "^0.96.0",
     "@effect/platform-bun": "^0.89.0",
     "@openauthjs/openauth": "^0.4.3",

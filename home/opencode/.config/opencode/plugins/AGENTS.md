@@ -2,9 +2,18 @@
 
 Local OpenCode runtime plugins.
 
-## Current plugin
+## Integrations
 
-- `opencode-anthropic-auth/index.mjs`
+- `opencode-anthropic-auth/index.mjs`: existing OAuth compatibility, detailed below.
+- `dotfiles-tools`: pane-local worktree/condition bridge; never trust server Herdr env.
+- `herdr-opencode`: unchanged vendored V12; preserve provenance.
+- `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.
+- `skill-adapters`: canonical source digests and native harness substitutions.
+- `subscription-usage`: server-only OAuth resolution, sanitized on-demand TUI output.
+- `plannotator-v2`: wrapper around pinned upstream native plugin.
+
+See `../ASSESSMENT.md` and each plugin README. Pi/shared skills stay unchanged.
+Run root `npm test`; no live resources or provider calls in tests.
 
 ## Why this plugin exists
 

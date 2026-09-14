@@ -79,7 +79,8 @@ bun install --cwd "$HOME_PACKAGES/scripts/.local/share/sandbox-db"
 bun install --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 
 echo "📦 Installing OpenCode dependencies"
-bun install --cwd "$HOME_PACKAGES/opencode/.config/opencode"
+bun install --ignore-scripts --cwd "$HOME_PACKAGES/opencode/.config/opencode"
+bun "$HOME_PACKAGES/opencode/.config/opencode/scripts/install-plannotator.mjs"
 
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-anthropic-auth"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-vim-compat"
@@ -147,9 +148,10 @@ else
   echo "pnpm already installed, skipping"
 fi
 
-# OpenCode 2 beta
+# Stable V2 owns both opencode and opencode2; remove the old preview first.
 echo "🤖 Installing OpenCode 2"
-npm install -g @opencode-ai/cli@next
+npm uninstall --global --ignore-scripts @opencode-ai/cli
+npm install --global --allow-scripts=@opencode/cli @opencode/cli
 
 "$HOME/.local/bin/update-zsh-completions"
 printf '\nFor Local + Box in Herdr, run ./macos/setup-box from a local Mac terminal.\n'

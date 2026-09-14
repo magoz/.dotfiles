@@ -10,6 +10,10 @@
     "input.delete": "delete,shift+delete"
   },
   "plugins": [
+    { "package": "./plugins/herdr-opencode" },
+    { "package": "./plugins/dotfiles-tools" },
+    { "package": "./plugins/worktree-manager" },
+    { "package": "./plugins/subscription-usage" },
     {
       "package": "./plugins/opencode-vim-compat",
       "options": {
