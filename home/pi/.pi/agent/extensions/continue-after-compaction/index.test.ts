@@ -31,14 +31,18 @@ type RegisteredTool = {
   ): Promise<ToolResult>;
 };
 
-type EventContext = { sessionManager: { getBranch(): SessionEntry[] } };
+type EventContext = {
+  sessionManager: { getBranch(): SessionEntry[] };
+  hasPendingMessages(): boolean;
+  isIdle(): boolean;
+};
 
 type EventHandler = (
   event: {
     reason?: "manual" | "threshold" | "overflow";
     willRetry?: boolean;
   },
-  ctx?: EventContext,
+  ctx: EventContext,
 ) => void;
 
 function entry(value: unknown): SessionEntry {
@@ -71,7 +75,10 @@ function compaction(id = "compact-1", firstKeptEntryId = "retained-message"): Se
   });
 }
 
-function setup(branch: SessionEntry[]) {
+function setup(
+  branch: SessionEntry[],
+  options: { hasPendingMessages?: boolean; isIdle?: boolean } = {},
+) {
   let tool: RegisteredTool | undefined;
   const handlers = new Map<string, EventHandler>();
   const sent: Array<{ content: string; options: { deliverAs: string } }> = [];
@@ -97,12 +104,28 @@ function setup(branch: SessionEntry[]) {
   } as never);
 
   assert.ok(tool);
+  const ctx: EventContext = {
+    sessionManager: { getBranch: () => branch },
+    hasPendingMessages: () => options.hasPendingMessages ?? false,
+    isIdle: () => options.isIdle ?? true,
+  };
   return {
     tool,
     handlers,
     sent,
     activeTools: () => [...activeTools],
-    ctx: { sessionManager: { getBranch: () => branch } },
+    ctx,
+    compact(
+      event: { reason?: "manual" | "threshold" | "overflow"; willRetry?: boolean } = {},
+    ) {
+      handlers.get("session_compact")?.(event, ctx);
+    },
+    settle() {
+      handlers.get("agent_settled")?.({}, ctx);
+    },
+    shutdown() {
+      handlers.get("session_shutdown")?.({}, ctx);
+    },
   };
 }
 
@@ -346,21 +369,27 @@ test("activates the recovery tool only on branches with compaction", () => {
   assert.deepEqual(activeTools(), ["read", "session_context_lookup"]);
 });
 
-test("skips only overflow compactions that native Pi retries", async () => {
-  const { handlers, sent } = setup([compaction()]);
-  const onCompact = handlers.get("session_compact");
-  assert.ok(onCompact);
+test("does not inject a continuation until the agent has settled", () => {
+  const { compact, sent } = setup([compaction()]);
 
-  onCompact({ reason: "overflow", willRetry: true });
-  await new Promise((resolve) => setTimeout(resolve, 5));
+  compact({ reason: "threshold", willRetry: false });
+
+  assert.equal(sent.length, 0);
+});
+
+test("skips only overflow compactions that native Pi retries", () => {
+  const { compact, settle, sent } = setup([compaction()]);
+
+  compact({ reason: "overflow", willRetry: true });
+  settle();
   assert.equal(sent.length, 0);
 
-  onCompact({ reason: "overflow", willRetry: false });
-  await new Promise((resolve) => setTimeout(resolve, 5));
+  compact({ reason: "overflow", willRetry: false });
+  settle();
   assert.equal(sent.length, 1);
 
-  onCompact({ reason: "threshold", willRetry: false });
-  await new Promise((resolve) => setTimeout(resolve, 5));
+  compact({ reason: "threshold", willRetry: false });
+  settle();
 
   assert.equal(sent.length, 2);
   assert.equal(sent[0]?.options.deliverAs, "followUp");
@@ -370,16 +399,63 @@ test("skips only overflow compactions that native Pi retries", async () => {
   assert.doesNotMatch(sent[0]?.content ?? "", /Briefly state the context/i);
 });
 
-test("shutdown cancels a queued continuation", async () => {
-  const { handlers, sent } = setup([compaction()]);
-  const onCompact = handlers.get("session_compact");
-  const onShutdown = handlers.get("session_shutdown");
-  assert.ok(onCompact);
-  assert.ok(onShutdown);
+test("does not inject after manual compact", () => {
+  const { compact, settle, sent } = setup([compaction()]);
 
-  onCompact({ reason: "manual", willRetry: false });
-  onShutdown({});
-  await new Promise((resolve) => setTimeout(resolve, 5));
+  compact({ reason: "manual", willRetry: false });
+  settle();
+
+  assert.equal(sent.length, 0);
+});
+
+test("does not inject when a steer or follow-up is already queued", () => {
+  const { compact, settle, sent } = setup([compaction()], { hasPendingMessages: true });
+
+  compact({ reason: "threshold", willRetry: false });
+  settle();
+
+  assert.equal(sent.length, 0);
+});
+
+test("does not inject while the agent is still running", () => {
+  const { compact, settle, sent } = setup([compaction()], { isIdle: false });
+
+  compact({ reason: "threshold", willRetry: false });
+  settle();
+
+  assert.equal(sent.length, 0);
+});
+
+test("does not inject when a user message already follows compaction", () => {
+  const branch = [
+    retainedEntry(),
+    compaction(),
+    entry({
+      type: "message",
+      id: "steered-after-compact",
+      parentId: "compact-1",
+      timestamp: "2026-08-01T10:04:00.000Z",
+      message: {
+        role: "user",
+        content: [{ type: "text", text: "how do i load this?" }],
+        timestamp: 4,
+      },
+    }),
+  ];
+  const { compact, settle, sent } = setup(branch);
+
+  compact({ reason: "threshold", willRetry: false });
+  settle();
+
+  assert.equal(sent.length, 0);
+});
+
+test("shutdown cancels a queued continuation", () => {
+  const { compact, shutdown, settle, sent } = setup([compaction()]);
+
+  compact({ reason: "threshold", willRetry: false });
+  shutdown();
+  settle();
 
   assert.equal(sent.length, 0);
 });

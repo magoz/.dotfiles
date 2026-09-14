@@ -329,9 +329,24 @@ function persistedLookupCount(entries: SessionEntry[], compactionIndex: number):
   ).length;
 }
 
+function latestCompactionIndex(entries: SessionEntry[]): number {
+  for (let index = entries.length - 1; index >= 0; index--) {
+    if (entries[index]?.type === "compaction") return index;
+  }
+  return -1;
+}
+
+function hasUserMessageAfterLatestCompaction(entries: SessionEntry[]): boolean {
+  const compactionIndex = latestCompactionIndex(entries);
+  if (compactionIndex < 0) return false;
+  return entries.slice(compactionIndex + 1).some(
+    (entry) => entry.type === "message" && entry.message.role === "user",
+  );
+}
+
 export default function continueAfterCompaction(pi: ExtensionAPI): void {
-  const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
   const inMemoryLookupCounts = new Map<string, number>();
+  let continuationPending = false;
 
   const setLookupActive = (active: boolean) => {
     const current = pi.getActiveTools();
@@ -460,19 +475,26 @@ export default function continueAfterCompaction(pi: ExtensionAPI): void {
 
   pi.on("session_compact", (event) => {
     setLookupActive(true);
-    if (event.willRetry) return;
+    // Native overflow recovery already retries the aborted turn. Manual /compact
+    // is user-initiated while idle; injecting a prompt races TUI's compaction
+    // queue flush and surprises an explicit pause.
+    if (event.willRetry || event.reason === "manual") return;
+    continuationPending = true;
+  });
 
-    const timer = setTimeout(() => {
-      pendingTimers.delete(timer);
-      pi.sendUserMessage(CONTINUATION_PROMPT, { deliverAs: "followUp" });
-    }, 0);
-
-    pendingTimers.add(timer);
+  pi.on("agent_settled", (_event, ctx) => {
+    if (!continuationPending) return;
+    continuationPending = false;
+    // A pre-compaction steer, TUI compaction-queue flush, or in-run continuation
+    // already gives the model a next user turn. Sending here would call prompt()
+    // while that delivery is in flight ("Agent is already processing a prompt").
+    if (!ctx.isIdle() || ctx.hasPendingMessages()) return;
+    if (hasUserMessageAfterLatestCompaction(ctx.sessionManager.getBranch())) return;
+    pi.sendUserMessage(CONTINUATION_PROMPT, { deliverAs: "followUp" });
   });
 
   pi.on("session_shutdown", () => {
-    for (const timer of pendingTimers) clearTimeout(timer);
-    pendingTimers.clear();
+    continuationPending = false;
     inMemoryLookupCounts.clear();
   });
 }
