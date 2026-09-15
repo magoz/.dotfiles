@@ -154,7 +154,7 @@ test("theme-aware quota colors use each window; stale/expired values are muted",
   assert.deepEqual(colors, ["muted", "muted", "muted"]);
 });
 
-function context(provider = "openai-codex", options: { oauth?: boolean; baseUrl?: string; headers?: Record<string, string>; apiKey?: string } = {}) {
+function context(provider = "openai-codex", options: { oauth?: boolean; baseUrl?: string; headers?: Record<string, string | null>; apiKey?: string } = {}) {
   let authCalls = 0;
   const ctx = {
     model: { provider, id: "test-model", baseUrl: options.baseUrl ?? defaultBaseUrl(provider) },
@@ -174,6 +174,23 @@ function deferred<T>() {
   const promise = new Promise<T>((done) => { resolve = done; });
   return { promise, resolve };
 }
+
+test("ignores null provider headers instead of sending literal null credentials", async () => {
+  const { ctx } = context("openai-codex", { headers: {
+    authorization: null,
+    "chatgpt-account-id": null,
+  } });
+  let sentHeaders: Headers | undefined;
+  const tracker = new SubscriptionUsageTracker(() => {}, async (_url, init) => {
+    sentHeaders = new Headers(init?.headers);
+    return Response.json(codexPayload);
+  }, () => NOW);
+  await tracker.refresh(ctx);
+  assert.equal(sentHeaders?.get("authorization"), "Bearer test-access-token");
+  assert.equal(sentHeaders?.get("chatgpt-account-id"), null);
+  assert.equal(tracker.getText(), EXPECTED);
+  tracker.stop();
+});
 
 test("only requests official OAuth usage endpoints with allowlisted headers and no redirects", async () => {
   const cases = [

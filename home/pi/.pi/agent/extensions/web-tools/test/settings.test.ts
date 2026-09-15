@@ -1,10 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+	getWebToolsSettings,
 	parseEnumSetting,
 	parseIntegerSetting,
 	parseOnOff,
 } from "../settings.ts";
+
+test("search connects directly to Exa's official hosted endpoint", () => {
+	const { search } = getWebToolsSettings();
+	assert.equal(search.enabled, true);
+	assert.equal(search.provider, "exa");
+	assert.equal(search.endpoint, "https://mcp.exa.ai/mcp");
+});
 
 test("parseOnOff accepts on/off and falls back safely", () => {
 	assert.equal(parseOnOff("on", false), true);

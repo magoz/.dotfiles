@@ -1,11 +1,11 @@
 {
-  "lastChangelogVersion": "0.85.0",
+  "lastChangelogVersion": "0.85.1",
   "theme": "tokyonight-moon",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-6-astra",
   "defaultThinkingLevel": "high",
   "packages": [
-    "npm:pi-subagents@0.67.0",
+    "npm:pi-subagents@0.68.0",
     {
       "source": "npm:pi-vimmode@0.9.0",
       "extensions": []
@@ -14,11 +14,7 @@
     "npm:@plannotator/pi-extension",
     "npm:pi-mcp-adapter",
     "npm:pi-context-budget@0.1.2",
-    "git:github.com/joelhooks/pi-until@7c90bdc90291321f60130984e479bc4a844a7d50",
-    {
-      "source": "npm:pi-multi-account@1.21.3",
-      "extensions": []
-    }
+    "git:github.com/joelhooks/pi-until@22dd0e6710fc13ecfc1f00b4d564d2e07bf41da2"
   ],
   "extensions": [],
   "piVimMode": {

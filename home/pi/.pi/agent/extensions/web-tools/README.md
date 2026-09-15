@@ -46,14 +46,15 @@ Current defaults:
 
 - `enabled`: `true`
 - `provider`: `exa`
-- `endpoint`: configured in `settings.ts`
+- `endpoint`: `https://mcp.exa.ai/mcp` (Exa's official hosted server)
 - `timeoutSeconds`: `25`
 - `defaultMaxResults`: `8`
 - `defaultDepth`: `auto`
 
 Behavior notes:
 
-- uses the configured Exa MCP-compatible endpoint
+- connects directly to [Exa's official hosted MCP endpoint](https://exa.ai/docs/reference/exa-mcp), without an intermediary proxy
+- uses Exa's keyless, rate-limited access; no API key is sent
 - Exa currently supports provider depths `auto` and `fast`; tool input `deep` is downgraded to `fast`
 - search responses are limited to `1 MB`
 - provider requests currently send:

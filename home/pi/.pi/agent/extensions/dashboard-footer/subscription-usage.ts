@@ -245,7 +245,11 @@ export class SubscriptionUsageTracker {
       const auth = await abortable(ctx.modelRegistry.getApiKeyAndHeaders(model), controller.signal);
       controller.signal.throwIfAborted();
       if (!auth.ok) throw new Error("Usage authentication unavailable");
-      const resolved = new Headers(auth.headers);
+      const resolved = new Headers();
+      // Pi provider headers use null to omit a header, not the string "null".
+      for (const [name, value] of Object.entries(auth.headers ?? {})) {
+        if (value !== null) resolved.set(name, value);
+      }
       const authorization = resolved.get("authorization") ?? (auth.apiKey ? `Bearer ${auth.apiKey}` : undefined);
       if (!authorization) throw new Error("Usage authentication unavailable");
       // Do not forward arbitrary model headers to a different endpoint.
