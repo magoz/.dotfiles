@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check": "tsc --noEmit --strict --skipLibCheck --target esnext --module nodenext --allowImportingTsExtensions *.ts",
     "test": "node --test *.test.ts"
   },
   "pi": {

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { SUMMARIZATION_PROMPT_ANCHOR, stripTranscribedThinking } from "./summarization.ts";
 
-const DEFAULT_CLAUDE_CODE_VERSION = "2.1.258";
+const DEFAULT_CLAUDE_CODE_VERSION = "2.1.272";
 const CLAUDE_CODE_ENTRYPOINT = "sdk-cli";
 const BILLING_HEADER_PREFIX = "x-anthropic-billing-header:";
 const BILLING_HEADER_SALT = "59cf53e54c78";
@@ -128,9 +129,11 @@ export function shapePiSystemPrompt(text: string): string {
 }
 
 function shapeSystem(system: unknown, header: string | undefined): unknown {
-	if (!Array.isArray(system)) return system;
+	const blocks = Array.isArray(system)
+		? system
+		: typeof system === "string" ? [{ type: "text", text: system }] : [];
 
-	const shaped = system.map((block) => {
+	const shaped = blocks.map((block) => {
 		const text = systemText(block);
 		return text?.includes(PI_PROMPT_PREFIX)
 			? replaceSystemText(block, shapePiSystemPrompt(text))
@@ -175,6 +178,23 @@ function splitInvalidAssistantMessage(message: unknown): unknown[] {
 	];
 }
 
+function stripThinkingFromUserMessage(message: unknown): unknown {
+	if (!isRecord(message) || message.role !== "user") return message;
+	if (typeof message.content === "string") {
+		return { ...message, content: stripTranscribedThinking(message.content) };
+	}
+	if (!Array.isArray(message.content)) return message;
+
+	return {
+		...message,
+		content: message.content.map((block) =>
+			isRecord(block) && block.type === "text" && typeof block.text === "string"
+				? { ...block, text: stripTranscribedThinking(block.text) }
+				: block,
+		),
+	};
+}
+
 /** Apply only post-serialization fixes Pi does not natively provide. */
 export function shapeAnthropicOAuthPayload(
 	payload: unknown,
@@ -182,7 +202,17 @@ export function shapeAnthropicOAuthPayload(
 ): unknown {
 	if (!isAnthropicPayload(payload)) return payload;
 
-	const messages = payload.messages.flatMap(splitInvalidAssistantMessage);
+	// Only Pi-generated summary requests may rewrite transcript text. Normal chat,
+	// native thinking blocks, and content outside the envelope remain untouched.
+	const systemBlocks = Array.isArray(payload.system) ? payload.system : [payload.system];
+	const summarizing = systemBlocks.some((block) =>
+		systemText(block)?.includes(SUMMARIZATION_PROMPT_ANCHOR),
+	);
+	const transcriptMessages = summarizing
+		? payload.messages.map(stripThinkingFromUserMessage)
+		: payload.messages;
+	// Billing must describe the sanitized first user message, not the original.
+	const messages = transcriptMessages.flatMap(splitInvalidAssistantMessage);
 	return {
 		...payload,
 		messages,

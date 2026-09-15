@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+	getClaudeCodeVersion,
 	shapeAnthropicOAuthPayload,
 	shapePiSystemPrompt,
 } from "./request.ts";
@@ -88,6 +89,18 @@ test("is idempotent and ignores malformed payloads", () => {
 	const twice = shapeAnthropicOAuthPayload(once, "2.1.220");
 
 	assert.deepEqual(twice, once);
+});
+
+test("uses the current version pin and preserves the local override", (t) => {
+	const previous = process.env.ANTHROPIC_CLI_VERSION;
+	t.after(() => {
+		if (previous === undefined) delete process.env.ANTHROPIC_CLI_VERSION;
+		else process.env.ANTHROPIC_CLI_VERSION = previous;
+	});
+	delete process.env.ANTHROPIC_CLI_VERSION;
+	assert.equal(getClaudeCodeVersion(), "2.1.272");
+	process.env.ANTHROPIC_CLI_VERSION = "2.1.300";
+	assert.equal(getClaudeCodeVersion(), "2.1.300");
 });
 
 function isRecord(value: unknown): value is Record<string, unknown> {
