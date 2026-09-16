@@ -30,7 +30,12 @@ write_completion() {
 }
 
 write_completion herdr herdr completion zsh
-write_completion opencode opencode --completions zsh
+# OpenCode 2 uses `opencode completion <shell>`; pre-2.0 used `--completions`.
+if command -v opencode >/dev/null 2>&1 && opencode completion zsh >/dev/null 2>&1; then
+  write_completion opencode opencode completion zsh
+else
+  write_completion opencode opencode --completions zsh
+fi
 # Drop the completion generated for the retired preview command.
 rm -f "$completion_dir/_opencode2"
 write_completion pnpm pnpm completion zsh

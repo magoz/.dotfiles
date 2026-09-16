@@ -150,6 +150,11 @@ fi
 
 # Stable V2 owns both opencode and opencode2; remove the old preview first.
 echo "🤖 Installing OpenCode 2"
+# Homebrew's opencode formula is the v1 line: it shadows the npm v2 binary on
+# PATH while rejecting the v2 config schema. Remove it.
+if brew list --versions opencode &>/dev/null; then
+  brew uninstall --ignore-dependencies opencode
+fi
 npm uninstall --global --ignore-scripts @opencode-ai/cli
 npm install --global --allow-scripts=@opencode/cli @opencode/cli
 
