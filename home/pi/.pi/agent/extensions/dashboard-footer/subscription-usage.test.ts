@@ -6,6 +6,7 @@ import {
   normalizeAnthropicUsage,
   normalizeCodexUsage,
   normalizeGrokUsage,
+  normalizeOpencodeGoUsage,
   quotaColor,
   SubscriptionUsageTracker,
 } from "./subscription-usage.ts";
@@ -42,6 +43,7 @@ const GROK_EXPECTED = "7d 63% left / 2h 14m";
 function defaultBaseUrl(provider: string) {
   if (provider === "anthropic") return "https://api.anthropic.com";
   if (provider === "xai") return "https://api.x.ai/v1";
+  if (provider === "opencode-go") return "https://opencode.ai/zen/go/v1";
   return "https://chatgpt.com/backend-api";
 }
 
@@ -76,6 +78,47 @@ test("parses Grok included-pool percent and exact weekly/monthly labels without 
   assert.equal(unknown[0].label, "usage");
   assert.equal(formatSubscriptionUsage(unknown, NOW), "usage 90% left / 1d");
   assert.ok(!formatSubscriptionUsage(unknown, NOW)!.includes("USAGE_PERIOD"));
+});
+
+test("parses OpenCode Go rolling/weekly/monthly usage with fixed labels", () => {
+  const payload = {
+    usage: {
+      rolling: { status: "ok", percent: 37, resetsAt: "2026-08-11T14:14:00.000Z" },
+      weekly: { status: "ok", percent: 28, resetsAt: "2026-08-15T15:00:00.000Z" },
+      monthly: { status: "ok", percent: 12, resetsAt: "2026-09-11T12:00:00.000Z" },
+    },
+  };
+  const windows = normalizeOpencodeGoUsage(payload, NOW);
+  assert.deepEqual(windows.map((w) => w.label), ["5h", "7d", "month"]);
+  assert.equal(
+    formatSubscriptionUsage(windows, NOW),
+    "5h 63% left / 2h 14m · 7d 72% left / 4d 3h · month 88% left / 31d",
+  );
+});
+
+test("OpenCode Go parsing is strict, preserves partial windows, and clamps percentages", () => {
+  for (const payload of [null, [], {}, { usage: null }, { usage: {} }]) {
+    assert.deepEqual(normalizeOpencodeGoUsage(payload, NOW), []);
+  }
+  for (const percent of [undefined, null, "", "50", true, NaN, Infinity]) {
+    assert.deepEqual(normalizeOpencodeGoUsage({ usage: { rolling: { percent } } }, NOW), []);
+  }
+  assert.equal(normalizeOpencodeGoUsage({ usage: { rolling: { percent: -20 } } }, NOW)[0].remainingPercent, 100);
+  assert.equal(normalizeOpencodeGoUsage({ usage: { rolling: { percent: 120 } } }, NOW)[0].remainingPercent, 0);
+  assert.equal(
+    formatSubscriptionUsage(normalizeOpencodeGoUsage({ usage: { rolling: { percent: 0 } } }, NOW), NOW),
+    "5h 100% left / reset unknown",
+  );
+  // Relative resets and snake_case aliases are accepted without inventing a reset.
+  const relative = normalizeOpencodeGoUsage({ usage: {
+    rolling: { usage_percent: 10, resets_in_seconds: 90 },
+    weekly: { usagePercent: 99.8 },
+  } }, NOW);
+  assert.equal(formatSubscriptionUsage(relative, NOW), "5h 90% left / 2m · 7d <1% left / reset unknown");
+  const partial = normalizeOpencodeGoUsage({ usage: { monthly: { percent: 50, resetsAt: "2026-08-12T12:00:00Z" } } }, NOW);
+  assert.equal(partial.length, 1);
+  assert.equal(partial[0].label, "month");
+  assert.equal(formatSubscriptionUsage(partial, NOW), "month 50% left / 1d");
 });
 
 test("strict parsing keeps missing/invalid data unknown, preserves partial windows, and clamps percentages", () => {
@@ -248,15 +291,51 @@ test("Codex account ID can come from Pi's resolved access token without reading 
   tracker.stop();
 });
 
+test("OpenCode Go uses API-key auth on the official origin with allowlisted headers", async () => {
+  const goPayload = {
+    usage: {
+      rolling: { status: "ok", percent: 37, resetsAt: new Date(NOW + 134 * MINUTE).toISOString() },
+      weekly: { status: "ok", percent: 28, resetsAt: new Date(NOW + 99 * 60 * MINUTE).toISOString() },
+      monthly: { status: "ok", percent: 12, resetsAt: new Date(NOW + 31 * 24 * 60 * MINUTE).toISOString() },
+    },
+  };
+  let calls = 0;
+  const { ctx } = context("opencode-go", { oauth: false, headers: {
+    authorization: "Bearer test-resolved",
+    "x-private-header": "not-for-usage",
+  } });
+  const tracker = new SubscriptionUsageTracker(() => {}, async (url, init) => {
+    calls += 1;
+    assert.equal(url, "https://opencode.ai/zen/go/v1/usage");
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.get("authorization"), "Bearer test-resolved");
+    assert.equal(headers.get("accept"), "application/json");
+    assert.equal(headers.get("x-private-header"), null);
+    assert.equal([...headers.keys()].sort().join(","), "accept,authorization");
+    assert.equal(init?.redirect, "error");
+    assert.ok(init?.signal);
+    return Response.json(goPayload);
+  }, () => NOW);
+  await tracker.refresh(ctx);
+  await tracker.refresh(ctx);
+  assert.equal(calls, 1);
+  assert.equal(tracker.getText(), "5h 63% left / 2h 14m · 7d 72% left / 4d 3h · month 88% left / 31d");
+  tracker.stop();
+});
+
 test("unsupported providers, API keys and nonofficial origins do not resolve auth or fetch", async () => {
   const cases = [
     context("other"), context("anthropic", { oauth: false }), context("openai-codex-account-2"),
     context("xai", { oauth: false }),
+    context("opencode-go", { oauth: true }),
     ...["https://proxy.example", "http://chatgpt.com", "https://chatgpt.com:8443", "https://user@chatgpt.com", "not a URL"]
       .map((baseUrl) => context("openai-codex", { baseUrl })),
     ...["https://cli-chat-proxy.grok.com", "https://cli-chat-proxy.grok.com/v1", "http://api.x.ai/v1",
       "https://api.x.ai:8443", "https://user@api.x.ai/v1", "https://api.x.ai.example", "not a URL"]
       .map((baseUrl) => context("xai", { baseUrl })),
+    ...["https://proxy.example", "http://opencode.ai", "https://opencode.ai:8443",
+      "https://user@opencode.ai/zen/go/v1", "https://opencode.ai.example", "not a URL"]
+      .map((baseUrl) => context("opencode-go", { oauth: false, baseUrl })),
   ];
   const tracker = new SubscriptionUsageTracker(() => {}, async () => { throw new Error("unexpected fetch"); }, () => NOW);
   for (const { ctx, authCalls } of cases) {

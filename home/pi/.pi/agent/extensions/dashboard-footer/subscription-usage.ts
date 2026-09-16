@@ -89,6 +89,41 @@ export function normalizeGrokUsage(payload: unknown): SubscriptionWindow[] {
   }];
 }
 
+function normalizeOpencodeGoWindow(
+  value: unknown,
+  label: string,
+  now: number,
+): SubscriptionWindow | undefined {
+  if (!isRecord(value)) return undefined;
+  const used = finiteNumber(value.percent)
+    ?? finiteNumber(value.usage_percent)
+    ?? finiteNumber(value.usagePercent);
+  if (used === undefined) return undefined;
+  const resetsAtRaw = value.resetsAt ?? value.resets_at;
+  const absolute = typeof resetsAtRaw === "string" ? Date.parse(resetsAtRaw) : finiteNumber(resetsAtRaw);
+  const relative = finiteNumber(value.resets_in_seconds)
+    ?? finiteNumber(value.resetInSec)
+    ?? finiteNumber(value.reset_after_seconds);
+  const resolvedReset = finiteNumber(absolute) !== undefined ? finiteNumber(absolute)
+    : relative !== undefined ? now + Math.max(0, relative) * 1_000 : undefined;
+  return {
+    label,
+    remainingPercent: remainingPercent(used),
+    resetsAt: finiteNumber(resolvedReset),
+  };
+}
+
+export function normalizeOpencodeGoUsage(payload: unknown, now = Date.now()): SubscriptionWindow[] {
+  if (!isRecord(payload)) return [];
+  const usage = isRecord(payload.usage) ? payload.usage : undefined;
+  if (!usage) return [];
+  return [
+    normalizeOpencodeGoWindow(usage.rolling, "5h", now),
+    normalizeOpencodeGoWindow(usage.weekly, "7d", now),
+    normalizeOpencodeGoWindow(usage.monthly, "month", now),
+  ].filter((window): window is SubscriptionWindow => window !== undefined);
+}
+
 export function quotaColor(remaining: number): "muted" | "warning" | "error" {
   if (remaining <= 10) return "error";
   if (remaining <= 30) return "warning";
@@ -130,6 +165,7 @@ interface ProviderUsageConfig {
   endpoint: string;
   origin: string;
   refreshMs: number;
+  authKind: "oauth" | "api_key";
   normalize(payload: unknown, now: number): SubscriptionWindow[];
 }
 
@@ -138,19 +174,29 @@ function providerUsageConfig(provider: string): ProviderUsageConfig | undefined 
     endpoint: "https://api.anthropic.com/api/oauth/usage",
     origin: "https://api.anthropic.com",
     refreshMs: 10 * MINUTE,
+    authKind: "oauth",
     normalize: normalizeAnthropicUsage,
   };
   if (provider === "openai-codex") return {
     endpoint: "https://chatgpt.com/backend-api/wham/usage",
     origin: "https://chatgpt.com",
     refreshMs: 5 * MINUTE,
+    authKind: "oauth",
     normalize: normalizeCodexUsage,
   };
   if (provider === "xai") return {
     endpoint: "https://cli-chat-proxy.grok.com/v1/billing?format=credits",
     origin: "https://api.x.ai",
     refreshMs: 5 * MINUTE,
+    authKind: "oauth",
     normalize: normalizeGrokUsage,
+  };
+  if (provider === "opencode-go") return {
+    endpoint: "https://opencode.ai/zen/go/v1/usage",
+    origin: "https://opencode.ai",
+    refreshMs: 5 * MINUTE,
+    authKind: "api_key",
+    normalize: (payload, now) => normalizeOpencodeGoUsage(payload, now),
   };
   return undefined;
 }
@@ -221,8 +267,10 @@ export class SubscriptionUsageTracker {
   async refresh(ctx: ExtensionContext): Promise<void> {
     const model = ctx.model;
     const config = model ? providerUsageConfig(model.provider) : undefined;
+    const usesOAuth = model ? ctx.modelRegistry.isUsingOAuth(model) : false;
+    const authMatches = config?.authKind === "api_key" ? !usesOAuth : usesOAuth;
     const key = model && config && usesOfficialOrigin(model.baseUrl, config.origin)
-      && ctx.modelRegistry.isUsingOAuth(model) ? model.provider : undefined;
+      && authMatches ? model.provider : undefined;
     // Once logout/API-key mode is observed, the old account's allowance is no
     // longer valid even if a subsequent login happens before the TTL expires.
     if (!key && model) this.snapshots.delete(model.provider);

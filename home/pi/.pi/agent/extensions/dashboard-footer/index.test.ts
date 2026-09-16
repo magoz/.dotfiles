@@ -174,3 +174,41 @@ test("registered footer shows Grok quota from mocked billing without mutating th
   await Promise.resolve();
   assert.equal(fetches, 1);
 });
+
+test("registered footer shows OpenCode Go quota in API-key mode without mutating the model", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  let fetches = 0;
+  t.mock.method(globalThis, "fetch", async (url: string | URL | Request, init?: RequestInit) => {
+    fetches += 1;
+    assert.equal(String(url), "https://opencode.ai/zen/go/v1/usage");
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.get("authorization"), "Bearer test-token");
+    assert.equal(headers.get("accept"), "application/json");
+    assert.equal(init?.redirect, "error");
+    return Response.json({
+      usage: {
+        rolling: { status: "ok", percent: 20, resetsAt: new Date(Date.now() + 300_000).toISOString() },
+        weekly: { status: "ok", percent: 40, resetsAt: new Date(Date.now() + 3_600_000).toISOString() },
+        monthly: { status: "ok", percent: 10, resetsAt: new Date(Date.now() + 86_400_000).toISOString() },
+      },
+    });
+  });
+  const model = { provider: "opencode-go", id: "muse-spark-1.3-contributor", reasoning: true, contextWindow: 1_000_000, baseUrl: "https://opencode.ai/zen/go/v1" };
+  const before = { ...model };
+  const app = setup("tui", false, model);
+  assert.equal(app.emit("session_start"), undefined, "usage never holds startup open");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(fetches, 1);
+  assert.deepEqual(app.ctx.model, before);
+  const line = app.footer()!.render(200)[1];
+  assert.match(line, /80% left/);
+  assert.match(line, /5h /);
+  assert.match(line, /7d /);
+  assert.match(line, /month /);
+  app.ctx.modelRegistry.isUsingOAuth = () => true;
+  app.emit("model_select");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(fetches, 1, "OAuth-mode Go does not fetch usage");
+  assert.deepEqual(app.ctx.model, before);
+  app.emit("session_shutdown");
+});

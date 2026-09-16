@@ -27,7 +27,20 @@ No dependency on `pi-multi-account` remains.
   and legacy monthly cents are ignored. Unsupported or missing quota still shows
   muted `Grok quota unavailable`. Inference token usage or API pricing is never
   presented as subscription allowance.
-- Other providers, API-key authentication, and custom/proxy origins are not queried.
+- **OpenCode Go API key:** rolling, weekly, and monthly allowance from
+  `GET https://opencode.ai/zen/go/v1/usage` when the selected model is
+  `opencode-go` on the official inference origin `https://opencode.ai`
+  (for example `https://opencode.ai/zen/go/v1`). Unlike the OAuth providers
+  above, Go authenticates with an API key, so the footer queries it in API-key
+  mode and never in OAuth mode. Requests send only `Authorization: Bearer` and
+  `Accept: application/json`. The payload is
+  `{ usage: { rolling: { percent, resetsAt }, weekly: {...}, monthly: {...} } }`
+  where `percent` is used percent; remaining is `100 - percent`. Windows render
+  with fixed labels `5h` / `7d` / `month` (Go defines 5-hour as 20% of the
+  monthly limit and weekly as 50%). `resetsAt` (RFC 3339) is the reset;
+  `resets_in_seconds` / `resetInSec` relative fallbacks are also accepted.
+  Missing or non-finite `percent` is unknown, never 0% used.
+- Other providers, mismatched auth modes, and custom/proxy origins are not queried.
 
 Example: `5h 63% left / 2h 14m · 7d 8% left / 4d 3h`.
 Each remaining percentage uses the active theme: `muted` above 30%, `warning`
@@ -36,7 +49,7 @@ Missing reset metadata says `reset unknown`; elapsed resets say `reset pending`
 until refreshed, never an invented 100%. Failed refreshes retain muted, labeled
 `(stale)` readings rather than pretending they are live.
 
-HTTP refresh is throttled per provider (5 minutes Codex and Grok, 10 minutes Anthropic);
+HTTP refresh is throttled per provider (5 minutes Codex, Grok, and Go, 10 minutes Anthropic);
 countdowns repaint every minute without extra HTTP requests. HTTP 429
 `Retry-After` can extend the interval. Requests have a 15-second deadline and do
 not block startup. Provider changes and shutdown cancel pending work; late
