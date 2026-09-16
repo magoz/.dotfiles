@@ -1,5 +1,6 @@
 ---
 name: pr-reviewer
+model: openai-codex/gpt-6-astra
 description: Read-only independent reviewer for repository pull request standards, specification, and knowledge audits
 thinking: high
 tools: read, grep, find, ls

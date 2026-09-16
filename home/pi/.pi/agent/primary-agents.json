@@ -1,0 +1,28 @@
+{
+  "default": "coding",
+  "agents": {
+    "coding": {
+      "description": "Architecture, supervision, and delivery; direct work or delegation by judgment",
+      "prompt": "primary-agents/coding.md",
+      "workers": ["general", "explore", "pr-reviewer", "web-researcher"],
+      "models": [
+        {
+          "id": "openai-codex/gpt-6-astra",
+          "guidance": "Preferred main coding model and the pr-reviewer default. Reserve for architecture, difficult reasoning, supervision, and final judgment rather than routine implementation. Main-model selection remains independent of identity activation."
+        },
+        {
+          "id": "anthropic/claude-fable-5-1",
+          "guidance": "Preferred for UI implementation in either public or private repositories. This task-specific preference takes precedence over the general implementation routing below."
+        },
+        {
+          "id": "opencode-go/muse-spark-1.3-contributor",
+          "guidance": "Preferred for non-UI implementation in verified public repositories. Verify the actual repository is public and the handoff contains no private material before using Muse; a remote URL alone is not evidence of public visibility. Never send private or unknown-visibility repository context to Muse."
+        },
+        {
+          "id": "xai/grok-4.6",
+          "guidance": "Preferred for non-UI implementation in private or unknown-visibility repositories. Also the configured default for general, explore, and web-researcher. Keep explore and web-researcher on Grok regardless of repository visibility unless the task warrants an explicit override that respects the other routing constraints."
+        }
+      ]
+    }
+  }
+}
