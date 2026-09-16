@@ -78,10 +78,12 @@ no mandatory phases or delegation quota are imposed.
 the frontier parent model. Coding explicitly selects `anthropic/claude-fable-5-1`
 for UI implementation or `opencode-go/muse-spark-1.3-contributor` for other
 public-repository implementation. UI routing takes precedence over the general
-implementation split. Before using `opencode-go/muse-spark-1.3-contributor`, coding
-must verify the actual repository is public and that the handoff contains no private
+implementation split. Before using `opencode-go/muse-spark-1.3-contributor` by default,
+coding verifies the actual repository is public and that the handoff contains no private
 material; a remote URL alone is not proof of visibility. Unknown visibility routes
-to `xai/grok-4.6`.
+to `xai/grok-4.6` by default. An explicit user instruction to use a specific model
+overrides this default visibility routing; coding confirms the requested scope and
+proceeds with the user's choice.
 
 `openai-codex/gpt-6-astra` is already Pi's configured main-model default. Identity activation still
 preserves a manually selected model. Unavailable worker models must be reported;

@@ -246,7 +246,8 @@ test("tracked coding model guide is included in the active primary prompt", (t) 
     assert.ok(model.guidance);
     assert.ok(prompt.includes(`${model.id}: ${model.guidance}`));
   }
-  assert.match(prompt, /Never send private or unknown-visibility repository context to Muse/);
+  assert.match(prompt, /Never send private or unknown-visibility repository context to Muse by default/);
+  assert.match(prompt, /explicit user instruction.*overrides this default routing regardless of repository visibility/i);
 });
 
 test("disk resume and fork preserve explicit clear without replaying primary instructions as messages", async (t) => {
