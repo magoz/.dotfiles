@@ -1,6 +1,6 @@
 ---
-name: explore
-model: xai/grok-4.6
+name: explore-codebase
+model: opencode-go/deepseek-v4.1-flash
 description: Read-only codebase exploration that maps files, symbols, data flow, conventions, and risks for a focused handoff
 thinking: low
 tools: read, grep, find, ls

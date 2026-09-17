@@ -4,23 +4,27 @@
     "coding": {
       "description": "Architecture, supervision, and delivery; direct work or delegation by judgment",
       "prompt": "primary-agents/coding.md",
-      "workers": ["general", "explore", "pr-reviewer", "web-researcher"],
+      "workers": ["general", "ui-design", "explore-codebase", "pr-reviewer", "web-researcher"],
       "models": [
         {
           "id": "openai-codex/gpt-6-astra",
-          "guidance": "Preferred main coding model and the pr-reviewer default. Reserve for architecture, difficult reasoning, supervision, and final judgment rather than routine implementation. Main-model selection remains independent of identity activation."
+          "guidance": "Preferred main coding model and the pr-reviewer default; anthropic/claude-fable-5-1 is an explicit per-launch review alternative. Reserve for architecture, difficult reasoning, supervision, and final judgment rather than routine implementation. Main-model selection remains independent of identity activation."
         },
         {
           "id": "anthropic/claude-fable-5-1",
-          "guidance": "Preferred for UI implementation in either public or private repositories. This task-specific preference takes precedence over the general implementation routing below."
+          "guidance": "Configured default for ui-design in either public or private repositories: design direction, interaction specifications, and implementation guidelines, not routine UI implementation. UI implementation belongs to general using the GLM/Muse visibility routing and following accepted design guidelines. Also an alternative to Astra for reviews; select it with an explicit per-launch override when appropriate."
         },
         {
           "id": "opencode-go/muse-spark-1.3-contributor",
-          "guidance": "Default for non-UI implementation in verified public repositories. Verify the actual repository is public and the handoff contains no private material before using Muse by default; a remote URL alone is not evidence of public visibility. Never send private or unknown-visibility repository context to Muse by default. An explicit user instruction to use Muse overrides this default routing regardless of repository visibility; confirm the requested scope and proceed with the user's choice."
+          "guidance": "Default for implementation (including UI implementation) and explore-codebase in verified public repositories; explicitly select Muse for these launches. For UI implementation, follow accepted design guidelines. Verify the actual repository is public and the handoff contains no private material before using Muse by default; a remote URL alone is not evidence of public visibility. Never send private or unknown-visibility repository context to Muse by default. An explicit user instruction to use Muse overrides this default routing regardless of repository visibility; confirm the requested scope and proceed with the user's choice."
         },
         {
-          "id": "xai/grok-4.6",
-          "guidance": "Default for non-UI implementation in private or unknown-visibility repositories. Also the configured default for general, explore, and web-researcher. Keep explore and web-researcher on Grok regardless of repository visibility unless the task warrants an explicit override. An explicit user instruction to use another model overrides this default regardless of repository visibility."
+          "id": "zai/glm-5.3",
+          "guidance": "Default for implementation (including UI implementation) in private or unknown-visibility repositories. Also the configured default for general. For UI implementation, follow accepted design guidelines. An explicit user instruction to use another model overrides this default regardless of repository visibility."
+        },
+        {
+          "id": "opencode-go/deepseek-v4.1-flash",
+          "guidance": "Configured default for explore-codebase in private or unknown-visibility repositories, and for web-researcher regardless of repository visibility. For explore-codebase in verified public repositories, explicitly select Muse instead. An explicit user instruction to use Muse overrides visibility routing."
         }
       ]
     }

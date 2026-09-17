@@ -1,6 +1,6 @@
 ---
 name: web-researcher
-model: xai/grok-4.6
+model: opencode-go/deepseek-v4.1-flash
 description: Researches current information on the public web
 tools: websearch, webfetch
 subagentOnlyExtensions: /home/magoz/.pi/agent/extensions/web-tools/index.ts

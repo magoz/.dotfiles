@@ -31,9 +31,9 @@ identity does not cancel already running workers or undo earlier work.
     "coding": {
       "description": "Architecture, supervision, and delivery",
       "prompt": "primary-agents/coding.md",
-      "workers": ["general", "explore", "pr-reviewer", "web-researcher"],
+      "workers": ["general", "ui-design", "explore-codebase", "pr-reviewer", "web-researcher"],
       "models": [
-        { "id": "provider/model-id", "guidance": "Prefer for UI implementation." }
+        { "id": "provider/model-id", "guidance": "Prefer for UI design." }
       ]
     }
   }
@@ -68,20 +68,29 @@ no mandatory phases or delegation quota are imposed.
 
 | Work | Preferred model |
 | --- | --- |
-| Main coding agent and `pr-reviewer` | `openai-codex/gpt-6-astra` |
-| UI implementation (public or private repo) | `anthropic/claude-fable-5-1` |
-| Other implementation in a verified public repo | `opencode-go/muse-spark-1.3-contributor` |
-| Other implementation in a private/unknown-visibility repo | `xai/grok-4.6` |
-| `explore` and `web-researcher` | `xai/grok-4.6` |
+| Main coding agent | `openai-codex/gpt-6-astra` |
+| `pr-reviewer` | `openai-codex/gpt-6-astra` (default), or `anthropic/claude-fable-5-1` via explicit per-launch override |
+| `ui-design` (public or private repo) | `anthropic/claude-fable-5-1` |
+| `general` implementation, including UI, in a verified public repo | `opencode-go/muse-spark-1.3-contributor` |
+| `general` implementation, including UI, in a private/unknown-visibility repo | `zai/glm-5.3` |
+| `explore-codebase` in a verified public repo | `opencode-go/muse-spark-1.3-contributor` via explicit per-launch override |
+| `explore-codebase` in a private/unknown-visibility repo | `opencode-go/deepseek-v4.1-flash` |
+| `web-researcher` | `opencode-go/deepseek-v4.1-flash` |
 
-`general` defaults to `xai/grok-4.6` so omitting a launch override does not inherit
-the frontier parent model. Coding explicitly selects `anthropic/claude-fable-5-1`
-for UI implementation or `opencode-go/muse-spark-1.3-contributor` for other
-public-repository implementation. UI routing takes precedence over the general
-implementation split. Before using `opencode-go/muse-spark-1.3-contributor` by default,
+`ui-design` is a read-only design specialist: it produces design direction,
+interaction specifications, and actionable implementation guidelines. The parent
+passes accepted guidelines to `general` for UI implementation; an already settled
+design does not require another design pass. Design proposals do not authorize
+production edits, and the designer reports any browser/visual validation gaps.
+
+`general` defaults to `zai/glm-5.3` so omitting a launch override does not inherit
+the frontier parent model. Coding explicitly selects
+`opencode-go/muse-spark-1.3-contributor` for public-repository implementation
+(including UI) and `explore-codebase`. Before using `opencode-go/muse-spark-1.3-contributor` by default,
 coding verifies the actual repository is public and that the handoff contains no private
 material; a remote URL alone is not proof of visibility. Unknown visibility routes
-to `xai/grok-4.6` by default. An explicit user instruction to use a specific model
+to `zai/glm-5.3` for implementation (including UI) and
+`opencode-go/deepseek-v4.1-flash` for `explore-codebase` by default. An explicit user instruction to use a specific model
 overrides this default visibility routing; coding confirms the requested scope and
 proceeds with the user's choice.
 
