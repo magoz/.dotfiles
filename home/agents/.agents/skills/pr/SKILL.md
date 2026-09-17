@@ -222,7 +222,8 @@ completed preparation for unchanged content; do not rerun Conform/Learn/Tidy sol
 transition. It keeps every published update aligned with repository policy, but it is not by itself
 a merge-readiness claim.
 
-1. Resolve the intended changed paths and perform Repository discovery for their owning areas.
+1. Resolve the intended changed paths and perform Repository discovery for their owning areas. Apply
+   Migration consolidation to the full PR diff, not just the latest commit or uncommitted changes.
 2. Load and follow `conform` in mutation mode for intended implementation, test, and behavior-bearing
    tooling changes. Keep fixes surgical and preserve unrelated work.
 3. Run the narrowest safe checks needed to catch preparation mistakes, including `git diff --check`
@@ -236,6 +237,39 @@ a merge-readiness claim.
    links/paths where applicable, and inspect the complete prepared diff for accidental churn.
 7. Treat accepted Conform/Learn/Tidy edits as task-owned only when they directly support the current
    work. Ask before including unrelated cleanup, and never stage it silently.
+
+## Migration consolidation
+
+The parent owns consolidation during Always-on preparation; reviewers verify it read-only. This is
+about database migration history, not Git commit squashing. Repository migration policy takes precedence.
+
+- Inventory migrations introduced by the full PR relative to its base, grouped by migration stream
+  (database/package and runner). Count logical migrations, not companion up/down files or snapshots.
+  Skip consolidation when a stream has fewer than two new migrations.
+- Default to squashing multiple PR-only, unapplied migrations in the same stream into one coherent
+  migration when there is no concrete reason to keep them separate. Routine iterative development is
+  not a reason. Inspect contents, dependencies, repository guidance, and application/deployment
+  evidence first; being new to the PR does not prove a migration has never been applied.
+- Preserve separate migrations when required by repository policy, staged rollout or expand/contract
+  boundaries, data-backfill sequencing, transaction constraints, or external dependencies. Never
+  combine independent streams or rewrite migrations already in the base or applied to shared/persistent
+  environments. Record the concrete reason for keeping multiple migrations.
+- If application history, safe equivalence, or the reason for separation is uncertain, ask the user
+  before rewriting or accepting the migration layout. Do not silently consolidate or silently waive
+  the decision. Disposable local applications require an explicit safe reconciliation plan under
+  repository policy; this skill does not authorize database resets or migration application.
+- Use repository-supported generation/squash tooling where available and safe. Preserve intended
+  schema and data effects, dependency order, and required rollback behavior; update companion files,
+  journals, checksums, and snapshots consistently. Do not merely concatenate SQL or discard intermediate
+  data transformations. Run relevant safe checks under the existing validation safety rules. Missing
+  required migration evidence blocks Ready; never bypass safety restrictions to obtain it.
+- Record the affected paths/stream, outcome (`consolidated`, `kept separate` with reason, or `blocked`
+  with the question), application-history evidence, and validation in the review bundle and managed
+  PR body when applicable. Supply this policy and disposition to both reviewers for applicable
+  Standards/Spec coverage; they report unjustified splits, unsafe rewrites, or evidence gaps, never edit.
+- Pre-merge audits this decision against the exact remote patch without changing files. Missing or
+  ambiguous evidence blocks readiness until resolved; any needed edits go through preparation and
+  invalidate affected validation/review evidence. Merge reuses only a still-applicable disposition.
 
 ## Visual proof (visible UI changes)
 
@@ -657,7 +691,8 @@ Report **ready** only when:
   disclosed preflight-unavailable single-model result permitted by Two independent review opinions;
 - no blocker/high review finding remains from either opinion and every medium finding is dispositioned;
 - applicable migration, deployment, integration, and end-to-end requirements are satisfied safely or
-  block readiness;
+  block readiness; multiple PR migrations have a resolved Migration consolidation disposition, with
+  unnecessary splits consolidated and retained splits justified;
 - visible UI changes have inspected, revision-bound screenshot proof or an explicit capture/attachment
   blocker; missing repository-required or change-critical visual evidence blocks readiness;
 - repository-required or available formatting checks pass, or formatting is explicitly not applicable;
