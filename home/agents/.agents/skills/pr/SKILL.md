@@ -347,7 +347,12 @@ Maintain generated content inside one block:
 
 ## Summary
 
-...
+<brief change and purpose; smallest useful diagram, tree, pseudocode, or diff sketch when helpful>
+
+## Evidence
+
+- **Before:** <observed behavior, screenshot, or execution result; source revision>
+- **After:** <corresponding observed result; source revision and check/capture reference>
 
 ## Visual proof
 
@@ -364,7 +369,9 @@ Maintain generated content inside one block:
 
 ## Remaining risks
 
-...
+- **Reversibility:** <two-way, one-way, or mixed; rollback path and hard-to-reverse effects>
+- **Blast radius:** <affected users, consumers, systems, or data; plausible failure modes>
+- <other residual risks or unknowns>
 <!-- pi-pr:end -->
 ```
 
@@ -374,6 +381,33 @@ normalize only its boundary markers rather than appending duplicate generated co
 an existing title or text outside the block unless the user explicitly requests it. Record the
 reviewed head SHA when readiness evidence exists. Omit the Visual proof section for changes with no
 visible UI impact; keep visual evidence separate from functional validation claims.
+
+### PR body communication
+
+Keep prose brief, skip preambles, and use the repository's established domain language. These
+presentation guidelines do not replace validation, review evidence, or safety gates.
+
+- **Summary:** explain what changed and why. When it improves understanding, choose the smallest
+  useful view: pseudocode for logic, a call tree for execution order, a component tree for UI ownership,
+  a shallow file tree for responsibility changes, or Mermaid for interactions. Use a diff sketch when
+  the existing shape matters; show the whole small block when most of it is new or omitted context
+  would hide ownership or order. Keep only relevant boundaries and place the visual beside the text
+  it supports. Plain prose is sufficient for a simple change; do not force a diagram into every PR.
+- **Evidence:** prefer a concise before/after comparison of the same behavior or visible state when
+  actual comparative evidence exists. Use inspected application screenshots for visual changes and
+  exact test names, commands, or focused output for behavior. Label each result with its actual source
+  revision or patch digest; distinguish observations from expected behavior. Never fabricate a
+  failing-before run, imply an unexecuted check passed, or run unsafe historical code just to complete
+  the pair. If before evidence is unavailable, say so and show the verified after result; do not invent
+  a new readiness blocker. Omit this section when it adds nothing beyond Validation or Visual proof,
+  and reference those sections rather than duplicating logs or image embeds. Existing visual-proof
+  requirements and publication safeguards still apply.
+- **Remaining risks:** state whether rollback is cheap (**two-way**), hard or irreversible (**one-way**),
+  or **mixed**, and explain the practical rollback path and any lasting effects. A Git revert alone
+  does not undo data loss, external side effects, or consumer adoption. Describe the plausible blast
+  radius, including affected users, consumers, systems, or data and relevant failure modes such as
+  mobile layout regressions or API incompatibility. Record uncertainty instead of claiming risk-free
+  operation; do not turn this into an exhaustive hypothetical checklist.
 
 ## Ready workflow (`/skill:pr ready`)
 
