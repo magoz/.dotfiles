@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import askUser from "./index.ts";
 
 type RegisteredTool = {
@@ -118,6 +119,54 @@ test("navigates options with j and k", async () => {
   assert.ok(renders[3]?.some((line) => line.includes("❯ 1. Alpha")));
   assert.equal(result.details.answer, "Beta");
 });
+
+for (const customAnswer of [false, true]) {
+  test(`rerenders at the current width while waiting in ${customAnswer ? "custom-answer" : "options"} mode`, async () => {
+    const tool = getRegisteredTool();
+    const result = await tool.execute(
+      "call-resize",
+      {
+        question: "Choose an option while the terminal changes width ".repeat(4),
+        options: [{ label: "Alpha" }, { label: "Beta 界 🎉" }],
+      },
+      new AbortController().signal,
+      () => {},
+      {
+        mode: "tui",
+        ui: {
+          custom: async (factory: Function) => new Promise((resolve) => {
+            const component = factory({ requestRender() {}, terminal: { rows: 40 } }, {
+              fg: (_color: string, text: string) => `\x1b[36m${text}\x1b[39m`,
+              bold: (text: string) => `\x1b[1m${text}\x1b[22m`,
+            }, {}, resolve);
+            if (customAnswer) {
+              component.handleInput("3");
+              component.handleInput("My custom answer 界 🎉");
+            } else {
+              component.handleInput("j");
+            }
+
+            // A resize can call render again without input or invalidate().
+            for (const width of [123, 117, 60, 140, 24, 117]) {
+              const lines: string[] = component.render(width);
+              assert.ok(lines.every((line) => visibleWidth(line) <= width),
+                `rendered line exceeds ${width} columns`);
+              assert.equal(visibleWidth(lines.at(-1)!), width,
+                "border must also expand when the terminal grows");
+              assert.deepEqual(component.render(width), lines);
+              component.invalidate();
+              assert.deepEqual(component.render(width), lines);
+            }
+            component.handleInput("\r");
+          }),
+        },
+      },
+    );
+
+    assert.equal(result.details.answer, customAnswer ? "My custom answer 界 🎉" : "Beta 界 🎉");
+    assert.equal(result.details.wasCustom, customAnswer);
+  });
+}
 
 test("reports an aborted UI interaction as cancellation", async () => {
   const tool = getRegisteredTool();

@@ -157,6 +157,7 @@ export default function askUser(pi: ExtensionAPI) {
           let optionIndex = 0;
           let editMode = false;
           let cachedLines: string[] | undefined;
+          let cachedWidth: number | undefined;
 
           let settled = false;
 
@@ -263,7 +264,8 @@ export default function askUser(pi: ExtensionAPI) {
           }
 
           function render(width: number): string[] {
-            if (cachedLines) return cachedLines;
+            // Resizes can rerender without input or an explicit invalidation.
+            if (cachedLines && cachedWidth === width) return cachedLines;
 
             const lines: string[] = [];
             const add = (s: string) => lines.push(truncateToWidth(s, width));
@@ -322,6 +324,7 @@ export default function askUser(pi: ExtensionAPI) {
             }
             add(theme.fg("accent", "─".repeat(width)));
 
+            cachedWidth = width;
             cachedLines = lines;
             return lines;
           }
