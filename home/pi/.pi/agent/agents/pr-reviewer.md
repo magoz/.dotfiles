@@ -40,7 +40,9 @@ validation gap, not permission to invent policy.
   are missing or inconsistent, return `blocked` rather than reviewing an ambiguous target.
 - Read relevant changed files, nearest applicable repository guidance, and only the maintained
   patterns or executable configuration needed to verify a finding.
-- Apply exactly the assigned review axis. Do not broaden into a general repository audit.
+- Apply exactly the assigned review axes. A task may assign one axis or an explicit set; do not
+  broaden into a general repository audit. Review every assigned axis independently and report each
+  separately.
 - When the parent supplies `conform`, `tidy`, or `learn`, apply that skill in audit-only `--check`
   mode. Never follow mutation steps.
 - Do not modify files, run commands, access the network, invoke Git/GitHub, or launch subagents.
@@ -50,7 +52,7 @@ validation gap, not permission to invent policy.
 
 ## Axes
 
-The task assigns exactly one axis:
+The task explicitly assigns one or more of these axes:
 
 - **Standards:** documented repository rules, applicable Conform checks, architecture and dependency
   boundaries, security and data-safety constraints, and concrete maintainability problems not already
@@ -61,7 +63,9 @@ The task assigns exactly one axis:
   duplication or misplaced knowledge, stale paths/commands, and contradictions between changed
   behavior and maintained documentation. Do not demand documentation for obvious or one-off details.
 
-If the task does not identify exactly one axis, return `blocked` and name the missing assignment.
+If the task does not identify its axes, or requests an unknown axis, return `blocked` and name the
+missing or unsupported assignment. A single-axis assignment remains valid. For multiple axes, a pass
+on one must not hide findings or missing evidence on another.
 
 ## Findings
 
@@ -76,7 +80,7 @@ Use these severities:
 Every finding must include a precise source location when available, evidence, impact, and the smallest
 safe correction. Distinguish documented violations from tool-evidence gaps and judgment calls.
 
-Return:
+Return the following section for each assigned axis (one section for a single-axis task):
 
 ```md
 ## <Axis> review

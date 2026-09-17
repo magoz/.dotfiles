@@ -135,6 +135,47 @@ reason to repeat work.
   operation. Do not create bespoke lock daemons, supervisor protocols, or review infrastructure for
   a routine merge. Retain expected-SHA, clean-worktree, identity, and durable-recovery safeguards.
 
+## Two independent review opinions
+
+Whenever a fresh independent review is needed, use two fresh-context, read-only `pr-reviewer`
+children with explicit model overrides:
+
+- **Astra:** `openai-codex/gpt-6-astra`
+- **Fable:** `anthropic/claude-fable-5-1`
+
+Both review the **same frozen bundle, scope, requirements, validation evidence, and assigned axes**.
+These are two opinions on the same work, not complementary assignments: never give Standards only to
+Astra and Spec only to Fable. A normal full review uses two children total, each covering Standards,
+Spec, and Knowledge in separately labeled sections, rather than one child per model per axis. For a
+focused follow-up, give both the same affected scope and axes. Do not show either reviewer the other's
+findings or inherited implementation rationale before their independent reports are complete.
+
+Before launching, use pi-subagents capability/model discovery and its supported authentication and
+execution preflight; a configured model name is not availability proof. If one model is unavailable
+before launch, use the other for all assigned axes and explicitly report **one opinion obtained** with
+the missing provider/model and reason. If neither is available, independent review is blocked. Do not
+substitute another model silently or count two runs of the same model as two model opinions. Stricter
+repository or user requirements for two successful opinions still block readiness when one is missing.
+A launch, tooling, or runtime failure after dispatch is an infrastructure blocker, not a successful
+single-opinion fallback: stop, retain the exact failure/run identity and partial evidence, and follow
+pi-subagents recovery rules before retrying or asking the owner.
+
+Use one top-level async pi-subagents workflow per invocation, with parallel `runs.all` calls for the
+reviewers inside it; any later review rounds belong to that same workflow. Follow pi-subagents guidance
+for parent-owned fixes and subsequent rounds. Pass the frozen bundle and relevant audit-only skills to
+both, bind distinct durable outputs on each child call outside the repository, and omit reviewer
+acceptance gates. Neither reviewer may write project files. The parent waits for both required results
+before editing, verifies and deduplicates findings without dropping their attribution, and dispositions
+every finding. A pass from one reviewer never cancels a supported blocker from the other; unresolved
+blocker disagreements require clarification, not majority voting.
+
+Record each opinion's exact provider/model, run/output reference, target digest/SHA, axes, verdict, and
+parent disposition in review evidence and the managed PR body. Apply Evidence reuse per model and axis:
+valid opinions do not need rerunning, but one model's report cannot stand in for the other's. Obtain
+only missing or invalidated opinions, recording original targets and delta applicability when reused.
+An unavailable-model skip is not a second opinion; recheck availability when a later invocation needs
+that missing opinion. Reusing two valid opinions requires no new launches.
+
 ## Repository discovery
 
 Before choosing commands or gates:
@@ -164,7 +205,8 @@ verify GitHub identity and the source push URL directly instead.
    is verified as that remote. Verify any repository-declared runtime version.
 2. Confirm `pi-subagents` is available and user/project agent `pr-reviewer` is discoverable. If not,
    stop and suggest installing/configuring the dependency; do not silently downgrade independent
-   review. Skip this dependency check for verified already-merged cleanup, which runs no review.
+   review. Before any fresh review, apply Two independent review opinions to discover/preflight both
+   preferred models. Skip this dependency check for verified already-merged cleanup, which runs no review.
 3. Detect PR state before any GitHub write. Query open and closed/merged PRs for the head branch. Never
    create a duplicate or reuse a closed/merged PR without asking, except for verified already-merged
    cleanup in `merge` mode. Match repository identity and head SHA, not merely a reused branch name.
@@ -330,18 +372,20 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
    change-critical check blocks ready rather than being inferred as success. For visible UI changes,
    complete or refresh Visual proof and include any selected PNGs and capture provenance in the review
    bundle before freezing it.
-5. Freeze the implementation patch before independent review:
+5. Freeze the complete prepared patch before independent review, including documentation from the
+   Always-on preparation pass:
    - write scope/specification, changed paths, exact binary patch, and validation evidence to a
      temporary directory outside the repository;
    - compute the patch digest with `git hash-object --stdin` over the exact binary diff;
    - do not edit while reviewers inspect it.
-6. When independent review is missing or invalidated, launch `pr-reviewer` in fresh context for the
-   required axes below. Reuse unaffected reviews; a focused low-risk delta does not automatically
-   require another full two-axis pass:
+6. When independent review is missing or invalidated, apply Two independent review opinions. For a
+   full review, both Astra and Fable cover all three axes against that same complete bundle:
    - **Standards**, with the `conform` skill supplied and explicit `--check`/no-edit instructions;
-   - **Spec**, with the exact requirements and no inherited implementation rationale.
-     Give both the frozen bundle through `reads`. Omit reviewer acceptance gates and project-file
-     outputs.
+   - **Spec**, with the exact requirements and no inherited implementation rationale;
+   - **Knowledge**, with `learn` and `tidy` supplied in `--check`/no-edit mode.
+     Request a separate verdict for each axis from each reviewer. Reuse unaffected opinions; a focused
+     low-risk delta does not automatically require another full review. Do not launch a separate
+     Knowledge reviewer when these reports already cover the unchanged documentation.
 7. The parent verifies and dispositions every finding. Blocker/high findings must be fixed; medium
    findings need an explicit fix-or-defer disposition. Ignore unsupported or optional churn.
 8. If accepted fixes change implementation, tests, or behavior-bearing tooling, repeat this code loop
@@ -357,13 +401,14 @@ The Always-on preparation pass already runs Learn and Tidy once. After implement
    instructions; otherwise retain the already prepared documentation.
 3. Format changed documentation/agent files with repository tooling and run the narrowest relevant
    documentation, formatting, stale-reference, and link checks.
-4. Freeze one complete bundle containing the stabilized implementation patch, documentation patch,
-   scope, changed paths, and validation evidence. If Knowledge review is missing or invalidated,
-   launch a fresh **Knowledge** `pr-reviewer` with `learn` and `tidy` supplied in `--check`/no-edit
-   mode. Otherwise retain the existing Knowledge result.
-5. When agent instructions, executable config, or other behavior-bearing tooling guidance changed,
-   also run fresh Standards and Spec axes against that complete bundle. Tool and capability policy is
-   not documentation-only merely because it is written in Markdown.
+4. Confirm the complete bundle still matches the reviewed implementation, documentation, scope,
+   changed paths, and validation evidence. Reuse both Knowledge opinions from the code loop when
+   unchanged. If later edits invalidate them, freeze a new complete bundle and apply Two independent
+   review opinions to the affected Knowledge scope with `learn` and `tidy` in `--check`/no-edit mode.
+5. When later edits change agent instructions, executable config, or other behavior-bearing tooling
+   guidance, include the invalidated Standards and Spec axes in that same review round for both
+   models. Tool and capability policy is not documentation-only merely because it is written in
+   Markdown. Do not repeat axes already covered by valid opinions on the complete bundle.
 6. Fix blocker/high findings and explicitly disposition medium findings. Re-run only axes invalidated
    by subsequent changes.
 7. Return to the code loop only if documentation changed an implementation rule, executable config,
@@ -408,8 +453,9 @@ Git state, or GitHub state.
    create an isolated temporary clone and run the needed checks there. Do not copy this work into a
    second full validation pass. All fetch/install/validation work for this read-only mode stays in
    temporary state, never the current repository; remove the owned temporary clone afterward.
-5. Reuse applicable Standards, Spec, and Knowledge reviews. Run only missing or invalidated axes;
-   explicit full audits run all three against the exact base-to-head patch.
+5. Reuse applicable Standards, Spec, and Knowledge opinions per model. Apply Two independent review
+   opinions for missing or invalidated coverage; explicit full audits give both models all three axes
+   against the same exact base-to-head patch.
 6. Report `ready`, `not ready`, or `blocked by missing evidence`, bound to exact base/head SHAs,
    distinguishing reused evidence from newly executed checks. Never merge.
 
@@ -607,7 +653,9 @@ Report **ready** only when:
 - when behavior changed or repository policy requires tests, applicable tests prove it at appropriate
   repository-defined seams; non-behavioral changes record tests as not applicable rather than inventing
   them;
-- no blocker/high review finding remains and every medium finding is dispositioned;
+- review evidence includes both independent model opinions for the required axes, or an explicitly
+  disclosed preflight-unavailable single-model result permitted by Two independent review opinions;
+- no blocker/high review finding remains from either opinion and every medium finding is dispositioned;
 - applicable migration, deployment, integration, and end-to-end requirements are satisfied safely or
   block readiness;
 - visible UI changes have inspected, revision-bound screenshot proof or an explicit capture/attachment

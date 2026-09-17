@@ -8,11 +8,11 @@
       "models": [
         {
           "id": "openai-codex/gpt-6-astra",
-          "guidance": "Preferred main coding model and the pr-reviewer default; anthropic/claude-fable-5-1 is an explicit per-launch review alternative. Reserve for architecture, difficult reasoning, supervision, and final judgment rather than routine implementation. Main-model selection remains independent of identity activation."
+          "guidance": "Preferred main coding model and the pr-reviewer default. The PR skill requests independent opinions from both Astra and anthropic/claude-fable-5-1 on the same patch and criteria when available; outside that skill, Fable remains an explicit per-launch review alternative. Reserve for architecture, difficult reasoning, supervision, and final judgment rather than routine implementation. Main-model selection remains independent of identity activation."
         },
         {
           "id": "anthropic/claude-fable-5-1",
-          "guidance": "Configured default for ui-design in either public or private repositories: design direction, interaction specifications, and implementation guidelines, not routine UI implementation. UI implementation belongs to general using the GLM/Muse visibility routing and following accepted design guidelines. Also an alternative to Astra for reviews; select it with an explicit per-launch override when appropriate."
+          "guidance": "Configured default for ui-design in either public or private repositories: design direction, interaction specifications, and implementation guidelines, not routine UI implementation. UI implementation belongs to general using the GLM/Muse visibility routing and following accepted design guidelines. For the PR skill, select it with an explicit per-launch override for a second independent opinion alongside Astra on the same patch and criteria when available. Outside that skill, it remains an alternative to Astra for reviews."
         },
         {
           "id": "opencode-go/muse-spark-1.3-contributor",

@@ -69,13 +69,20 @@ no mandatory phases or delegation quota are imposed.
 | Work | Preferred model |
 | --- | --- |
 | Main coding agent | `openai-codex/gpt-6-astra` |
-| `pr-reviewer` | `openai-codex/gpt-6-astra` (default), or `anthropic/claude-fable-5-1` via explicit per-launch override |
+| `pr-reviewer` | `openai-codex/gpt-6-astra` (default); the PR skill also requests `anthropic/claude-fable-5-1` for a second independent opinion |
 | `ui-design` (public or private repo) | `anthropic/claude-fable-5-1` |
 | `general` implementation, including UI, in a verified public repo | `opencode-go/muse-spark-1.3-contributor` |
 | `general` implementation, including UI, in a private/unknown-visibility repo | `zai/glm-5.3` |
 | `explore-codebase` in a verified public repo | `opencode-go/muse-spark-1.3-contributor` via explicit per-launch override |
 | `explore-codebase` in a private/unknown-visibility repo | `opencode-go/deepseek-v4.1-flash` |
 | `web-researcher` | `opencode-go/deepseek-v4.1-flash` |
+
+The PR skill uses two fresh-context `pr-reviewer` children when both models are
+available: Astra and Fable independently review the same frozen patch and assigned
+criteria, not different axes. Each can cover Standards, Spec, and Knowledge in one
+report with separate axis verdicts. The skill owns availability handling, evidence
+reuse, and parent reconciliation; outside it, Fable remains an optional review
+alternative. Single-axis reviewer assignments remain supported.
 
 `ui-design` is a read-only design specialist: it produces design direction,
 interaction specifications, and actionable implementation guidelines. The parent
