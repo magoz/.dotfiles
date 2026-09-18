@@ -49,11 +49,12 @@ No dependency on `pi-multi-account` remains.
   never in OAuth mode. Requests send only `Authorization: Bearer` and
   `Accept: application/json`. The payload is
   `{ data: { limits: [{ type, unit, percentage, nextResetTime }] } }` where
-  `percentage` is used percent; remaining is `100 - percentage`. Token windows
-  render with fixed labels `5h` (`TOKENS_LIMIT` `unit` 3) and `7d` (`unit` 6);
-  `nextResetTime` (epoch milliseconds) is the reset. Monthly `TIME_LIMIT`
-  web-search quota is ignored. Missing or non-finite `percentage` is unknown,
-  never 0% used.
+  `percentage` is used percent; remaining is `100 - percentage`. Allowance
+  windows render with fixed labels `5h` (`CREDIT_LIMIT`/`TOKENS_LIMIT` `unit` 3)
+  and `7d` (`unit` 6); live Max-plan keys report `CREDIT_LIMIT`, older/token
+  plans reported `TOKENS_LIMIT`, and both are accepted. `nextResetTime` (epoch
+  milliseconds) is the reset. Monthly `TIME_LIMIT` web-search quota is ignored.
+  Missing or non-finite `percentage` is unknown, never 0% used.
 
 Example: `5h 63% left / 2h 14m · 7d 8% left / 4d 3h`.
 Each remaining percentage uses the active theme: `muted` above 30%, `warning`

@@ -123,12 +123,24 @@ test("OpenCode Go parsing is strict, preserves partial windows, and clamps perce
   assert.equal(formatSubscriptionUsage(partial, NOW), "month 50% left / 1d");
 });
 
-test("parses Z.ai 5h/weekly token windows and ignores monthly web-search quota", () => {
-  const payload = {
+test("parses Z.ai 5h/weekly windows from live CREDIT_LIMIT and legacy TOKENS_LIMIT shapes", () => {
+  const livePayload = {
     code: 200,
+    msg: "Operation successful",
     success: true,
     data: {
-      level: "lite",
+      level: "max",
+      limits: [
+        { type: "CREDIT_LIMIT", unit: 3, number: 5, usage: 28_000, currentValue: 9_683, remaining: 18_316, percentage: 34, nextResetTime: NOW + 134 * MINUTE },
+        { type: "CREDIT_LIMIT", unit: 6, number: 1, usage: 140_000, currentValue: 55_530, remaining: 84_469, percentage: 39, nextResetTime: NOW + 99 * 60 * MINUTE },
+      ],
+    },
+  };
+  const windows = normalizeZaiUsage(livePayload);
+  assert.deepEqual(windows.map((w) => w.label), ["5h", "7d"]);
+  assert.equal(formatSubscriptionUsage(windows, NOW), "5h 66% left / 2h 14m · 7d 61% left / 4d 3h");
+  const legacyPayload = {
+    data: {
       limits: [
         { type: "TOKENS_LIMIT", unit: 3, number: 5, percentage: 16, nextResetTime: NOW + 134 * MINUTE },
         { type: "TOKENS_LIMIT", unit: 6, number: 7, percentage: 4, nextResetTime: NOW + 99 * 60 * MINUTE },
@@ -136,9 +148,9 @@ test("parses Z.ai 5h/weekly token windows and ignores monthly web-search quota",
       ],
     },
   };
-  const windows = normalizeZaiUsage(payload);
-  assert.deepEqual(windows.map((w) => w.label), ["5h", "7d"]);
-  assert.equal(formatSubscriptionUsage(windows, NOW), "5h 84% left / 2h 14m · 7d 96% left / 4d 3h");
+  const legacy = normalizeZaiUsage(legacyPayload);
+  assert.deepEqual(legacy.map((w) => w.label), ["5h", "7d"]);
+  assert.equal(formatSubscriptionUsage(legacy, NOW), "5h 84% left / 2h 14m · 7d 96% left / 4d 3h");
 });
 
 test("Z.ai parsing is strict, preserves partial windows, and clamps percentages", () => {
@@ -154,9 +166,10 @@ test("Z.ai parsing is strict, preserves partial windows, and clamps percentages"
     formatSubscriptionUsage(normalizeZaiUsage({ data: { limits: [{ type: "TOKENS_LIMIT", unit: 3, percentage: 0 }] } }), NOW),
     "5h 100% left / reset unknown",
   );
-  // TIME_LIMIT entries and unknown units never render as token allowance.
+  // TIME_LIMIT entries and unknown units never render as allowance.
   assert.deepEqual(normalizeZaiUsage({ data: { limits: [{ type: "TIME_LIMIT", unit: 5, percentage: 10 }] } }), []);
   assert.deepEqual(normalizeZaiUsage({ data: { limits: [{ type: "TOKENS_LIMIT", unit: 5, percentage: 10 }] } }), []);
+  assert.deepEqual(normalizeZaiUsage({ data: { limits: [{ type: "UNKNOWN_LIMIT", unit: 3, percentage: 10 }] } }), []);
   const partial = normalizeZaiUsage({ data: { limits: [{ type: "TOKENS_LIMIT", unit: 6, percentage: 50, nextResetTime: NOW + 24 * 60 * MINUTE }] } });
   assert.equal(partial.length, 1);
   assert.equal(partial[0].label, "7d");
@@ -371,9 +384,10 @@ test("Z.ai uses API-key auth on the official origin with allowlisted headers", a
     code: 200,
     success: true,
     data: {
+      level: "max",
       limits: [
-        { type: "TOKENS_LIMIT", unit: 3, number: 5, percentage: 37, nextResetTime: NOW + 134 * MINUTE },
-        { type: "TOKENS_LIMIT", unit: 6, number: 7, percentage: 28, nextResetTime: NOW + 99 * 60 * MINUTE },
+        { type: "CREDIT_LIMIT", unit: 3, number: 5, percentage: 37, nextResetTime: NOW + 134 * MINUTE },
+        { type: "CREDIT_LIMIT", unit: 6, number: 1, percentage: 28, nextResetTime: NOW + 99 * 60 * MINUTE },
         { type: "TIME_LIMIT", unit: 5, number: 1, percentage: 57 },
       ],
     },

@@ -129,10 +129,12 @@ export function normalizeZaiUsage(payload: unknown): SubscriptionWindow[] {
   const data = isRecord(payload.data) ? payload.data : undefined;
   const limits = data && Array.isArray(data.limits) ? data.limits : undefined;
   if (!limits) return [];
+  // Live plans report credit limits; older/token plans reported TOKENS_LIMIT.
+  const tokenLimitTypes = new Set(["TOKENS_LIMIT", "CREDIT_LIMIT"]);
   const specs = [{ unit: 3, label: "5h" }, { unit: 6, label: "7d" }] as const;
   return specs.flatMap(({ unit, label }) => {
     const entry = limits.find((candidate): candidate is JsonRecord =>
-      isRecord(candidate) && candidate.type === "TOKENS_LIMIT" && candidate.unit === unit);
+      isRecord(candidate) && tokenLimitTypes.has(candidate.type as string) && candidate.unit === unit);
     if (!entry) return [];
     const used = finiteNumber(entry.percentage);
     if (used === undefined) return [];
