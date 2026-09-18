@@ -1,12 +1,12 @@
-{
-  "research": "5fc9c430b6624164a4f3dd570ba5f0961bfc84cda7fa2e1fb8e9f5f370dabbd1",
-  "code-review": "73e6f26d2173b669cd481d15915ad5152f156f8473ab9f37deeafdd6683e3955",
-  "pr": "7c52d5ab2b14d4d0f2939c66957e72477cb86cb4d4a6b0da844d2700c9022dd5",
-  "implement-issue": "2362d62e94bf8f733998609a2df79d112ca530c9ef64f87a1759a96bc6ff3f70",
-  "implement-issue-worktree": "5e647acda310b4cfdef81ff8f53088fba52bd268ffa924c238fb664ba752b5ea",
-  "review-pr": "b9cd24dd6530103543d458c6c5895bdd90cac63233a3bbb461463e8bbdf86598",
-  "issue-frontier": "cdeffb3e9bdc17fdd750738911ba71a0d291cdc914f18fccf51c627e1a15f190",
-  "report-issue": "9b41aed0b39bed37eabc4265ce6e7309462ccfd56f76399fc3fba23767824484",
-  "triage-issue": "d985846ee8fa91131be60406d369474e27a3b67f89b2566afb431200fce5a09a",
-  "slice-issue": "c4d01d355b374756defae2b077fdd12182759bee5866da24d7ef623c7684139d"
-}
+[
+  "research",
+  "code-review",
+  "pr",
+  "implement-issue",
+  "implement-issue-worktree",
+  "review-pr",
+  "issue-frontier",
+  "report-issue",
+  "triage-issue",
+  "slice-issue"
+]

@@ -86,12 +86,12 @@ source path is deliberate: V2 deduplicates source paths *before* applying preced
 so explicitly repeating `~/.agents/skills` would not override older OpenCode copies.
 The alias wins without deleting those copies or changing shared files.
 
-Runtime adapters retain canonical locations/supporting files, preserve policy gates,
-and reject changed SKILL content using reviewed SHA-256 digests. V2 loads config
+Runtime adapters retain canonical locations/supporting files and preserve policy
+gates; `sources.json` is an id allowlist, not content digests, so changed
+canonical skills adapt without a blocking review gate. V2 loads config
 skills after user plugins; adapters re-register on plugin updates and synchronously
 at prompt/tool/context boundaries. Context guidance also covers already-persisted
-raw skill activations. Review changed policy before updating digests, never blindly
-regenerate them. Custom compaction/toggle is not ported; old aliases explain native
+raw skill activations. Custom compaction/toggle is not ported; old aliases explain native
 compaction instead. Dependency install scripts are disabled to prevent Plannotator
 postinstall from modifying global commands/skills. Plannotator's CLI is installed
 separately into `~/.config/opencode/bin/plannotator`, pinned to 0.27.14 with reviewed

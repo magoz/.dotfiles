@@ -8,7 +8,7 @@ Local OpenCode runtime plugins.
 - `dotfiles-tools`: pane-local worktree/condition bridge; never trust server Herdr env.
 - `herdr-opencode`: unchanged vendored V12; preserve provenance.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.
-- `skill-adapters`: canonical source digests and native harness substitutions.
+- `skill-adapters`: canonical source overlays (id allowlist) and native harness substitutions.
 - `subscription-usage`: server-only OAuth resolution, sanitized on-demand TUI output.
 - `plannotator-v2`: wrapper around pinned upstream native plugin.
 

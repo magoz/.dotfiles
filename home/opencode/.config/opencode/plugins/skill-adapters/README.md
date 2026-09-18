@@ -22,7 +22,7 @@ Parent still freezes outside the repository, as canonical policy requires. Child
 receive the **complete sanitized frozen evidence inline in `subagent.prompt`**, not
 those external paths and not Pi's unsupported `reads` parameter. Keep all child
 external-directory denies; never grant broad `/tmp` or home access. Canonical
-policies/supporting files and reviewed source digests remain unchanged.
+policies/supporting files remain unchanged.
 
 `review-bundle.js` is a pure transport helper (no file access, delegation or hooks):
 

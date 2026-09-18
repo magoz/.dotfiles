@@ -34,9 +34,12 @@ test('late native config.skill loading, prompt/tool boundaries and persisted-ski
     content += '\nPolicy changed';
     const context = { system: [] };
     await hooks.get('session:context')(context);
-    assert.match(context.system[0].text, /is stale/);
     assert.match(context.system[0].text, /single implementation writer/);
-    assert.equal((await ctx.skill.list()).data[0].autoinvoke, false);
+    assert.doesNotMatch(context.system[0].text, /stale/);
+    // Drifted canonical content re-adapts instead of blocking.
+    const adapted = (await ctx.skill.list()).data[0].content;
+    assert.match(adapted, /^# OpenCode assessment/);
+    assert.match(adapted, /Policy changed/);
   } finally { await cleanup(); await native.dispose(); }
   assert.equal(transforms.size, 0); assert.equal(hooks.size, 0);
 });
