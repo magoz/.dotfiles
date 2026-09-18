@@ -124,6 +124,22 @@ export function normalizeOpencodeGoUsage(payload: unknown, now = Date.now()): Su
   ].filter((window): window is SubscriptionWindow => window !== undefined);
 }
 
+export function normalizeZaiUsage(payload: unknown): SubscriptionWindow[] {
+  if (!isRecord(payload)) return [];
+  const data = isRecord(payload.data) ? payload.data : undefined;
+  const limits = data && Array.isArray(data.limits) ? data.limits : undefined;
+  if (!limits) return [];
+  const specs = [{ unit: 3, label: "5h" }, { unit: 6, label: "7d" }] as const;
+  return specs.flatMap(({ unit, label }) => {
+    const entry = limits.find((candidate): candidate is JsonRecord =>
+      isRecord(candidate) && candidate.type === "TOKENS_LIMIT" && candidate.unit === unit);
+    if (!entry) return [];
+    const used = finiteNumber(entry.percentage);
+    if (used === undefined) return [];
+    return [{ label, remainingPercent: remainingPercent(used), resetsAt: finiteNumber(entry.nextResetTime) }];
+  });
+}
+
 export function quotaColor(remaining: number): "muted" | "warning" | "error" {
   if (remaining <= 10) return "error";
   if (remaining <= 30) return "warning";
@@ -197,6 +213,13 @@ function providerUsageConfig(provider: string): ProviderUsageConfig | undefined 
     refreshMs: 5 * MINUTE,
     authKind: "api_key",
     normalize: (payload, now) => normalizeOpencodeGoUsage(payload, now),
+  };
+  if (provider === "zai") return {
+    endpoint: "https://api.z.ai/api/monitor/usage/quota/limit",
+    origin: "https://api.z.ai",
+    refreshMs: 5 * MINUTE,
+    authKind: "api_key",
+    normalize: (payload) => normalizeZaiUsage(payload),
   };
   return undefined;
 }

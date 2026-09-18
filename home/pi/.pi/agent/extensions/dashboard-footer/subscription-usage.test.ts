@@ -7,6 +7,7 @@ import {
   normalizeCodexUsage,
   normalizeGrokUsage,
   normalizeOpencodeGoUsage,
+  normalizeZaiUsage,
   quotaColor,
   SubscriptionUsageTracker,
 } from "./subscription-usage.ts";
@@ -44,6 +45,7 @@ function defaultBaseUrl(provider: string) {
   if (provider === "anthropic") return "https://api.anthropic.com";
   if (provider === "xai") return "https://api.x.ai/v1";
   if (provider === "opencode-go") return "https://opencode.ai/zen/go/v1";
+  if (provider === "zai") return "https://api.z.ai/api/coding/paas/v4";
   return "https://chatgpt.com/backend-api";
 }
 
@@ -121,11 +123,52 @@ test("OpenCode Go parsing is strict, preserves partial windows, and clamps perce
   assert.equal(formatSubscriptionUsage(partial, NOW), "month 50% left / 1d");
 });
 
+test("parses Z.ai 5h/weekly token windows and ignores monthly web-search quota", () => {
+  const payload = {
+    code: 200,
+    success: true,
+    data: {
+      level: "lite",
+      limits: [
+        { type: "TOKENS_LIMIT", unit: 3, number: 5, percentage: 16, nextResetTime: NOW + 134 * MINUTE },
+        { type: "TOKENS_LIMIT", unit: 6, number: 7, percentage: 4, nextResetTime: NOW + 99 * 60 * MINUTE },
+        { type: "TIME_LIMIT", unit: 5, number: 1, percentage: 57, nextResetTime: NOW + 18 * 24 * 60 * MINUTE },
+      ],
+    },
+  };
+  const windows = normalizeZaiUsage(payload);
+  assert.deepEqual(windows.map((w) => w.label), ["5h", "7d"]);
+  assert.equal(formatSubscriptionUsage(windows, NOW), "5h 84% left / 2h 14m · 7d 96% left / 4d 3h");
+});
+
+test("Z.ai parsing is strict, preserves partial windows, and clamps percentages", () => {
+  for (const payload of [null, [], {}, { data: null }, { data: {} }, { data: { limits: null } }, { data: { limits: [] } }]) {
+    assert.deepEqual(normalizeZaiUsage(payload), []);
+  }
+  for (const percentage of [undefined, null, "", "50", true, NaN, Infinity]) {
+    assert.deepEqual(normalizeZaiUsage({ data: { limits: [{ type: "TOKENS_LIMIT", unit: 3, percentage }] } }), []);
+  }
+  assert.equal(normalizeZaiUsage({ data: { limits: [{ type: "TOKENS_LIMIT", unit: 3, percentage: -20 }] } })[0].remainingPercent, 100);
+  assert.equal(normalizeZaiUsage({ data: { limits: [{ type: "TOKENS_LIMIT", unit: 3, percentage: 120 }] } })[0].remainingPercent, 0);
+  assert.equal(
+    formatSubscriptionUsage(normalizeZaiUsage({ data: { limits: [{ type: "TOKENS_LIMIT", unit: 3, percentage: 0 }] } }), NOW),
+    "5h 100% left / reset unknown",
+  );
+  // TIME_LIMIT entries and unknown units never render as token allowance.
+  assert.deepEqual(normalizeZaiUsage({ data: { limits: [{ type: "TIME_LIMIT", unit: 5, percentage: 10 }] } }), []);
+  assert.deepEqual(normalizeZaiUsage({ data: { limits: [{ type: "TOKENS_LIMIT", unit: 5, percentage: 10 }] } }), []);
+  const partial = normalizeZaiUsage({ data: { limits: [{ type: "TOKENS_LIMIT", unit: 6, percentage: 50, nextResetTime: NOW + 24 * 60 * MINUTE }] } });
+  assert.equal(partial.length, 1);
+  assert.equal(partial[0].label, "7d");
+  assert.equal(formatSubscriptionUsage(partial, NOW), "7d 50% left / 1d");
+});
+
 test("strict parsing keeps missing/invalid data unknown, preserves partial windows, and clamps percentages", () => {
   for (const payload of [null, [], {}, { rate_limit: null }, { config: null }]) {
     assert.deepEqual(normalizeCodexUsage(payload), []);
     assert.deepEqual(normalizeAnthropicUsage(payload), []);
     assert.deepEqual(normalizeGrokUsage(payload), []);
+    assert.deepEqual(normalizeZaiUsage(payload), []);
   }
   for (const utilization of [undefined, null, "", "50", true, NaN, Infinity]) {
     assert.deepEqual(normalizeAnthropicUsage({ five_hour: { utilization } }), []);
@@ -323,11 +366,48 @@ test("OpenCode Go uses API-key auth on the official origin with allowlisted head
   tracker.stop();
 });
 
+test("Z.ai uses API-key auth on the official origin with allowlisted headers", async () => {
+  const zaiPayload = {
+    code: 200,
+    success: true,
+    data: {
+      limits: [
+        { type: "TOKENS_LIMIT", unit: 3, number: 5, percentage: 37, nextResetTime: NOW + 134 * MINUTE },
+        { type: "TOKENS_LIMIT", unit: 6, number: 7, percentage: 28, nextResetTime: NOW + 99 * 60 * MINUTE },
+        { type: "TIME_LIMIT", unit: 5, number: 1, percentage: 57 },
+      ],
+    },
+  };
+  let calls = 0;
+  const { ctx } = context("zai", { oauth: false, headers: {
+    authorization: "Bearer test-resolved",
+    "x-private-header": "not-for-usage",
+  } });
+  const tracker = new SubscriptionUsageTracker(() => {}, async (url, init) => {
+    calls += 1;
+    assert.equal(url, "https://api.z.ai/api/monitor/usage/quota/limit");
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.get("authorization"), "Bearer test-resolved");
+    assert.equal(headers.get("accept"), "application/json");
+    assert.equal(headers.get("x-private-header"), null);
+    assert.equal([...headers.keys()].sort().join(","), "accept,authorization");
+    assert.equal(init?.redirect, "error");
+    assert.ok(init?.signal);
+    return Response.json(zaiPayload);
+  }, () => NOW);
+  await tracker.refresh(ctx);
+  await tracker.refresh(ctx);
+  assert.equal(calls, 1);
+  assert.equal(tracker.getText(), EXPECTED);
+  tracker.stop();
+});
+
 test("unsupported providers, API keys and nonofficial origins do not resolve auth or fetch", async () => {
   const cases = [
     context("other"), context("anthropic", { oauth: false }), context("openai-codex-account-2"),
     context("xai", { oauth: false }),
     context("opencode-go", { oauth: true }),
+    context("zai", { oauth: true }),
     ...["https://proxy.example", "http://chatgpt.com", "https://chatgpt.com:8443", "https://user@chatgpt.com", "not a URL"]
       .map((baseUrl) => context("openai-codex", { baseUrl })),
     ...["https://cli-chat-proxy.grok.com", "https://cli-chat-proxy.grok.com/v1", "http://api.x.ai/v1",
@@ -336,6 +416,9 @@ test("unsupported providers, API keys and nonofficial origins do not resolve aut
     ...["https://proxy.example", "http://opencode.ai", "https://opencode.ai:8443",
       "https://user@opencode.ai/zen/go/v1", "https://opencode.ai.example", "not a URL"]
       .map((baseUrl) => context("opencode-go", { oauth: false, baseUrl })),
+    ...["https://proxy.example", "http://api.z.ai", "https://api.z.ai:8443",
+      "https://user@api.z.ai/api/coding/paas/v4", "https://api.z.ai.example", "not a URL"]
+      .map((baseUrl) => context("zai", { oauth: false, baseUrl })),
   ];
   const tracker = new SubscriptionUsageTracker(() => {}, async () => { throw new Error("unexpected fetch"); }, () => NOW);
   for (const { ctx, authCalls } of cases) {

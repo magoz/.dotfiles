@@ -212,3 +212,41 @@ test("registered footer shows OpenCode Go quota in API-key mode without mutating
   assert.deepEqual(app.ctx.model, before);
   app.emit("session_shutdown");
 });
+
+test("registered footer shows Z.ai quota in API-key mode without mutating the model", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  let fetches = 0;
+  t.mock.method(globalThis, "fetch", async (url: string | URL | Request, init?: RequestInit) => {
+    fetches += 1;
+    assert.equal(String(url), "https://api.z.ai/api/monitor/usage/quota/limit");
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.get("authorization"), "Bearer test-token");
+    assert.equal(headers.get("accept"), "application/json");
+    assert.equal(init?.redirect, "error");
+    return Response.json({
+      data: {
+        limits: [
+          { type: "TOKENS_LIMIT", unit: 3, percentage: 20, nextResetTime: Date.now() + 300_000 },
+          { type: "TOKENS_LIMIT", unit: 6, percentage: 40, nextResetTime: Date.now() + 3_600_000 },
+        ],
+      },
+    });
+  });
+  const model = { provider: "zai", id: "glm-5.3", reasoning: true, contextWindow: 200_000, baseUrl: "https://api.z.ai/api/coding/paas/v4" };
+  const before = { ...model };
+  const app = setup("tui", false, model);
+  assert.equal(app.emit("session_start"), undefined, "usage never holds startup open");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(fetches, 1);
+  assert.deepEqual(app.ctx.model, before);
+  const line = app.footer()!.render(200)[1];
+  assert.match(line, /80% left/);
+  assert.match(line, /5h /);
+  assert.match(line, /7d /);
+  app.ctx.modelRegistry.isUsingOAuth = () => true;
+  app.emit("model_select");
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(fetches, 1, "OAuth-mode Z.ai does not fetch usage");
+  assert.deepEqual(app.ctx.model, before);
+  app.emit("session_shutdown");
+});

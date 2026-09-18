@@ -41,6 +41,19 @@ No dependency on `pi-multi-account` remains.
   `resets_in_seconds` / `resetInSec` relative fallbacks are also accepted.
   Missing or non-finite `percent` is unknown, never 0% used.
 - Other providers, mismatched auth modes, and custom/proxy origins are not queried.
+- **Z.ai (GLM Coding Plan) API key:** 5-hour and weekly token allowance from
+  `GET https://api.z.ai/api/monitor/usage/quota/limit` when the selected model is
+  `zai` on the official inference origin `https://api.z.ai`
+  (for example `https://api.z.ai/api/coding/paas/v4`). Like Go, Z.ai
+  authenticates with an API key, so the footer queries it in API-key mode and
+  never in OAuth mode. Requests send only `Authorization: Bearer` and
+  `Accept: application/json`. The payload is
+  `{ data: { limits: [{ type, unit, percentage, nextResetTime }] } }` where
+  `percentage` is used percent; remaining is `100 - percentage`. Token windows
+  render with fixed labels `5h` (`TOKENS_LIMIT` `unit` 3) and `7d` (`unit` 6);
+  `nextResetTime` (epoch milliseconds) is the reset. Monthly `TIME_LIMIT`
+  web-search quota is ignored. Missing or non-finite `percentage` is unknown,
+  never 0% used.
 
 Example: `5h 63% left / 2h 14m · 7d 8% left / 4d 3h`.
 Each remaining percentage uses the active theme: `muted` above 30%, `warning`
