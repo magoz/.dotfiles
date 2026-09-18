@@ -10,10 +10,34 @@ test('normalizers never invent unused Grok allowance or expose provider strings'
   assert.equal(windows('openai', { rate_limit: { primary_window: { used_percent: 30, reset_at: 10 } } })[0].reset, 10000);
   assert.match(format([{ label: '5h', left: 1, reset: 1 }], 5), /reset pending/);
 });
+test('zai normalizer parses live CREDIT_LIMIT and legacy TOKENS_LIMIT windows only', () => {
+  const live = { code: 200, success: true, data: { level: 'max', limits: [
+    { type: 'CREDIT_LIMIT', unit: 3, number: 5, usage: 28000, currentValue: 9683, remaining: 18316, percentage: 34, nextResetTime: 1789728449559 },
+    { type: 'CREDIT_LIMIT', unit: 6, number: 1, usage: 140000, currentValue: 55530, remaining: 84469, percentage: 39, nextResetTime: 1790237572969 },
+    { type: 'TIME_LIMIT', unit: 5, number: 1, percentage: 57 },
+  ] } };
+  assert.deepEqual(windows('zai', live), [
+    { label: '5h', left: 66, reset: 1789728449559 },
+    { label: '7d', left: 61, reset: 1790237572969 },
+  ]);
+  assert.deepEqual(windows('zai', { data: { limits: [
+    { type: 'TOKENS_LIMIT', unit: 3, percentage: 16 },
+    { type: 'TOKENS_LIMIT', unit: 6, percentage: 4, nextResetTime: 'not-a-number' },
+  ] } }), [{ label: '5h', left: 84, reset: undefined }, { label: '7d', left: 96, reset: undefined }]);
+  for (const bad of [null, [], {}, { data: null }, { data: {} }, { data: { limits: null } }, { data: { limits: [] } },
+    { data: { limits: [{ type: 'TIME_LIMIT', unit: 3, percentage: 10 }] } },
+    { data: { limits: [{ type: 'UNKNOWN_LIMIT', unit: 3, percentage: 10 }] } },
+    { data: { limits: [{ type: 'CREDIT_LIMIT', unit: 5, percentage: 10 }] } },
+    { data: { limits: [{ type: 'CREDIT_LIMIT', unit: 3, percentage: '50' }] } },
+    { data: { limits: [{ type: 'CREDIT_LIMIT', unit: 3, percentage: NaN }] } }]) assert.deepEqual(windows('zai', bad), []);
+  assert.deepEqual(windows('zai', { data: { limits: [{ type: 'CREDIT_LIMIT', unit: 6, percentage: -20 }] } }), [{ label: '7d', left: 100, reset: undefined }]);
+});
 test('only supported official origins or the explicit local Claude adapter', () => {
   assert.equal(allowedOrigin('openai', { settings: { baseURL: 'https://evil.invalid' } }, {}), false);
   assert.equal(allowedOrigin('openai', { settings: { baseURL: 'https://user:secret@api.openai.com' } }, {}), false);
   assert.equal(allowedOrigin('anthropic', { api: { url: 'http://127.0.0.1:123/random/v1' } }, { methodID: 'claude-pro-max' }), true);
+  assert.equal(allowedOrigin('zai', { settings: { baseURL: 'https://proxy.example' } }, {}), false);
+  assert.equal(allowedOrigin('zai', { settings: { baseURL: 'https://api.z.ai/api/coding/paas/v4' } }, {}), true);
 });
 function context(credential) {
   return {
@@ -34,6 +58,34 @@ test('OAuth-only fixed endpoint, redirect rejection, cache, no secret output', a
   } finally { usage.dispose(); }
   const keyed = makeUsage(context({ type: 'key', key: 'synthetic-key' }), { fetcher: async () => assert.fail('No API key telemetry') });
   assert.equal((await keyed.get('ses')).status, 'unavailable'); keyed.dispose();
+});
+
+function zaiContext(credential) {
+  return {
+    location: { directory: '/repo' }, session: { async get() { return { id: 'ses', location: { directory: '/repo' }, model: { providerID: 'zai', id: 'glm-5.3' } }; } },
+    catalog: { provider: { async get() { return { data: { id: 'zai', integrationID: 'zai' } }; } }, model: { async list() { return { data: [{ id: 'glm-5.3', providerID: 'zai' }] }; } } },
+    integration: { connection: { async active() { return { type: 'credential', id: 'connection' }; }, async resolve() { return credential; } } },
+  };
+}
+test('zai API-key quota uses the official monitor endpoint; auth-kind mismatches never fetch', async () => {
+  let calls = 0;
+  const usage = makeUsage(zaiContext({ type: 'key', key: 'synthetic-key' }), { fetcher: async (url, options) => {
+    calls++; assert.equal(url, 'https://api.z.ai/api/monitor/usage/quota/limit');
+    assert.equal(new Headers(options.headers).get('authorization'), 'Bearer synthetic-key');
+    return new Response(JSON.stringify({ data: { limits: [
+      { type: 'CREDIT_LIMIT', unit: 3, percentage: 34, nextResetTime: Date.now() + 3_600_000 },
+      { type: 'CREDIT_LIMIT', unit: 6, percentage: 39, nextResetTime: Date.now() + 86_400_000 },
+    ] } }));
+  } });
+  try {
+    const result = await usage.get('ses');
+    assert.equal(result.status, 'available');
+    assert.match(result.text, /5h: 66% left/);
+    assert.match(result.text, /7d: 61% left/);
+    await usage.get('ses'); assert.equal(calls, 1);
+  } finally { usage.dispose(); }
+  const oauth = makeUsage(zaiContext({ type: 'oauth', access: 'synthetic-secret' }), { fetcher: async () => assert.fail('OAuth cannot read API-key quota') });
+  assert.equal((await oauth.get('ses')).status, 'unavailable'); oauth.dispose();
 });
 
 const success = (used = 20) => new Response(JSON.stringify({ rate_limit: { primary_window: { used_percent: used } } }));

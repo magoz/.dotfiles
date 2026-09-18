@@ -21,6 +21,14 @@ export function windows(provider, payload, now = Date.now()) {
     const label = period?.type === 'USAGE_PERIOD_TYPE_WEEKLY' ? '7d' : period?.type === 'USAGE_PERIOD_TYPE_MONTHLY' ? 'month' : 'usage';
     return [{ label, left: left(payload.config.creditUsagePercent), reset: date(period?.end) }];
   }
+  if (provider === 'zai' && record(payload.data) && Array.isArray(payload.data.limits)) {
+    // Live Max-plan keys report CREDIT_LIMIT; older/token plans reported TOKENS_LIMIT.
+    const kinds = new Set(['TOKENS_LIMIT', 'CREDIT_LIMIT']);
+    return [[3, '5h'], [6, '7d']].flatMap(([unit, label]) => {
+      const limit = payload.data.limits.find((v) => record(v) && kinds.has(v.type) && v.unit === unit);
+      return number(limit?.percentage) !== undefined ? [{ label, left: left(limit.percentage), reset: number(limit.nextResetTime) }] : [];
+    });
+  }
   return [];
 }
 export function format(items, now = Date.now()) {
@@ -34,6 +42,7 @@ const providers = {
   openai: { url: 'https://chatgpt.com/backend-api/wham/usage', origins: ['https://api.openai.com', 'https://chatgpt.com'], ttl: 300000 },
   anthropic: { url: 'https://api.anthropic.com/api/oauth/usage', origins: ['https://api.anthropic.com'], ttl: 600000 },
   xai: { url: 'https://cli-chat-proxy.grok.com/v1/billing?format=credits', origins: ['https://api.x.ai', 'https://cli-chat-proxy.grok.com'], ttl: 300000 },
+  zai: { url: 'https://api.z.ai/api/monitor/usage/quota/limit', origins: ['https://api.z.ai'], ttl: 300000, authKind: 'key' },
 };
 export function allowedOrigin(provider, definition, credential) {
   const config = providers[provider];
@@ -85,7 +94,7 @@ export async function readBounded(response, signal) {
 }
 export function makeUsage(ctx, { fetcher = fetch, now = Date.now, timeoutMs = 15000 } = {}) {
   const cache = new Map(), requests = new Map(), lifetime = new AbortController();
-  const unavailable = { status: 'unavailable', text: 'Subscription quota unavailable (requires a supported official OAuth connection).' };
+  const unavailable = { status: 'unavailable', text: 'Subscription quota unavailable (requires a supported official connection).' };
   const fallback = (entry) => entry?.snapshot && now() - entry.snapshot.at < STALE_RETENTION_MS
     ? { status: 'stale', text: `${entry.snapshot.value.text}\n(stale)` } : unavailable;
   return {
@@ -110,7 +119,10 @@ export function makeUsage(ctx, { fetcher = fetch, now = Date.now, timeoutMs = 15
         const connection = await wait(ctx.integration.connection.active(provider.integrationID));
         if (!connection || connection.type !== 'credential' || typeof connection.id !== 'string' || !connection.id) return unavailable;
         const credential = await wait(ctx.integration.connection.resolve(connection));
-        if (credential?.type !== 'oauth' || typeof credential.access !== 'string' || !credential.access || !allowedOrigin(providerID, provider, credential)) return unavailable;
+        // OAuth providers keep token-free API keys out; the Z.ai monitor endpoint
+        // is API-key only, so its token comes from the key credential instead.
+        const token = config.authKind === 'key' ? credential?.key : credential?.access;
+        if ((config.authKind === 'key' ? credential?.type !== 'key' : credential?.type !== 'oauth') || typeof token !== 'string' || !token || !allowedOrigin(providerID, provider, credential)) return unavailable;
         const { data: models } = await wait(ctx.catalog.model.list());
         const model = models.find((m) => m.providerID === providerID && m.id === session.model.id);
         if (!model || !allowedOrigin(providerID, model, credential)) return unavailable;
@@ -127,7 +139,7 @@ export function makeUsage(ctx, { fetcher = fetch, now = Date.now, timeoutMs = 15
         cache.set(key, entry);
         if (cache.size > 128) cache.delete(cache.keys().next().value);
         const current = () => !signal.aborted && cache.get(key) === entry;
-        const headers = { Authorization: `Bearer ${credential.access}`, Accept: 'application/json' };
+        const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
         if (providerID === 'openai' && accountID) headers['ChatGPT-Account-Id'] = accountID;
         if (providerID === 'anthropic') headers['anthropic-beta'] = 'oauth-2025-04-20';
         if (providerID === 'xai') headers['X-XAI-Token-Auth'] = 'xai-grok-cli';

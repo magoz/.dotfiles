@@ -1,18 +1,26 @@
 # Subscription usage (OpenCode assessment)
 
-`/subscription-usage` or `/quota` displays Codex, Claude, or Grok OAuth allowance.
-This is intentionally an on-demand cached snapshot, not a replacement footer.
-No startup requests, inference, auth-file reads, account switching, or Pi imports.
-Credentials stay in the server and resolve via the native integration connection.
-The TUI receives only normalized percentages/reset text. API keys and unsupported
-origins are skipped. Fixed HTTPS endpoints reject redirects and have a 15s timeout;
+`/subscription-usage` or `/quota` displays Codex, Claude, Grok OAuth, or Z.ai
+API-key allowance. This is intentionally an on-demand cached snapshot, not a
+replacement footer. No startup requests, inference, auth-file reads, account
+switching, or Pi imports. Credentials stay in the server and resolve via the
+native integration connection. The TUI receives only normalized percentages/reset
+text. API keys are accepted only for the official Z.ai monitor endpoint; other
+providers require official OAuth, and API keys and unsupported origins are skipped
+for them. Fixed HTTPS endpoints reject redirects and have a 15s timeout;
 5m cache (10m Claude), 429 backoff, cancellation on plugin unload.
 
 Payload conventions follow the local Pi footer's provider implementations, but
 this adapter is independent so Pi can evolve during assessment. Grok uses its
 first-party internal CLI billing endpoint, not a public stable quota contract;
-missing `creditUsagePercent` means unknown. Recheck compatibility when providers
-change. Missing auth/model data reports unavailable, never 100% allowance.
+missing `creditUsagePercent` means unknown. Z.ai uses the GLM Coding Plan
+subscription monitor `GET https://api.z.ai/api/monitor/usage/quota/limit` with
+API-key auth (`Authorization: Bearer`); allowance windows are
+`CREDIT_LIMIT`/`TOKENS_LIMIT` entries with `unit` 3 (`5h`) and 6 (`7d`), where
+`percentage` is used percent and `nextResetTime` (epoch ms) is the reset;
+monthly `TIME_LIMIT` web-search quota is ignored. Live Max-plan keys report
+`CREDIT_LIMIT`; recheck compatibility when providers change. Missing
+auth/model data reports unavailable, never 100% allowance.
 
 Assessment limitation: this has synthetic tests, not live quota-provider checks.
 
