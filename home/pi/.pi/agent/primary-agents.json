@@ -4,11 +4,11 @@
     "coding": {
       "description": "Architecture, supervision, and delivery; direct work or delegation by judgment",
       "prompt": "primary-agents/coding.md",
-      "workers": ["general", "ui-design", "explore-codebase", "pr-reviewer", "web-researcher"],
+      "workers": ["general", "ui-design", "explore-codebase", "pr-reviewer", "tech-lead", "web-researcher"],
       "models": [
         {
           "id": "openai-codex/gpt-6-astra",
-          "guidance": "Preferred main coding model and the pr-reviewer default. The PR skill requests independent opinions from both Astra and anthropic/claude-fable-5-1 on the same patch and criteria when available; outside that skill, Fable remains an explicit per-launch review alternative. Reserve for architecture, difficult reasoning, supervision, and final judgment rather than routine implementation. Main-model selection remains independent of identity activation."
+          "guidance": "Preferred main coding model and the pr-reviewer and tech-lead default. Tech-lead fallback: Fable, then public-only Muse, then GLM 5.3. The PR skill requests independent opinions from both Astra and anthropic/claude-fable-5-1 on the same patch and criteria when available; outside that skill, Fable remains an explicit per-launch review alternative. Use tech-lead for frontier judgment checkpoints (architecture, difficult tradeoffs, contested decisions) so a cheap main session consults frontier only at high-stakes moments. Reserve for architecture, difficult reasoning, supervision, and final judgment rather than routine implementation. Main-model selection remains independent of identity activation."
         },
         {
           "id": "anthropic/claude-fable-5-1",

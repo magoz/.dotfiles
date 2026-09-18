@@ -151,14 +151,14 @@ focused follow-up, give both the same affected scope and axes. Do not show eithe
 findings or inherited implementation rationale before their independent reports are complete.
 
 Before launching, use pi-subagents capability/model discovery and its supported authentication and
-execution preflight; a configured model name is not availability proof. If one model is unavailable
-before launch, use the other for all assigned axes and explicitly report **one opinion obtained** with
-the missing provider/model and reason. If neither is available, independent review is blocked. Do not
-substitute another model silently or count two runs of the same model as two model opinions. Stricter
-repository or user requirements for two successful opinions still block readiness when one is missing.
-A launch, tooling, or runtime failure after dispatch is an infrastructure blocker, not a successful
-single-opinion fallback: stop, retain the exact failure/run identity and partial evidence, and follow
-pi-subagents recovery rules before retrying or asking the owner.
+execution preflight; a configured model name is not availability proof. If either preferred model is
+unavailable before launch, fallback to the caller agent's model for that slot (launch that `pr-reviewer`
+without an explicit model override) and explicitly report the fallback with the missing provider/model,
+reason, and actual model used. If both are unavailable, run only once on the caller agent's model — do not launch two reviewers on the same model.
+Do not substitute any other model silently, and do not count two runs of the same model as two preferred-model
+opinions — report fallback opinions as caller-model opinions. Stricter repository or user requirements for
+two preferred-model opinions still block readiness when a fallback was used.
+A post-dispatch failure that signals that model is down, unavailable, out of credits/quota, unauthorized, or not found (e.g. auth, quota/credit, rate-limit-exhausted with no retry-after making progress, model/provider not found, account limit) counts as unavailable: fallback that slot to the caller agent's model and explicitly report the failure/run identity, signal, and actual model used. If both slots fail this way, run only once on the caller agent's model. Do not retry a dead/quota-exhausted model repeatedly — at most one same-model retry for genuinely transient errors (network blip, timeout), then fallback. Other launch, tooling, or runtime failures remain infrastructure blockers: stop, retain the exact failure/run identity and partial evidence, and follow pi-subagents recovery rules before retrying or asking the owner.
 
 Use one top-level async pi-subagents workflow per invocation, with parallel `runs.all` calls for the
 reviewers inside it; any later review rounds belong to that same workflow. Follow pi-subagents guidance
@@ -173,7 +173,7 @@ Record each opinion's exact provider/model, run/output reference, target digest/
 parent disposition in review evidence and the managed PR body. Apply Evidence reuse per model and axis:
 valid opinions do not need rerunning, but one model's report cannot stand in for the other's. Obtain
 only missing or invalidated opinions, recording original targets and delta applicability when reused.
-An unavailable-model skip is not a second opinion; recheck availability when a later invocation needs
+An unavailable-model caller fallback is not a preferred-model opinion; recheck availability when a later invocation needs
 that missing opinion. Reusing two valid opinions requires no new launches.
 
 ## Repository discovery
