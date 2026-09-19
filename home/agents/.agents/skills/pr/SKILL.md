@@ -281,30 +281,52 @@ captures or publishes new assets.
 1. Identify the changed UI and the smallest useful set of screenshots. Show the relevant states, such
    as a dialog plus its expanded selector; include responsive or error states when changed. Load and
    follow `agent-browser` for capture, or `browser-control` when an existing authenticated user browser
-   is needed. Do not duplicate browser setup instructions here.
+   is needed. Do not duplicate browser setup instructions here. When the change has no visible UI
+   impact, capture nothing and omit the Visual proof section from the PR body — no images required.
 2. Capture the actual application from the intended checkout or a preview verified to serve that
    revision. Record the source commit SHA or exact uncommitted patch digest, environment, viewport,
    and demonstrated state. Use synthetic data and repository-approved safe environments. Screenshot
    capture does not authorize unsafe database resets, production mutations, deployments, provider
-   calls, or authentication bypasses.
+   calls, or authentication bypasses. When the changed UI sits behind login, authenticate through the
+   repository's local-dev path: resolve the local dev URL, test/synthetic user, and OTP/one-time-code
+   retrieval (dev database query or repository-documented dev tooling/endpoint) from `AGENTS.md` or
+   its linked guides. Never use production, never use real user data, never hardcode or commit
+   credentials, and never bypass authentication by editing the DOM or faking state. When the login
+   path cannot be inferred from the repository, stop and ask the user for the missing piece instead
+   of guessing or silently skipping authenticated states.
 3. Open and inspect every image before publication: confirm it demonstrates the change, is legible,
    and contains no secrets or private user data. Never substitute mockups, generated images, or
    DOM-edited approximations for actual application evidence. Screenshots prove appearance and the
    captured state, not persistence, provider behavior, or a passing functional test.
-4. Prefer native GitHub image attachments. GitHub CLI v2.99.0+ supports uploading local images and
-   videos with the repeatable `--attach` flag on `gh pr create/edit/comment`, using existing CLI
-   authentication and repository write access. Check the installed command's help before declaring
-   uploads unavailable. If native upload is genuinely unavailable, commit only the inspected PNGs on
-   the PR branch in the repository's approved screenshot location; use `docs/screenshots/` as a
-   fallback only when repository policy permits. These intentionally selected evidence files are
-   task-owned, not unexplained generated artifacts. Keep files small and descriptive; never commit whole browser/test output directories.
-   Include them before the normal staging/review gates, not as an unreviewed follow-up to a ready PR.
-   Do not create public gists or use unrelated image hosts to work around private-repository access.
-5. Embed the images with short captions in the managed PR body. For committed assets, use immutable
-   URLs such as `https://github.com/<owner>/<repo>/blob/<asset-sha>/<path>.png?raw=true`, resolving the
-   repository that owns the assets. Record the captured source revision separately from any later
-   screenshot-only commit. After publishing, verify the body contains rendered image elements and the
-   uploaded images are retrievable with the intended repository access; local paths are not attachments.
+4. Upload screenshots only as native GitHub attachments via `gh --attach`; never commit evidence
+   images to the PR branch. Save inspected captures to a temporary directory outside the repository
+   (for example `/tmp/pr-visual-<branch>/`), never inside the repo checkout. GitHub CLI v2.99.0+
+   uploads local images and videos with the repeatable `--attach` flag on `gh pr create/edit/comment`,
+   using existing CLI authentication and repository write access. Write the PR body to a file with a
+   matching markdown reference per image, using each file's basename so GitHub rewrites it to the
+   uploaded asset, then publish body and uploads in one command:
+
+   ```md
+   ![Login error state](./login-error.png)
+   ```
+
+   ```bash
+   gh pr create --draft --body-file /tmp/pr-body.md --attach '/tmp/pr-visual-branch/login-error.png#Login error state'
+   gh pr edit <number> --body-file /tmp/pr-body.md --attach '/tmp/pr-visual-branch/login-error.png#Login error state'
+   ```
+
+   Repeat `--attach` for each image (up to 50 per command). Alt text after `#` describes the state;
+   a reference already in the body keeps the alt text written there. If some attachments upload and
+   others fail, the command still updates the PR with the successes but exits non-zero: treat that as
+   a partial failure, fix and re-run the missing uploads, never claim complete evidence. Do not
+   create public gists or use unrelated image hosts to work around private-repository access. There is
+   no commit-based fallback: if native upload is genuinely unavailable (checked via the installed
+   command's help), record `blocked` with the reason instead of committing images.
+5. Embed the images with short captions in the managed PR body Visual proof section, alongside the
+   captured source revision, environment, viewport, and demonstrated state. After every publish or
+   body update, verify with `gh pr view <number> --json body -q .body` that each reference was
+   rewritten to a `githubusercontent` asset URL and no `./<file>.png` local-path reference remains;
+   re-upload anything still local. Local paths are never attachments.
 6. On updates, recapture when the relevant UI code, assets, or configuration changes. Reuse existing
    screenshots only when those inputs are unchanged, retaining their original provenance. If safe
    capture or attachment is unavailable, record `blocked` with the reason and missing prerequisite;
@@ -320,10 +342,12 @@ ready or auto-merge eligibility for an incompletely validated commit.
 
 1. Complete the Always-on preparation pass, then inspect staged, unstaged, and untracked paths. Infer
    the intended set from the current task and ask only when files are genuinely unrelated or
-   ambiguous. For visible UI changes, complete Visual proof capture and select any task-owned PNGs
-   before staging; record blockers when capture is unavailable.
+   ambiguous. For visible UI changes, complete Visual proof capture to the temporary directory
+   outside the repository before staging; evidence screenshots are attached via `gh --attach` and
+   are never staged or committed. Record blockers when capture is unavailable.
 2. Block publication hazards: tracked credentials or environment files, private keys, generated build
-   or test artifacts (except inspected Visual proof PNGs), unexplained binary/large files, merge
+   or test artifacts (including evidence screenshots, which are attached via `gh --attach` and never
+   committed), unexplained binary/large files, merge
    markers, or unrelated changes. Apply any stricter repository rules.
 3. Stage only task-owned paths and run `git diff --cached --check`. A draft may have incomplete tests,
    but its body must report checks honestly.
@@ -438,7 +462,8 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
 4. Run end-to-end, integration, deployment-preview, migration, or infrastructure validation only when
    relevant and safe under repository policy. Missing evidence for a repository-required or
    change-critical check blocks ready rather than being inferred as success. For visible UI changes,
-   complete or refresh Visual proof and include any selected PNGs and capture provenance in the review
+   complete or refresh Visual proof (captures stay in the temporary directory outside the repository;
+   they are attached via `gh --attach`, never committed) and include capture provenance in the review
    bundle before freezing it.
 5. Freeze the complete prepared patch before independent review, including documentation from the
    Always-on preparation pass:
