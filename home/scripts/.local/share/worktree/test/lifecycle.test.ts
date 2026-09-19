@@ -28,6 +28,8 @@ const createFake = (
     name?: string
     startedPaneId?: string
     startedKind?: string
+    toplevel?: string
+    commonDir?: string
     startErrorCode?: "cli:agent:start:timeout" | "agent_pane_busy"
     detectedStatus?: "idle" | "working" | "blocked"
   } = {}
@@ -38,7 +40,7 @@ const createFake = (
     calls.push({ mode: "capture", command, args, cwd: runOptions.cwd })
 
     if (command === "git" && args.includes("--show-toplevel")) {
-      return Effect.succeed({ stdout: "/repo\n", stderr: "" })
+      return Effect.succeed({ stdout: `${options.toplevel ?? "/repo"}\n`, stderr: "" })
     }
     if (command === "git" && args.includes("fetch")) {
       if (options.failFetch) return Effect.fail(new ProcessError({
@@ -55,7 +57,7 @@ const createFake = (
       return Effect.succeed({ stdout: "abc123\n", stderr: "" })
     }
     if (command === "git" && args.includes("--git-common-dir")) {
-      return Effect.succeed({ stdout: "/repo/.git\n", stderr: "" })
+      return Effect.succeed({ stdout: `${options.commonDir ?? "/repo/.git"}\n`, stderr: "" })
     }
     if (command === "herdr" && args[0] === "worktree") {
       return Effect.succeed({
@@ -246,6 +248,21 @@ test("agent names are valid, deterministic, and bounded", () => {
   expect(name).toMatch(/^[a-z][a-z0-9-]{0,31}$/)
   expect(name.length).toBeLessThanOrEqual(32)
   expect(name).toBe(agentNameFor("Feature/A Very Long Branch Name With Symbols!", "wABC123"))
+})
+
+test("creation from a linked checkout hands Herdr the primary root", async () => {
+  const fake = createFake({ toplevel: "/repo-linked", commonDir: "/repo/.git" })
+  const created = await Effect.runPromise(createEnvironment({
+    repo: "/repo-linked", branch: "feat/feature", ttl: "7d", setupCommands: []
+  }).pipe(Effect.provide(fake.layer)))
+  expect(created.source).toBe("/repo-linked")
+  const createCall = fake.calls.find(
+    (call) => call.command === "herdr" && call.args[0] === "worktree" && call.args[1] === "create"
+  )
+  expect(createCall?.args[createCall.args.indexOf("--cwd") + 1]).toBe("/repo")
+  // Provisioning still copies the app link from the invoking checkout.
+  const provisionCall = fake.calls.find((call) => call.command === "provision-env")
+  expect(provisionCall?.args).toContain("/repo-linked")
 })
 
 test("default creation fetches and pins the base before allocating Herdr resources", async () => {

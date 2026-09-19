@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { execFileSync } from "node:child_process"
-import { requireNewBranch, resolveBase } from "../src/git"
+import { requireNewBranch, resolveBase, resolvePrimaryRoot } from "../src/git"
 import { ProcessLive } from "../src/process"
 
 const roots: string[] = []
@@ -105,6 +105,15 @@ test("invalid explicit bases fail rather than silently selecting the default", a
     await expect(resolve(source, base)).rejects.toThrow("base ref does not exist")
   }
   expectCleanRefs(source)
+})
+
+test("resolvePrimaryRoot returns the primary root from a primary or linked checkout", async () => {
+  const { source } = fixture()
+  const run = (repo: string) => Effect.runPromise(resolvePrimaryRoot(repo).pipe(Effect.provide(ProcessLive)))
+  await expect(run(source)).resolves.toBe(source)
+  const linked = join(source + "-linked")
+  git(source, "worktree", "add", "-b", "linked-branch", linked)
+  await expect(run(linked)).resolves.toBe(source)
 })
 
 test("default creation rejects an existing destination branch without moving it", async () => {

@@ -1,6 +1,6 @@
 import { Console, Effect, Either } from "effect"
 import { type CreateOptions, type CreatedEnvironment, WorktreeError, agentDisplayName, resolveAgentKind } from "./domain"
-import { defaultWorktreePath, requireNewBranch, resolveBase, resolveRepository } from "./git"
+import { defaultWorktreePath, requireNewBranch, resolveBase, resolvePrimaryRoot, resolveRepository } from "./git"
 import {
   agentNameFor,
   createHerdrWorktree,
@@ -51,13 +51,21 @@ export const createEnvironment = (options: CreateOptions) =>
     const agentKind = yield* resolveAgentKind(options.agent)
     const agentLabel = agentDisplayName(agentKind)
     const source = yield* resolveRepository(options.repo)
-    if (options.base === undefined) yield* requireNewBranch(source, options.branch)
-    const base = yield* resolveBase(source, options.base)
-    const destinationPath = options.path ?? (yield* defaultWorktreePath(source, options.branch))
+    // Herdr groups new worktrees under the repo parent workspace and rejects
+    // linked checkouts as the create source (linked_worktree_source), so always
+    // hand Herdr the primary root while provisioning stays sourced from the
+    // invoking checkout.
+    const herdrSource = yield* resolvePrimaryRoot(source)
+    if (herdrSource !== source) {
+      yield* Console.log(`worktree: using primary checkout ${herdrSource} for Herdr (invoked from linked worktree ${source})`)
+    }
+    if (options.base === undefined) yield* requireNewBranch(herdrSource, options.branch)
+    const base = yield* resolveBase(herdrSource, options.base)
+    const destinationPath = options.path ?? (yield* defaultWorktreePath(herdrSource, options.branch))
     const resolvedOptions = { ...options, path: destinationPath }
 
     yield* Console.log(`worktree: creating ${options.branch} from ${base}`)
-    const created = yield* createHerdrWorktree(source, base, resolvedOptions)
+    const created = yield* createHerdrWorktree(herdrSource, base, resolvedOptions)
     const destination = created.result.worktree.path
     const workspaceId = created.result.workspace.workspace_id
     const pane = yield* findRootPane(workspaceId)

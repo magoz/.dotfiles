@@ -40,15 +40,24 @@ export const branchPathSlug = (branch: string) => {
   return slug
 }
 
-/** Place linked checkouts beside the primary repository, even when invoked from another worktree. */
-export const defaultWorktreePath = (repo: string, branch: string) =>
+/** Resolve the primary repository root, even when invoked from a linked worktree.
+ * Herdr's create/open actions must start from the repo parent workspace
+ * (linked_worktree_source), so callers pass this to Herdr as --cwd. */
+export const resolvePrimaryRoot = (repo: string) =>
   Effect.gen(function* () {
     const commonDirectory = yield* output(repo, [
       "rev-parse",
       "--path-format=absolute",
       "--git-common-dir"
     ])
-    const primaryRoot = basename(commonDirectory) === ".git" ? dirname(commonDirectory) : repo
+    if (basename(commonDirectory) === ".git") return dirname(commonDirectory)
+    return repo
+  })
+
+/** Place linked checkouts beside the primary repository, even when invoked from another worktree. */
+export const defaultWorktreePath = (repo: string, branch: string) =>
+  Effect.gen(function* () {
+    const primaryRoot = yield* resolvePrimaryRoot(repo)
     const slug = yield* Effect.try({
       try: () => branchPathSlug(branch),
       catch: (error) =>
