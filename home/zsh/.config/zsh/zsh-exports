@@ -62,6 +62,8 @@ export CLICOLOR=1
 export EDITOR="nvim"
 # Check for Pi updates manually with `pi update`.
 export PI_SKIP_VERSION_CHECK=1
+# Trust locally installed CAs (including Portless) in Node-based clients such as Pi.
+export NODE_USE_SYSTEM_CA=1
 unset BROWSER
 
 export NNN_PLUG='v:imgview'

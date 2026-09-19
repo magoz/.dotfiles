@@ -1,0 +1,59 @@
+{
+  "providers": {
+    "subs-codex": {
+      "baseUrl": "http://127.0.0.1:8317/v1",
+      "api": "openai-responses",
+      "authHeader": true,
+      "models": [
+        {
+          "id": "gpt-5.6-sol",
+          "name": "GPT-5.6 Sol (Subs Codex Pool)",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 272000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "minimal": "low",
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "cost": {
+            "input": 5,
+            "output": 30,
+            "cacheRead": 0.5,
+            "cacheWrite": 6.25
+          },
+          "compat": {
+            "supportsOpenAIGrammarTools": true
+          }
+        },
+        {
+          "id": "gpt-6-astra",
+          "name": "GPT-6 Astra (Subs Codex Pool)",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 272000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": "low",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "cost": {
+            "input": 10,
+            "output": 50,
+            "cacheRead": 1,
+            "cacheWrite": 12.5
+          },
+          "compat": {
+            "supportsOpenAIGrammarTools": true
+          }
+        }
+      ]
+    }
+  }
+}
