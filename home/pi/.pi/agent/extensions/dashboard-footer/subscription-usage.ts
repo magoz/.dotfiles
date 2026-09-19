@@ -6,6 +6,7 @@ const MINUTE = 60_000;
 export interface SubscriptionWindow {
   label: string;
   remainingPercent: number;
+  capacityPercent?: number;
   resetsAt?: number;
 }
 
@@ -68,6 +69,52 @@ export function normalizeCodexUsage(payload: unknown, now = Date.now()): Subscri
     normalizeCodexWindow(payload.rate_limit.primary_window, "5h", now),
     normalizeCodexWindow(payload.rate_limit.secondary_window, "7d", now),
   ].filter((window): window is SubscriptionWindow => window !== undefined);
+}
+
+function subsWindowLabel(value: JsonRecord): string | undefined {
+  const durationMinutes = finiteNumber(value.durationMinutes);
+  if (durationMinutes !== undefined && durationMinutes > 0) {
+    return formatWindowLabel(durationMinutes * 60, "usage");
+  }
+  if (value.label === "5-hour") return "5h";
+  if (value.label === "Weekly") return "7d";
+  if (value.label === "Monthly") return "month";
+  return typeof value.label === "string" && value.label.length > 0 ? value.label : undefined;
+}
+
+export function normalizeSubsCodexUsage(payload: unknown): SubscriptionWindow[] {
+  if (!isRecord(payload) || !Array.isArray(payload.accounts)) return [];
+  const accounts = payload.accounts.filter((account): account is JsonRecord =>
+    isRecord(account) && account.provider === "codex");
+  if (accounts.length === 0 || accounts.some((account) => account.status !== "fresh")) return [];
+
+  const grouped = new Map<string, { label: string; remaining: number; capacity: number; resets: number[] }>();
+  for (const account of accounts) {
+    if (!Array.isArray(account.windows)) return [];
+    for (const candidate of account.windows) {
+      if (!isRecord(candidate)) continue;
+      const remaining = finiteNumber(candidate.remainingPercent);
+      const label = subsWindowLabel(candidate);
+      if (remaining === undefined || !label) continue;
+      const durationMinutes = finiteNumber(candidate.durationMinutes);
+      const key = durationMinutes !== undefined ? `duration:${durationMinutes}` : `label:${label}`;
+      const group = grouped.get(key) ?? { label, remaining: 0, capacity: 0, resets: [] };
+      group.remaining += Math.max(0, Math.min(100, remaining));
+      group.capacity += 100;
+      if (typeof candidate.resetsAt === "string") {
+        const reset = Date.parse(candidate.resetsAt);
+        if (Number.isFinite(reset)) group.resets.push(reset);
+      }
+      grouped.set(key, group);
+    }
+  }
+
+  return [...grouped.values()].map((group) => ({
+    label: group.label,
+    remainingPercent: group.remaining,
+    capacityPercent: group.capacity,
+    resetsAt: group.resets.length > 0 ? Math.min(...group.resets) : undefined,
+  }));
 }
 
 function grokWindowLabel(type: unknown): string {
@@ -172,7 +219,10 @@ export function formatSubscriptionUsage(
     const expired = window.resetsAt !== undefined && window.resetsAt <= now;
     const remaining = window.remainingPercent > 0 && window.remainingPercent < 1
       ? "<1" : `${Math.round(window.remainingPercent)}`;
-    const quota = fg(stale || expired ? "muted" : quotaColor(window.remainingPercent), `${remaining}% left`);
+    const capacity = window.capacityPercent ?? 100;
+    const healthPercent = capacity > 0 ? window.remainingPercent / capacity * 100 : 0;
+    const quotaText = capacity > 100 ? `${remaining}% of ${Math.round(capacity)}% left` : `${remaining}% left`;
+    const quota = fg(stale || expired ? "muted" : quotaColor(healthPercent), quotaText);
     const reset = window.resetsAt === undefined ? "reset unknown" : formatTimeRemaining(window.resetsAt, now);
     return `${fg("muted", `${window.label} `)}${quota}${fg("muted", ` / ${reset}`)}`;
   }).join(fg("muted", " · "));
@@ -183,7 +233,7 @@ interface ProviderUsageConfig {
   endpoint: string;
   origin: string;
   refreshMs: number;
-  authKind: "oauth" | "api_key";
+  authKind: "oauth" | "api_key" | "none";
   normalize(payload: unknown, now: number): SubscriptionWindow[];
 }
 
@@ -201,6 +251,13 @@ function providerUsageConfig(provider: string): ProviderUsageConfig | undefined 
     refreshMs: 5 * MINUTE,
     authKind: "oauth",
     normalize: normalizeCodexUsage,
+  };
+  if (provider === "subs-codex") return {
+    endpoint: "http://127.0.0.1:8320/api/usage",
+    origin: "http://127.0.0.1:8317",
+    refreshMs: MINUTE,
+    authKind: "none",
+    normalize: normalizeSubsCodexUsage,
   };
   if (provider === "xai") return {
     endpoint: "https://cli-chat-proxy.grok.com/v1/billing?format=credits",
@@ -293,7 +350,8 @@ export class SubscriptionUsageTracker {
     const model = ctx.model;
     const config = model ? providerUsageConfig(model.provider) : undefined;
     const usesOAuth = model ? ctx.modelRegistry.isUsingOAuth(model) : false;
-    const authMatches = config?.authKind === "api_key" ? !usesOAuth : usesOAuth;
+    const authMatches = config?.authKind === "none"
+      || (config?.authKind === "api_key" ? !usesOAuth : usesOAuth);
     const key = model && config && usesOfficialOrigin(model.baseUrl, config.origin)
       && authMatches ? model.provider : undefined;
     // Once logout/API-key mode is observed, the old account's allowance is no
@@ -315,22 +373,25 @@ export class SubscriptionUsageTracker {
     timeout.unref?.();
     let nextRefreshAt = this.now() + config.refreshMs;
     try {
-      const auth = await abortable(ctx.modelRegistry.getApiKeyAndHeaders(model), controller.signal);
-      controller.signal.throwIfAborted();
-      if (!auth.ok) throw new Error("Usage authentication unavailable");
-      const resolved = new Headers();
-      // Pi provider headers use null to omit a header, not the string "null".
-      for (const [name, value] of Object.entries(auth.headers ?? {})) {
-        if (value !== null) resolved.set(name, value);
+      const headers = new Headers({ Accept: "application/json" });
+      if (config.authKind !== "none") {
+        const auth = await abortable(ctx.modelRegistry.getApiKeyAndHeaders(model), controller.signal);
+        controller.signal.throwIfAborted();
+        if (!auth.ok) throw new Error("Usage authentication unavailable");
+        const resolved = new Headers();
+        // Pi provider headers use null to omit a header, not the string "null".
+        for (const [name, value] of Object.entries(auth.headers ?? {})) {
+          if (value !== null) resolved.set(name, value);
+        }
+        const authorization = resolved.get("authorization") ?? (auth.apiKey ? `Bearer ${auth.apiKey}` : undefined);
+        if (!authorization) throw new Error("Usage authentication unavailable");
+        // Do not forward arbitrary model headers to a different endpoint.
+        headers.set("Authorization", authorization);
+        if (model.provider === "anthropic") headers.set("anthropic-beta", "oauth-2025-04-20");
+        if (model.provider === "xai") headers.set("X-XAI-Token-Auth", "xai-grok-cli");
+        const accountId = resolved.get("chatgpt-account-id") ?? codexAccountId(authorization);
+        if (model.provider === "openai-codex" && accountId) headers.set("ChatGPT-Account-Id", accountId);
       }
-      const authorization = resolved.get("authorization") ?? (auth.apiKey ? `Bearer ${auth.apiKey}` : undefined);
-      if (!authorization) throw new Error("Usage authentication unavailable");
-      // Do not forward arbitrary model headers to a different endpoint.
-      const headers = new Headers({ Authorization: authorization, Accept: "application/json" });
-      if (model.provider === "anthropic") headers.set("anthropic-beta", "oauth-2025-04-20");
-      if (model.provider === "xai") headers.set("X-XAI-Token-Auth", "xai-grok-cli");
-      const accountId = resolved.get("chatgpt-account-id") ?? codexAccountId(authorization);
-      if (model.provider === "openai-codex" && accountId) headers.set("ChatGPT-Account-Id", accountId);
       const response = await this.fetchUsage(config.endpoint, {
         headers, signal: controller.signal, redirect: "error",
       });

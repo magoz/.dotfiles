@@ -7,6 +7,7 @@ import {
   normalizeCodexUsage,
   normalizeGrokUsage,
   normalizeOpencodeGoUsage,
+  normalizeSubsCodexUsage,
   normalizeZaiUsage,
   quotaColor,
   SubscriptionUsageTracker,
@@ -40,18 +41,51 @@ const grokPayload = {
   },
 };
 const GROK_EXPECTED = "7d 63% left / 2h 14m";
+const subsPayload = {
+  generatedAt: new Date(NOW).toISOString(),
+  accounts: [
+    {
+      provider: "codex",
+      status: "fresh",
+      windows: [{ label: "Weekly", remainingPercent: 99, resetsAt: new Date(NOW + 7 * 24 * 60 * MINUTE).toISOString(), durationMinutes: 10_080 }],
+    },
+    {
+      provider: "codex",
+      status: "fresh",
+      windows: [{ label: "Weekly", remainingPercent: 41, resetsAt: new Date(NOW + 99 * 60 * MINUTE).toISOString(), durationMinutes: 10_080 }],
+    },
+    { provider: "anthropic", status: "fresh", windows: [] },
+  ],
+};
+const SUBS_EXPECTED = "7d 140% of 200% left / 4d 3h";
 
 function defaultBaseUrl(provider: string) {
   if (provider === "anthropic") return "https://api.anthropic.com";
   if (provider === "xai") return "https://api.x.ai/v1";
   if (provider === "opencode-go") return "https://opencode.ai/zen/go/v1";
   if (provider === "zai") return "https://api.z.ai/api/coding/paas/v4";
+  if (provider === "subs-codex") return "http://127.0.0.1:8317/v1";
   return "https://chatgpt.com/backend-api";
 }
 
 test("restores Anthropic and Codex remaining allowance and reset countdowns", () => {
   assert.equal(formatSubscriptionUsage(normalizeAnthropicUsage(anthropicPayload), NOW), EXPECTED);
   assert.equal(formatSubscriptionUsage(normalizeCodexUsage(codexPayload), NOW), EXPECTED);
+});
+
+test("aggregates the local subs Codex pool across accounts", () => {
+  const windows = normalizeSubsCodexUsage(subsPayload);
+  assert.deepEqual(windows, [{
+    label: "7d",
+    remainingPercent: 140,
+    capacityPercent: 200,
+    resetsAt: NOW + 99 * 60 * MINUTE,
+  }]);
+  assert.equal(formatSubscriptionUsage(windows, NOW), SUBS_EXPECTED);
+  assert.deepEqual(normalizeSubsCodexUsage({ accounts: [] }), []);
+  assert.deepEqual(normalizeSubsCodexUsage({
+    accounts: [{ provider: "codex", status: "unavailable", windows: [] }],
+  }), []);
 });
 
 test("parses Grok included-pool percent and exact weekly/monthly labels without trusting server strings", () => {
@@ -336,6 +370,27 @@ test("only requests official OAuth usage endpoints with allowlisted headers and 
   }
 });
 
+test("subs-codex reads the loopback usage service without resolving or forwarding credentials", async () => {
+  let calls = 0;
+  const { ctx, authCalls } = context("subs-codex", { oauth: false });
+  const tracker = new SubscriptionUsageTracker(() => {}, async (url, init) => {
+    calls += 1;
+    assert.equal(url, "http://127.0.0.1:8320/api/usage");
+    const headers = new Headers(init?.headers);
+    assert.equal([...headers.keys()].join(","), "accept");
+    assert.equal(headers.get("accept"), "application/json");
+    assert.equal(init?.redirect, "error");
+    assert.ok(init?.signal);
+    return Response.json(subsPayload);
+  }, () => NOW);
+  await tracker.refresh(ctx);
+  await tracker.refresh(ctx);
+  assert.equal(calls, 1);
+  assert.equal(authCalls(), 0);
+  assert.equal(tracker.getText(), SUBS_EXPECTED);
+  tracker.stop();
+});
+
 test("Codex account ID can come from Pi's resolved access token without reading auth files", async () => {
   const payload = Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "test-account" } })).toString("base64url");
   const { ctx } = context("openai-codex", { apiKey: `test.${payload}.signature` });
@@ -422,6 +477,8 @@ test("unsupported providers, API keys and nonofficial origins do not resolve aut
     context("xai", { oauth: false }),
     context("opencode-go", { oauth: true }),
     context("zai", { oauth: true }),
+    context("subs-codex", { oauth: false, baseUrl: "https://subs.example/v1" }),
+    context("subs-codex", { oauth: false, baseUrl: "http://127.0.0.1:8318/v1" }),
     ...["https://proxy.example", "http://chatgpt.com", "https://chatgpt.com:8443", "https://user@chatgpt.com", "not a URL"]
       .map((baseUrl) => context("openai-codex", { baseUrl })),
     ...["https://cli-chat-proxy.grok.com", "https://cli-chat-proxy.grok.com/v1", "http://api.x.ai/v1",
