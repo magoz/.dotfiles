@@ -140,8 +140,14 @@ reason to repeat work.
 Whenever a fresh independent review is needed, use two fresh-context, read-only `pr-reviewer`
 children with explicit model overrides:
 
-- **Astra:** `openai-codex/gpt-6-astra`
+- **Astra:** `subs-codex/gpt-6-astra` preferred; `openai-codex/gpt-6-astra` is the same-model alternative
 - **Fable:** `anthropic/claude-fable-5-1`
+
+Explicit user provider/model selection wins; do not redirect an explicitly selected route without
+approval. Otherwise, resolve the Astra slot through Subs first, then authenticated and available direct
+Codex before falling back to the caller's model. Either Codex route satisfies the Astra opinion unless
+the user or repository requires a specific provider. They are not two independent model opinions;
+never use Astra through both routes as a replacement for Astra plus Fable.
 
 Both review the **same frozen bundle, scope, requirements, validation evidence, and assigned axes**.
 These are two opinions on the same work, not complementary assignments: never give Standards only to
@@ -151,14 +157,31 @@ focused follow-up, give both the same affected scope and axes. Do not show eithe
 findings or inherited implementation rationale before their independent reports are complete.
 
 Before launching, use pi-subagents capability/model discovery and its supported authentication and
-execution preflight; a configured model name is not availability proof. If either preferred model is
-unavailable before launch, fallback to the caller agent's model for that slot (launch that `pr-reviewer`
-without an explicit model override) and explicitly report the fallback with the missing provider/model,
-reason, and actual model used. If both are unavailable, run only once on the caller agent's model — do not launch two reviewers on the same model.
-Do not substitute any other model silently, and do not count two runs of the same model as two preferred-model
-opinions — report fallback opinions as caller-model opinions. Stricter repository or user requirements for
-two preferred-model opinions still block readiness when a fallback was used.
-A post-dispatch failure that signals that model is down, unavailable, out of credits/quota, unauthorized, or not found (e.g. auth, quota/credit, rate-limit-exhausted with no retry-after making progress, model/provider not found, account limit) counts as unavailable: fallback that slot to the caller agent's model and explicitly report the failure/run identity, signal, and actual model used. If both slots fail this way, run only once on the caller agent's model. Do not retry a dead/quota-exhausted model repeatedly — at most one same-model retry for genuinely transient errors (network blip, timeout), then fallback. Other launch, tooling, or runtime failures remain infrastructure blockers: stop, retain the exact failure/run identity and partial evidence, and follow pi-subagents recovery rules before retrying or asking the owner.
+execution preflight; a configured model name is not availability proof. Direct Codex is optional and
+must have its own configured authentication; do not add credentials or alter gateway settings to make
+fallback work. If Subs is unavailable, preflight direct Astra. If both Astra routes are unavailable,
+or Fable is unavailable, fall back to the caller agent's model for the affected slot. Resolve the
+caller's exact provider/model and pass it as an explicit override: omitting the override uses the
+`pr-reviewer` frontmatter default, not necessarily the caller's model. Preflight the caller route too;
+if it is unavailable or already failed as unavailable, report blocked rather than relaunching it.
+Report every route/model fallback with the missing provider/model, reason, and actual provider/model
+used. A direct Astra opinion remains an Astra opinion; a different-model caller fallback must be
+labeled as such. Deduplicate by underlying model, not provider: if the caller matches the other
+reviewer's model, reuse that opinion for the same bundle/axes rather than launching a duplicate.
+If both preferred models are unavailable, run only once on the available caller model. Never count
+two runs or two routes of the same model as two independent model opinions. Stricter repository or
+user requirements for both Astra and Fable still block readiness when either opinion is missing.
+
+A post-dispatch failure indicating provider/model unavailability (auth, exhausted quota/credits,
+rate-limit-exhausted with no retry-after making progress, provider/model not found, or account limit)
+uses the same bounded order: Subs Astra → available direct Astra → available caller model; Fable →
+available caller model. Record the exact failure/run identity, signal, and partial evidence before a
+later explicit launch. Do not revisit routes already known unavailable in this invocation. The Codex
+routes may share account limits; switching routes is not a guaranteed quota workaround. Allow at
+most one same-route retry for a genuinely transient network blip or timeout, then follow the fallback
+order. Other launch, tooling, or runtime failures remain infrastructure blockers: stop, retain the
+exact failure/run identity and partial evidence, and follow pi-subagents recovery rules before retrying
+or asking the owner. Never switch execution engines as a fallback.
 
 Use one top-level async pi-subagents workflow per invocation, with parallel `runs.all` calls for the
 reviewers inside it; any later review rounds belong to that same workflow. Follow pi-subagents guidance
@@ -171,7 +194,8 @@ blocker disagreements require clarification, not majority voting.
 
 Record each opinion's exact provider/model, run/output reference, target digest/SHA, axes, verdict, and
 parent disposition in review evidence and the managed PR body. Apply Evidence reuse per model and axis:
-valid opinions do not need rerunning, but one model's report cannot stand in for the other's. Obtain
+valid opinions do not need rerunning, including an Astra opinion from either supported route when no
+provider-specific requirement applies, but one model's report cannot stand in for the other's. Obtain
 only missing or invalidated opinions, recording original targets and delta applicability when reused.
 An unavailable-model caller fallback is not a preferred-model opinion; recheck availability when a later invocation needs
 that missing opinion. Reusing two valid opinions requires no new launches.
