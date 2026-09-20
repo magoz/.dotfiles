@@ -20,7 +20,12 @@ const WorktreeInput = Type.Object({
   base: Type.Optional(
     Type.String({ description: "Explicit base override, used without fetching; omit for the freshly fetched origin default branch" }),
   ),
-  path: Type.Optional(Type.String({ description: "Explicit checkout path" })),
+  path: Type.Optional(
+    Type.String({
+      description:
+        "Exact custom checkout path explicitly requested by the user; omit for the shared CLI's sibling default",
+    }),
+  ),
   label: Type.Optional(Type.String({ description: "Herdr, database, and Pi session label" })),
   ttl: Type.Optional(Type.String({ description: "Sandbox database lifetime, default 7d" })),
   prompt: Type.Optional(Type.String({ description: "Kickoff prompt for the new Pi session" })),
@@ -129,6 +134,11 @@ const BASE_GUIDANCE =
   "Set base only for an explicitly requested branch or point in time, or a workflow's freshly verified immutable SHA. " +
   "A destination branch name alone is not a base override. Never bypass a failed fetch by supplying a local base.";
 
+const PATH_GUIDANCE =
+  "For create_worktree, omit path unless the user explicitly requests an exact custom checkout path. " +
+  "When path is omitted, the shared worktree CLI places the checkout beside the primary repository. " +
+  "Do not choose a centralized worktree root on the user's behalf.";
+
 export function buildAgentRequest(input: WorktreeInput): string {
   if (input.branch) {
     const task = input.prompt?.trim();
@@ -138,6 +148,7 @@ export function buildAgentRequest(input: WorktreeInput): string {
       task ? `Kickoff task for the destination Pi: ${task}` : undefined,
       "Ask me before calling the tool if any other consequential setup detail is ambiguous.",
       BASE_GUIDANCE,
+      PATH_GUIDANCE,
       VERCEL_LINK_GUIDANCE,
     ]
       .filter(Boolean)
@@ -149,6 +160,7 @@ export function buildAgentRequest(input: WorktreeInput): string {
     "Infer a concise conventional branch name from the task.",
     "If the appropriate branch name or worktree intent is genuinely ambiguous, ask me before calling the tool.",
     BASE_GUIDANCE,
+    PATH_GUIDANCE,
     VERCEL_LINK_GUIDANCE,
     `Task: ${input.prompt}`,
   ].join("\n");
@@ -206,6 +218,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
         "infer a concise conventional branch when omitted, ask the user first when the choice is genuinely " +
         "ambiguous, and remember that a successful call terminates the current Pi session.",
       BASE_GUIDANCE,
+      PATH_GUIDANCE,
       VERCEL_LINK_GUIDANCE,
     ],
     parameters: WorktreeInput,

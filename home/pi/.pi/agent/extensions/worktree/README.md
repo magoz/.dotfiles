@@ -16,6 +16,16 @@ Set `base` only for an explicitly requested alternate branch or point in time,
 or a workflow's freshly verified immutable SHA. Explicit bases are validated
 locally without fetching; never supply one merely to bypass a failed fetch.
 
+## Sibling default path
+
+Leave `path` unset unless the user explicitly requests an exact custom checkout
+location. The shared CLI then derives the checkout path beside the primary
+repository, including when creation starts from an existing linked worktree.
+The agent must not choose a centralized worktree root on the user's behalf.
+
+An explicit `path` remains available for intentional custom locations and is
+forwarded unchanged to the shared CLI.
+
 ## Agent-owned Vercel linking
 
 Before allocating a worktree, `create_worktree` runs

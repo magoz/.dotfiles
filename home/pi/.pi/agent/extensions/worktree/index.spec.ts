@@ -57,6 +57,28 @@ describe("worktree extension", () => {
     expect(tool.promptGuidelines.join(" ")).toContain("Never bypass a failed fetch");
   });
 
+  it("leaves the default checkout path to the CLI's sibling policy", () => {
+    for (const input of [{ prompt: "Add exports" }, { branch: "feat/exports" }]) {
+      expect(buildArgs(input, "/repo")).not.toContain("--path");
+      expect(buildAgentRequest(input)).toContain(
+        "omit path unless the user explicitly requests an exact custom checkout path",
+      );
+      expect(buildAgentRequest(input)).toContain("beside the primary repository");
+      expect(buildAgentRequest(input)).toContain(
+        "Do not choose a centralized worktree root on the user's behalf",
+      );
+    }
+
+    let tool: any;
+    register({ registerCommand() {}, registerTool(value: unknown) { tool = value; } } as never);
+    expect(tool.promptGuidelines.join(" ")).toContain(
+      "omit path unless the user explicitly requests an exact custom checkout path",
+    );
+    expect(tool.parameters.properties.path.description).toContain(
+      "explicitly requested by the user",
+    );
+  });
+
   it("infers a conventional branch when the slash command contains only a task", () => {
     expect(parseCommand("Add reporting exports")).toEqual({ prompt: "Add reporting exports" });
     expect(inferBranch("Add reporting exports")).toBe("feat/reporting-exports");
