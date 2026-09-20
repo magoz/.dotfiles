@@ -2,7 +2,7 @@
   "lastChangelogVersion": "0.85.1",
   "theme": "tokyonight-moon",
   "defaultProvider": "subs-codex",
-  "defaultModel": "gpt-6-astra",
+  "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "high",
   "packages": [
     "npm:pi-subagents@0.68.0",
@@ -33,14 +33,12 @@
     "defaultExtensions": []
   },
   "enabledModels": [
-    "openai-codex/gpt-5.6-sol",
     "subs-codex/gpt-5.6-sol",
     "subs-codex/gpt-6-astra",
     "anthropic/claude-fable-5-1",
-    "openai-codex/gpt-6-astra",
-    "xai/grok-4.6",
+    "zai/glm-5.3",
     "opencode-go/muse-spark-1.3-contributor",
-    "zai/glm-5.3"
+    "xai/grok-4.6"
   ],
   "hideThinkingBlock": false,
   "terminal": {
