@@ -67,8 +67,8 @@ HOME=$positive_home "$ARCH_DIR/stow" >/dev/null
 [[ $(readlink "$positive_home/.config/nvim") == *'/home/nvim/'* ]]
 [[ -L $positive_home/.config/starship.toml ]]
 [[ -e $positive_home/.local/bin/worktree ]]
-[[ -e $positive_home/.local/bin/plans ]]
-[[ -e $positive_home/.agents/skills/plans/SKILL.md ]]
+[[ -e $positive_home/.local/bin/aha ]]
+[[ -e $positive_home/.agents/skills/aha/SKILL.md ]]
 [[ $(<"$positive_home/.config/ghostty/config") == desktop-owned ]]
 [[ $(<"$positive_home/.config/hypr/hyprland.conf") == desktop-owned ]]
 [[ $(<"$positive_home/.pi/agent/sessions/keep") == runtime ]]
@@ -145,4 +145,4 @@ fi
 ! grep -Eq '(^|[[:space:]])(sudo|pacman|systemctl|tailscale|usermod|chsh|mkfs|lvcreate)([[:space:]]|$)' "$ARCH_DIR/install" "$ARCH_DIR/stow"
 printf 'ok: no machine provisioning commands in Arch entrypoints\n'
 
-"$REPO_ROOT/tests/plans-launcher.sh"
+"$REPO_ROOT/tests/aha-launcher.sh"

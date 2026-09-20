@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Aha is a separate application checkout, not vendored into dotfiles.
+set -euo pipefail
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "aha: Node 24 is required" >&2
+  exit 127
+fi
+
+entry="$HOME/aha/dist/cli/aha.js"
+if [[ ! -f "$entry" ]]; then
+  echo "aha: missing $entry" >&2
+  echo "Keep the magoz/aha checkout at ~/aha, then run:" >&2
+  echo "  (cd ~/aha && pnpm install --frozen-lockfile && pnpm build)" >&2
+  exit 127
+fi
+
+# A split-DNS browser hostname may resolve to a read-only gateway. Keep the CLI
+# endpoint in a local data file, never source/evaluate it as shell code.
+endpoint_file="$HOME/.config/aha/endpoint"
+if [[ -z ${AHA_ENDPOINT:-} && -f "$endpoint_file" ]]; then
+  endpoint=''
+  IFS= read -r endpoint < "$endpoint_file" || true
+  if [[ -z $endpoint ]]; then
+    echo "aha: empty or unreadable endpoint file: $endpoint_file" >&2
+    exit 1
+  fi
+  export AHA_ENDPOINT="$endpoint"
+fi
+
+# Preserve the caller's working directory so relative document paths still work.
+exec node "$entry" "$@"
