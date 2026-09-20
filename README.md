@@ -39,6 +39,20 @@ Package groups include:
 
 Not every target installs every package. [`macos/stow`](macos/stow) and [`arch/stow`](arch/stow) define their platform selections; machine-role installers may select additional packages.
 
+## Plans CLI
+
+Plans is a separate application repository at `~/plans` (`magoz/plans`), not
+vendored source or an npm package installed by these dotfiles. Build it with
+`pnpm install --frozen-lockfile && pnpm build` from that checkout. The `scripts`
+package provides `~/.local/bin/plans`, which invokes the built CLI while preserving
+the caller's working directory. The `agents` package provides a skill entry that
+reads `~/plans/SKILL.md` for the canonical workflow. For split DNS, put the public
+API endpoint URL (one line, no shell syntax) in `~/.config/plans/endpoint`; the
+launcher uses it when `PLANS_ENDPOINT` is unset. Explicit `--endpoint` arguments
+still take precedence. Neither package clones, builds, or deploys Plans
+automatically; credentials and machine-specific endpoint values stay outside
+dotfiles.
+
 ## macOS
 
 ### Prerequisites

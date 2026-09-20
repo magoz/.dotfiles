@@ -38,7 +38,7 @@ for tool in herdr opencode pnpm npm bun pi nvim tree-sitter; do
 printf '%s %s\n' "${0##*/}" "$*" >>"$ARCH_TEST_LOG"
 case "${0##*/} $*" in
   'npm --version') printf '11.16.0\n' ;;
-  'herdr completion zsh'|'opencode --completions zsh'|'pnpm completion zsh')
+  'herdr completion zsh'|'opencode completion zsh'|'opencode --completions zsh'|'pnpm completion zsh')
     printf '#compdef %s\n' "${0##*/}"
     ;;
 esac
@@ -67,6 +67,8 @@ HOME=$positive_home "$ARCH_DIR/stow" >/dev/null
 [[ $(readlink "$positive_home/.config/nvim") == *'/home/nvim/'* ]]
 [[ -L $positive_home/.config/starship.toml ]]
 [[ -e $positive_home/.local/bin/worktree ]]
+[[ -e $positive_home/.local/bin/plans ]]
+[[ -e $positive_home/.agents/skills/plans/SKILL.md ]]
 [[ $(<"$positive_home/.config/ghostty/config") == desktop-owned ]]
 [[ $(<"$positive_home/.config/hypr/hyprland.conf") == desktop-owned ]]
 [[ $(<"$positive_home/.pi/agent/sessions/keep") == runtime ]]
@@ -142,3 +144,5 @@ fi
 # Machine-level actions belong in a separate infrastructure repository.
 ! grep -Eq '(^|[[:space:]])(sudo|pacman|systemctl|tailscale|usermod|chsh|mkfs|lvcreate)([[:space:]]|$)' "$ARCH_DIR/install" "$ARCH_DIR/stow"
 printf 'ok: no machine provisioning commands in Arch entrypoints\n'
+
+"$REPO_ROOT/tests/plans-launcher.sh"
