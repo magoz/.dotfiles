@@ -74,6 +74,8 @@ validation environment needs attestation, a required check cannot be satisfied, 
 architecture, access-control, migration, or scope decision is needed. Routine commit messages, draft
 creation, pushes, rebases, history updates, managed-body updates, ready transitions, squash merge, and
 verified branch/worktree cleanup do not need a second confirmation in their authorized modes.
+Ordinary application sign-in needed only for visual-proof capture is not a request for credential
+disclosure or environment attestation; follow the Visual proof authentication policy below.
 
 ## Invariants
 
@@ -140,14 +142,12 @@ reason to repeat work.
 Whenever a fresh independent review is needed, use two fresh-context, read-only `pr-reviewer`
 children with explicit model overrides:
 
-- **Astra:** `subs-codex/gpt-6-astra` preferred; `openai-codex/gpt-6-astra` is the same-model alternative
+- **Astra:** `subs-codex/gpt-6-astra`
 - **Fable:** `anthropic/claude-fable-5-1`
 
-Explicit user provider/model selection wins; do not redirect an explicitly selected route without
-approval. Otherwise, resolve the Astra slot through Subs first, then authenticated and available direct
-Codex before falling back to the caller's model. Either Codex route satisfies the Astra opinion unless
-the user or repository requires a specific provider. They are not two independent model opinions;
-never use Astra through both routes as a replacement for Astra plus Fable.
+The configured review models do not have overlapping provider routes. Never retry the same model
+through another provider. Explicit user provider/model selection determines the initial model;
+fallback remains automatic unless the user explicitly requires that exact model or forbids fallback.
 
 Both review the **same frozen bundle, scope, requirements, validation evidence, and assigned axes**.
 These are two opinions on the same work, not complementary assignments: never give Standards only to
@@ -157,31 +157,30 @@ focused follow-up, give both the same affected scope and axes. Do not show eithe
 findings or inherited implementation rationale before their independent reports are complete.
 
 Before launching, use pi-subagents capability/model discovery and its supported authentication and
-execution preflight; a configured model name is not availability proof. Direct Codex is optional and
-must have its own configured authentication; do not add credentials or alter gateway settings to make
-fallback work. If Subs is unavailable, preflight direct Astra. If both Astra routes are unavailable,
-or Fable is unavailable, fall back to the caller agent's model for the affected slot. Resolve the
-caller's exact provider/model and pass it as an explicit override: omitting the override uses the
-`pr-reviewer` frontmatter default, not necessarily the caller's model. Preflight the caller route too;
-if it is unavailable or already failed as unavailable, report blocked rather than relaunching it.
-Report every route/model fallback with the missing provider/model, reason, and actual provider/model
-used. A direct Astra opinion remains an Astra opinion; a different-model caller fallback must be
-labeled as such. Deduplicate by underlying model, not provider: if the caller matches the other
-reviewer's model, reuse that opinion for the same bundle/axes rather than launching a duplicate.
-If both preferred models are unavailable, run only once on the available caller model. Never count
-two runs or two routes of the same model as two independent model opinions. Stricter repository or
-user requirements for both Astra and Fable still block readiness when either opinion is missing.
+execution preflight; a configured model name is not availability proof. If Astra or Fable is
+unavailable, automatically fall back to the caller agent's model for the affected slot without waiting
+for user confirmation. Resolve the caller's exact provider/model and pass it as an explicit override:
+omitting the override uses the `pr-reviewer` frontmatter default, not necessarily the caller's model.
+Preflight the caller model too; if it is unavailable or already failed as unavailable, report that
+opinion blocked rather than relaunching it. Report every model fallback with the unavailable model,
+reason, and actual model used. A caller-model fallback must be labeled as such.
 
-A post-dispatch failure indicating provider/model unavailability (auth, exhausted quota/credits,
-rate-limit-exhausted with no retry-after making progress, provider/model not found, or account limit)
-uses the same bounded order: Subs Astra → available direct Astra → available caller model; Fable →
-available caller model. Record the exact failure/run identity, signal, and partial evidence before a
-later explicit launch. Do not revisit routes already known unavailable in this invocation. The Codex
-routes may share account limits; switching routes is not a guaranteed quota workaround. Allow at
-most one same-route retry for a genuinely transient network blip or timeout, then follow the fallback
-order. Other launch, tooling, or runtime failures remain infrastructure blockers: stop, retain the
-exact failure/run identity and partial evidence, and follow pi-subagents recovery rules before retrying
-or asking the owner. Never switch execution engines as a fallback.
+Deduplicate by underlying model: if the caller matches the other reviewer's model, reuse that opinion
+for the same bundle and axes rather than launching a duplicate. If both preferred models are
+unavailable, run only once on the available caller model. Never count two runs of the same model as
+two independent opinions. Stricter repository or user requirements for both Astra and Fable still
+block readiness when either preferred opinion is missing.
+
+A post-dispatch failure indicating model unavailability (authentication failure, exhausted
+quota/credits, rate-limit exhaustion with no retry-after that can make progress, model not found, or
+account limit) uses the same automatic order: Astra → available caller model; Fable → available caller
+model. Record the exact failure/run identity, signal, and partial evidence, then start the fallback as
+a new explicit launch without asking for approval. Do not revisit models already known unavailable in
+this invocation. Allow at most one same-model retry for a genuinely transient network blip or timeout,
+then follow the fallback order. Other launch, tooling, prompt-runtime, extension, or workflow failures
+remain infrastructure blockers: stop, retain the exact failure/run identity and partial evidence, and
+follow pi-subagents recovery rules before retrying or asking the owner. Never switch execution engines
+as a fallback.
 
 Use one top-level async pi-subagents workflow per invocation, with parallel `runs.all` calls for the
 reviewers inside it; any later review rounds belong to that same workflow. Follow pi-subagents guidance
@@ -194,8 +193,7 @@ blocker disagreements require clarification, not majority voting.
 
 Record each opinion's exact provider/model, run/output reference, target digest/SHA, axes, verdict, and
 parent disposition in review evidence and the managed PR body. Apply Evidence reuse per model and axis:
-valid opinions do not need rerunning, including an Astra opinion from either supported route when no
-provider-specific requirement applies, but one model's report cannot stand in for the other's. Obtain
+valid opinions do not need rerunning, but one model's report cannot stand in for the other's. Obtain
 only missing or invalidated opinions, recording original targets and delta applicability when reused.
 An unavailable-model caller fallback is not a preferred-model opinion; recheck availability when a later invocation needs
 that missing opinion. Reusing two valid opinions requires no new launches.
@@ -304,20 +302,44 @@ captures or publishes new assets.
 
 1. Identify the changed UI and the smallest useful set of screenshots. Show the relevant states, such
    as a dialog plus its expanded selector; include responsive or error states when changed. Load and
-   follow `agent-browser` for capture, or `browser-control` when an existing authenticated user browser
-   is needed. Do not duplicate browser setup instructions here. When the change has no visible UI
-   impact, capture nothing and omit the Visual proof section from the PR body — no images required.
+   follow `agent-browser` for capture. Do not duplicate browser setup instructions here. When the
+   change has no visible UI impact, capture nothing and omit the Visual proof section from the PR body
+   — no images required.
 2. Capture the actual application from the intended checkout or a preview verified to serve that
    revision. Record the source commit SHA or exact uncommitted patch digest, environment, viewport,
    and demonstrated state. Use synthetic data and repository-approved safe environments. Screenshot
    capture does not authorize unsafe database resets, production mutations, deployments, provider
-   calls, or authentication bypasses. When the changed UI sits behind login, authenticate through the
-   repository's local-dev path: resolve the local dev URL, test/synthetic user, and OTP/one-time-code
-   retrieval (dev database query or repository-documented dev tooling/endpoint) from `AGENTS.md` or
-   its linked guides. Never use production, never use real user data, never hardcode or commit
-   credentials, and never bypass authentication by editing the DOM or faking state. When the login
-   path cannot be inferred from the repository, stop and ask the user for the missing piece instead
-   of guessing or silently skipping authenticated states.
+   calls, or authentication bypasses.
+
+   For UI behind login, repository provisioning is the default source of truth and must be exhausted
+   before asking the user anything. The agent owns this routine setup:
+
+   1. Read the applicable `AGENTS.md` files and linked environment, sandbox, authentication, seed, and
+      testing guides. Inspect repository-owned provision/seed scripts, task-runner commands, test
+      helpers, and environment templates for names and workflow—not secret values.
+   2. Run the repository-approved provisioning flow for the intended checkout or sandbox. Resolve the
+      local URL, synthetic/test identity, seeded account, magic-link helper, and OTP/one-time-code
+      retrieval through documented dev tooling, endpoint, or disposable dev-database query.
+   3. Use `agent-browser` to authenticate and capture the required states.
+      Browser automation may use synthetic, disposable login values obtained through the documented
+      provisioning flow, but must not persist or repeat them in the PR body, evidence bundle, commit,
+      or final report.
+
+   Do not request an authentication handoff or ask the user to perform the login. Never inspect
+   password managers, personal credential stores, shell history, unrelated environment files, or
+   production data to discover login material. Never read, print, log, copy, summarize, or return real
+   passwords, session tokens, cookies, OTP seeds, recovery codes, or production credentials.
+
+   A login screen, missing pre-existing session, or credentials not being immediately visible is not a
+   blocker and is not a reason to ask the user. Diagnose repository provisioning failures using the
+   repository's documented recovery path and safe, redacted command evidence. Ask one non-secret
+   question only
+   after concrete inspection proves that required provisioning guidance is absent or contradictory,
+   the approved provisioning command is blocked by a human-owned access or environment decision, and
+   no safe repository-owned alternative exists. State the exact failed command or missing decision;
+   never ask the user to provide credentials. If safe authentication still cannot be established,
+   record visual proof as blocked rather than guessing, bypassing login, editing the DOM, faking state,
+   or silently skipping authenticated states.
 3. Open and inspect every image before publication: confirm it demonstrates the change, is legible,
    and contains no secrets or private user data. Never substitute mockups, generated images, or
    DOM-edited approximations for actual application evidence. Screenshots prove appearance and the
