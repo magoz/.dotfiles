@@ -70,31 +70,30 @@ no mandatory phases or delegation quota are imposed.
 | --- | --- |
 | Main coding agent | `subs-codex/gpt-6-astra` |
 | `pr-reviewer` | `subs-codex/gpt-6-astra` (default); the PR skill also requests `anthropic/claude-fable-5-1` for a second independent opinion |
-| `tech-lead` | `subs-codex/gpt-6-astra` (default); direct Astra, then Fable, public-only Muse, and GLM 5.3 as explicit fallbacks |
+| `tech-lead` | `subs-codex/gpt-6-astra` (default); automatic chain through Fable, public-only Muse, GLM 5.3, and GPT Sol |
 | `ui-design` (public or private repo) | `anthropic/claude-fable-5-1` |
 | `general` implementation, including UI, in a verified public repo | `opencode-go/muse-spark-1.3-contributor` |
-| `general` implementation, including UI, in a private/unknown-visibility repo | `zai/glm-5.3` |
+| `general` implementation, including UI, in a private/unknown-visibility repo | `zai/glm-5.3`; automatic `subs-codex/gpt-5.6-sol` fallback for availability/auth/quota failures |
 | `explore-codebase` in a verified public repo | `opencode-go/muse-spark-1.3-contributor` via explicit per-launch override |
 | `explore-codebase` in a private/unknown-visibility repo | `opencode-go/deepseek-v4.1-flash` |
 | `web-researcher` | `opencode-go/deepseek-v4.1-flash` |
 
-Codex routing prefers `subs-codex/<model-id>`, with `openai-codex/<same-model-id>`
-as an explicit alternative when the gateway route is unavailable and direct access
-passes authentication and availability preflight. Explicit user provider/model
-selection wins and is not silently redirected. Check the same model's alternative
-route before changing models, report the exact route and reason, and inspect partial
-work before a later explicit launch. Availability/auth/quota failures may justify
-another route; unrelated tooling or workflow failures remain infrastructure blockers.
-The two routes may share account limits, so direct access is not a guaranteed quota
-workaround. Neither route selection nor fallback changes the execution engine.
+The configured models do not have overlapping provider routes. On availability,
+authentication, or quota failure, coding moves directly to the next model in the
+automatic fallback chain instead of retrying the same model through another provider.
+Explicit user provider/model selection determines the initial model; fallback remains
+automatic unless the user explicitly requires that exact model or forbids fallback.
+Inspect partial work, then start each fallback as a new explicit pi-subagents launch
+without waiting for user confirmation. Report the exact failed model, reason, and
+selected fallback so the transition is observable. Unrelated tooling or workflow
+failures remain infrastructure blockers. Fallback never changes the execution engine.
 
 The PR skill uses two fresh-context `pr-reviewer` children when both models are
 available: Astra and Fable independently review the same frozen patch and assigned
 criteria, not different axes. Each can cover Standards, Spec, and Knowledge in one
 report with separate axis verdicts. The skill owns availability handling, evidence
 reuse, and parent reconciliation; outside it, Fable remains an optional review
-alternative. Either supported Astra route satisfies the Astra slot unless a specific
-provider is required; two Astra routes are not two independent model opinions.
+alternative. Astra occupies one model slot through its configured Subs route.
 Single-axis reviewer assignments remain supported.
 
 `ui-design` is a read-only design specialist: it produces design direction,
@@ -114,18 +113,27 @@ to `zai/glm-5.3` for implementation (including UI) and
 overrides this default visibility routing; coding confirms the requested scope and
 proceeds with the user's choice.
 
-`subs-codex/gpt-6-astra` is already Pi's configured main-model default. Identity activation still
-preserves a manually selected model. Unavailable worker models must be reported;
-trying an alternative requires a later explicit pi-subagents launch, checking any
-partial work first and preserving the visibility constraint. No automatic fallback
-chain is configured. Exact model IDs and routing prose live in `primary-agents.json`.
+When GLM is unavailable, authentication fails, or quota is exhausted, the parent
+inspects any partial work and automatically starts a new explicit pi-subagents launch
+with `subs-codex/gpt-5.6-sol`, without waiting for user confirmation. No second provider
+route is attempted for GLM or Sol. GPT Sol is eligible for private/unknown-visibility
+work too. GLM remains the default, and the parent reports the failed model, reason, and
+selected fallback so the automatic switch is not silent. Unrelated
+launch/tooling/workflow failures remain infrastructure blockers, not fallback triggers.
 
-Both Codex routes remain enabled in `settings.json`; enabling direct Codex does not
-supply authentication. Subs model registrations currently declare a 272,000-token
-context window. `context-budget.json` retains its direct-Codex short/full profiles;
-Subs full-context profiles are deferred until the gateway's supported larger limits
-are verified. Do not copy the direct route's 1,050,000-token budget merely because
-the model IDs match.
+`subs-codex/gpt-6-astra` is already Pi's configured main-model default. Identity activation still
+preserves a manually selected model. All configured provider/model fallback chains are
+automatic for availability, authentication, and quota failures. When no explicit chain
+is defined, coding selects the closest suitable permitted model for the role while
+preserving repository-visibility and privacy constraints. Automatic means the parent
+starts a new explicit pi-subagents launch after inspecting partial work; it is not an
+opaque in-run model substitution. Exact model IDs and routing prose live in
+`primary-agents.json`.
+
+Only the Subs Codex routes participate in worker model routing. Direct-Codex profiles
+may remain in `context-budget.json`, but they are not fallback candidates. Subs model
+registrations currently declare a 272,000-token context window; full-context profiles
+are deferred until the gateway's supported larger limits are verified.
 
 ## Lifecycle
 

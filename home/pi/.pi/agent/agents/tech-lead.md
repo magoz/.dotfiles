@@ -53,21 +53,23 @@ gap to report, not permission to invent policy.
 ## Model fallback
 
 Preferred model is Astra via Subs (frontmatter default). Explicit user provider/model selection
-wins; do not redirect it without approval. Otherwise the parent selects fallback via explicit
-per-launch override in this order, after pi-subagents model/authentication/execution preflight:
+determines the initial route; fallback remains automatic unless the user explicitly requires that
+exact route or forbids fallback. After pi-subagents model/authentication/execution preflight, the
+parent automatically advances through this chain using a new explicit launch for each attempt:
 
 1. `subs-codex/gpt-6-astra` (default)
-2. `openai-codex/gpt-6-astra` — the same Astra model via direct Codex, only when authenticated and available
-3. `anthropic/claude-fable-5-1`
-4. `opencode-go/muse-spark-1.3-contributor` — only if parent verified public repository and handoff
-   contains no private material; otherwise skip to 5
-5. `zai/glm-5.3` (final fallback)
+2. `anthropic/claude-fable-5-1`
+3. `opencode-go/muse-spark-1.3-contributor` — only if parent verified public repository and handoff
+   contains no private material; otherwise skip to 4
+4. `zai/glm-5.3`
+5. `subs-codex/gpt-5.6-sol` — GPT Sol fallback from GLM
 
-Report the exact provider/model used and any fallback with the unavailable route/model plus reason.
-Provider availability, authentication, or exhausted quota may justify another route; unrelated launch,
-tooling, or workflow failures remain infrastructure blockers under pi-subagents recovery rules. Inspect
-partial work before any later explicit launch; never substitute silently or change execution engines.
-The two Codex routes may share account limits, so direct access is not a guaranteed quota workaround.
+On model availability, authentication, or quota failure, inspect any partial work and immediately
+try the next eligible model without waiting for user confirmation. The configured models do not
+have overlapping provider routes, so never retry the same model through another provider. Report
+the exact failed model, reason, and fallback model so the transition is observable. Unrelated launch,
+tooling, prompt-runtime, extension, or workflow failures remain infrastructure blockers under
+pi-subagents recovery rules and must not trigger fallback. Never change execution engines.
 
 ## Triggers (consult) vs non-goals (do not consult)
 

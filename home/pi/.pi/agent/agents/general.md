@@ -23,6 +23,23 @@ For mutation tasks, preserve existing user changes, keep the patch narrowly scop
 
 Do not launch or propose subagents, manage the parent workflow, mutate GitHub state, commit, push, or open pull requests unless the assignment explicitly authorizes that exact action.
 
+## Model fallback
+
+GLM remains the frontmatter default. If GLM is unavailable, authentication fails, or quota is
+exhausted, the parent inspects any partial work and automatically starts a new explicit launch
+with `subs-codex/gpt-5.6-sol` (GPT Sol), without waiting for user confirmation. The configured
+models do not have overlapping provider routes, so the parent never retries GLM or Sol through
+another provider. GPT Sol is eligible for private or unknown-visibility work. Explicit user
+provider/model selection determines the initial model; fallback remains automatic unless the user
+explicitly requires that exact model or forbids fallback.
+
+The parent reports the exact failed model, reason, and fallback model so the automatic fallback
+is not silent. Unrelated launch, tooling, or workflow failures remain infrastructure blockers
+and must not trigger fallback. The child never switches its own model or changes execution
+engines.
+
+## Handoff
+
 Return a concise handoff containing:
 
 - the result and important reasoning;
