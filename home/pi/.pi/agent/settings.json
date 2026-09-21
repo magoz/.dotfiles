@@ -43,7 +43,7 @@
   "hideThinkingBlock": false,
   "terminal": {
     "hyperlinks": true,
-    "showImages": false,
+    "showImages": true,
     "images": "kitty"
   }
 }
