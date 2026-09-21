@@ -73,6 +73,36 @@ test("restores Anthropic and Codex remaining allowance and reset countdowns", ()
   assert.equal(formatSubscriptionUsage(normalizeCodexUsage(codexPayload), NOW), EXPECTED);
 });
 
+test("surfaces Anthropic model-scoped weekly limits such as exhausted Fable", () => {
+  const payload = {
+    ...anthropicPayload,
+    limits: [
+      {
+        kind: "weekly_scoped",
+        percent: 100,
+        resets_at: "2026-08-15T15:00:00.000Z",
+        scope: { model: { id: null, display_name: "Fable" } },
+      },
+    ],
+  };
+  const windows = normalizeAnthropicUsage(payload);
+  assert.deepEqual(windows.map((w) => w.label), ["5h", "7d", "Fable 7d"]);
+  assert.equal(windows[2].remainingPercent, 0);
+  assert.equal(
+    formatSubscriptionUsage(windows, NOW),
+    `${EXPECTED} · Fable 7d 0% left / 4d 3h`,
+  );
+  // Non-scoped limit kinds and malformed scopes never render as allowance.
+  assert.deepEqual(
+    normalizeAnthropicUsage({ ...anthropicPayload, limits: [{ kind: "weekly_all", percent: 100 }] }),
+    normalizeAnthropicUsage(anthropicPayload),
+  );
+  assert.deepEqual(
+    normalizeAnthropicUsage({ ...anthropicPayload, limits: [{ kind: "weekly_scoped", percent: 100 }] }),
+    normalizeAnthropicUsage(anthropicPayload),
+  );
+});
+
 test("aggregates the local subs Codex pool across accounts", () => {
   const windows = normalizeSubsCodexUsage(subsPayload);
   assert.deepEqual(windows, [{

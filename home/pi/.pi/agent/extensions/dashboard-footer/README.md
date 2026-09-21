@@ -18,7 +18,7 @@ No dependency on `pi-multi-account` remains.
   no gateway key, management key, account token, or other authorization header.
   If any Codex account is unavailable, the prior pool reading is retained as
   stale rather than treating the missing account as 0% remaining.
-- **Anthropic OAuth:** aggregate 5-hour and 7-day allowance from `https://api.anthropic.com/api/oauth/usage`.
+- **Anthropic OAuth:** aggregate 5-hour and 7-day allowance from `https://api.anthropic.com/api/oauth/usage`, plus model-scoped weekly limits from its `limits` array (for example an exhausted `Fable 7d` quota that the aggregate 7-day window would otherwise hide).
 - **Grok / SuperGrok OAuth:** remaining included-pool allowance from
   `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` when the selected
   model is xAI OAuth on the official inference origin `https://api.x.ai/v1`.

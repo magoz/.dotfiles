@@ -32,12 +32,47 @@ function normalizeAnthropicWindow(value: unknown, label: string): SubscriptionWi
   return { label, remainingPercent: remainingPercent(used), resetsAt: finiteNumber(reset) };
 }
 
+function normalizeAnthropicReset(value: unknown): number | undefined {
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  const numeric = finiteNumber(value);
+  if (numeric === undefined) return undefined;
+  return numeric > 10_000_000_000 ? numeric : numeric * 1_000;
+}
+
 export function normalizeAnthropicUsage(payload: unknown): SubscriptionWindow[] {
   if (!isRecord(payload)) return [];
-  return [
+  const standard = [
     normalizeAnthropicWindow(payload.five_hour, "5h"),
     normalizeAnthropicWindow(payload.seven_day, "7d"),
   ].filter((window): window is SubscriptionWindow => window !== undefined);
+
+  // Model-scoped weekly limits (for example the Fable allowance) live in
+  // `limits` alongside the aggregate windows. Surface them so an exhausted
+  // Fable quota cannot hide behind a healthy aggregate 7d window.
+  const scoped = Array.isArray(payload.limits)
+    ? payload.limits.flatMap((candidate): SubscriptionWindow[] => {
+        if (!isRecord(candidate) || candidate.kind !== "weekly_scoped") return [];
+        const scope = isRecord(candidate.scope) ? candidate.scope : undefined;
+        const model = scope && isRecord(scope.model) ? scope.model : undefined;
+        const displayName = typeof model?.display_name === "string" ? model.display_name.trim() : "";
+        const used = finiteNumber(candidate.percent);
+        if (!/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/.test(displayName) || used === undefined)
+          return [];
+        const resetsAt = normalizeAnthropicReset(
+          candidate.resets_at ?? candidate.nextResetTime ?? candidate.resetsAt,
+        );
+        return [{
+          label: `${displayName} 7d`,
+          remainingPercent: remainingPercent(used),
+          resetsAt: finiteNumber(resetsAt),
+        }];
+      })
+    : [];
+
+  return [...standard, ...scoped];
 }
 
 function formatWindowLabel(seconds: number | undefined, fallback: string): string {
