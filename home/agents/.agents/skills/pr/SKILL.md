@@ -716,50 +716,76 @@ another merge.
    already-merged PR and perform cleanup without claiming the earlier merge method. If GitHub confirms
    the PR remains open and the request definitely failed, a later invocation may rerun readiness/audit
    before another merge attempt.
+
+   Before implementing steps 8–10, define phase-specific predicates. Never reuse one validator whose
+   remote-ref assumptions span multiple receipt milestones:
+
+   | Receipt phase | Required remote-ref state | Local validation |
+   | --- | --- | --- |
+   | `merged`, before remote cleanup | absent, or exactly the receipt head SHA | worktree/ref identity may be checked |
+   | `remote-deleted` | absent | validate worktree/ref only; remote presence must not be required |
+   | `worktree-removed` / `worktree-skipped` | absent | validate only remaining local-ref cleanup |
+
+   If helper code is needed, separate `validate_remote_before_deletion`,
+   `validate_remote_after_deletion`, and `validate_worktree_and_local_ref`, or require an explicit
+   expected-remote-state argument with no default. The local validator must perform no remote-ref
+   existence check. Do not copy or adapt a temporary merge script from another PR; construct this
+   invocation from the locked receipt and these phase predicates. An absent ref is expected success
+   after `remote-deleted`, never evidence that the source ref changed.
 8. After confirmed merge, atomically delete the remote source branch only when it still points to the
    receipt's expected head SHA (reviewed head, or verified head recorded at merge for cleanup-only).
    Revalidate that the pinned push URL still identifies the recorded source
    repository; re-query the source repository's current default branch, protection, and applicable
    rulesets; and refuse deletion if the source branch is now default or protected. Query the exact full
    ref there, then push the deletion to that URL with mandatory
-   `--force-with-lease=<full-ref>:<head-sha>`. Treat an already absent live ref as success. Never use an
-   unguarded deletion or retry against a moved ref. If deletion fails, retain local recovery state and
-   report that merge succeeded but cleanup is incomplete.
-9. If no linked worktree was selected, persist `worktree-skipped` with its reason; do not invoke
-   worktree removal. For remote-only cleanup with no local checkout, also record `local-ref-skipped —
-   no local checkout` and proceed to step 11. Otherwise, for optional local-ref cleanup, re-enumerate
-   the intended repository's worktrees:
-   if the branch is checked out anywhere (including the primary checkout), leave it intact and record
-   `local-ref-skipped — checked out`. Do not switch or detach another checkout just to delete a ref.
-   If the local ref is absent, record that outcome; if present at the expected SHA and not checked out,
-   delete it using step 10's expected-old-SHA guard. If it moved, retain it and report the conflict.
-   Then proceed to step 11.
+   `--force-with-lease=<full-ref>:<head-sha>`. Treat an already absent live ref as success. A "moved"
+   ref means the live lookup returned a nonempty SHA different from the receipt head; absence is not
+   movement. Never use an unguarded deletion or retry against a moved ref. After deletion, verify the
+   ref is absent and durably persist `remote-deleted` before any local cleanup. From that milestone
+   onward, no worktree or local-ref predicate may require the remote ref to exist. If deletion fails,
+   retain local recovery state and report that merge succeeded but cleanup is incomplete.
+9. Dispatch local cleanup from the receipt's recorded worktree target; do not infer or select a new
+   target after remote deletion.
 
-   Otherwise, re-enumerate every registered worktree and require that only the recorded target has a symbolic
-   `HEAD` for the local branch. Revalidate its administrative ID, exact registered/canonical path,
-   bidirectional path mapping, clean status, checked-out head, and local branch ref. Git provides no
-   atomic identity lock
-   spanning worktree verification and removal, so require exclusive local ownership of all worktree
-   mutations under the common Git directory. The parent must be the sole writer, with no active async
-   child or other Git/worktree mutator; if that exclusion cannot be established, stop and retain the
-   receipt for manual cleanup rather than claiming concurrency safety.
+   - **No linked target:** persist `worktree-skipped` with its recorded reason and do not invoke
+     worktree removal. For remote-only cleanup with no local checkout, also persist
+     `local-ref-skipped — no local checkout` and proceed to step 11. Otherwise re-enumerate the
+     intended repository's worktrees. If the branch is checked out anywhere, including the primary
+     checkout, retain it and persist `local-ref-skipped — checked out`; do not switch or detach a
+     checkout just to delete the ref. If the local ref is absent, record that outcome. If it is present
+     at the receipt SHA and not checked out, delete it using step 10's expected-old-SHA guard. If it
+     moved, retain it and report the conflict. Then proceed to step 11.
 
-   Run the guarded cleanup in one final shell operation from a stable directory outside the target,
-   without launching other work. Open a `git update-ref --stdin` transaction that queues deletion of
-   the full local branch ref at the expected SHA, then `prepare` it so Git holds and verifies the ref
-   lock. While that transaction remains prepared:
-   - re-check worktree identity and cleanliness;
-   - remove the exact linked worktree without `--force` through the recorded common Git directory;
-   - commit the prepared ref deletion only after removal succeeds, or abort it if removal fails.
+   - **Recorded linked target:** re-enumerate every registered worktree and require that only the
+     recorded target has a symbolic `HEAD` for the local branch. Revalidate its administrative ID,
+     exact registered/canonical path, bidirectional path mapping, clean status, checked-out head, and
+     local branch ref. These are local predicates only: do not require or query a present remote source
+     ref. Git provides no atomic identity lock spanning worktree verification and removal, so require
+     exclusive local ownership of all worktree mutations under the common Git directory. The parent
+     must be the sole writer, with no active async child or other Git/worktree mutator; if that
+     exclusion cannot be established, stop and retain the receipt for manual cleanup rather than
+     claiming concurrency safety.
 
-   After worktree removal, atomically persist the `worktree-removed` milestone before committing the
-   ref transaction, then persist `local-ref-deleted`. Do not run broad `git worktree prune`; remove only
-   the recorded worktree and its own administrative entry. If the transaction or removal fails, never
-   retry with force.
+     Run the guarded cleanup in one final shell operation from a stable directory outside the target,
+     without launching other work. Open a `git update-ref --stdin` transaction that queues deletion of
+     the full local branch ref at the expected SHA, then `prepare` it so Git holds and verifies the ref
+     lock. While that transaction remains prepared:
+     - re-check local worktree identity and cleanliness without a remote-presence predicate;
+     - remove the exact linked worktree without `--force` through the recorded common Git directory;
+     - commit the prepared ref deletion only after removal succeeds, or abort it if removal fails.
+
+     After worktree removal, atomically persist the `worktree-removed` milestone before committing the
+     ref transaction, then persist `local-ref-deleted`. Do not run broad `git worktree prune`; remove
+     only the recorded worktree and its own administrative entry. If the transaction or removal fails,
+     never retry with force.
 
 10. Remote-only recovery revalidates GitHub/source-remote identity against its durable receipt and
     retains the local cleanup skips. Other recovery from `remote-deleted`, `worktree-removed`, or
-    `worktree-skipped` must use a surviving checkout with the same validated common Git directory. For a null worktree target, retain the skip
+    `worktree-skipped` must use a surviving checkout with the same validated common Git directory.
+    Recovery must dispatch from the persisted milestone, not rerun a pre-deletion validator:
+    `remote-deleted` requires the remote ref to remain absent and starts with worktree/local cleanup;
+    `worktree-removed` or `worktree-skipped` starts with local-ref cleanup. Never require the remote ref
+    to equal the receipt SHA after any of these milestones. For a null worktree target, retain the skip
     and follow step 9's no-worktree path; do not infer a new deletion target during recovery.
     For a recorded linked target, when both the recorded target path and administrative
     entry are absent, treat removal as proven even if a crash prevented its milestone write and
@@ -779,9 +805,14 @@ another merge.
 Report **squash-merged** only with the direct successful squash response; otherwise report **already
 merged** when GitHub confirms an existing merge, without asserting its method. Report the PR URL,
 reviewed base/head (or recorded head and merge evidence for cleanup-only runs), merge commit, remote
-branch deletion, local branch deletion, and worktree removal (or explicit skip reasons). Distinguish a successful merge with
-incomplete cleanup from fully completed cleanup; never hide the durable receipt or residual recovery
-steps. For cleanup-only runs, mark readiness checks and reviews as not run (already merged), not passed.
+branch deletion, local branch deletion, and worktree removal (or explicit skip reasons). Derive each
+reported cleanup outcome from the last durable receipt milestone plus live verification, not from the
+latest exception text. A later worktree/local-ref failure cannot downgrade a persisted
+`remote-deleted` milestone to "remote deletion not performed." Use "source ref changed" only when a
+live nonempty source ref points to a different SHA; report an absent ref as deleted/already absent.
+Distinguish a successful merge with incomplete cleanup from fully completed cleanup; never hide the
+durable receipt or residual recovery steps. For cleanup-only runs, mark readiness checks and reviews
+as not run (already merged), not passed.
 
 ## Acceptance
 
@@ -817,3 +848,8 @@ and residual risks. Do not claim that draft creation implies readiness.
 - Claiming review or validation against content that changed afterward
 - Marking a PR ready when required evidence is missing
 - Merging outside `/skill:pr merge` or cleaning up before GitHub confirms the merge
+- Reusing a pre-deletion remote-ref predicate after the `remote-deleted` milestone
+- Treating an absent remote ref as a changed ref, or reporting a completed receipt milestone as undone
+  because a later cleanup step failed
+- Copying a temporary merge/cleanup script from another PR instead of deriving phase predicates from
+  the current locked receipt

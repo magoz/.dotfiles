@@ -5,10 +5,70 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
 HOME_PACKAGES=$REPO_ROOT/home
 
+install_tailscale_app() (
+  local app_path=/Applications/Tailscale.app
+  local formula_installed=false
+  local cask_installed=false
+  local install_pkg=false
+  local package_url package_path expected_sha actual_sha temp_dir
+
+  brew list --formula tailscale &>/dev/null && formula_installed=true
+  brew list --cask tailscale-app &>/dev/null && cask_installed=true
+
+  # Tailscale recommends its standalone macOS app. The Homebrew formula installs
+  # CLI-only tailscaled, whose macOS DNS integration can miss split-DNS routes.
+  if [[ ! -d $app_path || $cask_installed == true ]]; then
+    install_pkg=true
+    temp_dir=$(mktemp -d)
+    trap 'rm -rf "$temp_dir"' EXIT
+    package_path=$temp_dir/Tailscale.pkg
+
+    echo "🔒 Downloading the official Tailscale macOS app"
+    package_url=$(curl -fsSL -o /dev/null -w '%{url_effective}' \
+      https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg)
+    [[ $package_url == https://pkgs.tailscale.com/stable/Tailscale-*-macos.pkg ]] || {
+      printf 'Unexpected Tailscale package URL: %s\n' "$package_url" >&2
+      exit 1
+    }
+
+    curl -fsSL "$package_url" -o "$package_path"
+    expected_sha=$(curl -fsSL "$package_url.sha256" | awk 'NR == 1 { print $1 }')
+    actual_sha=$(shasum -a 256 "$package_path" | awk '{ print $1 }')
+    [[ -n $expected_sha && $actual_sha == "$expected_sha" ]] || {
+      printf 'Tailscale package checksum verification failed\n' >&2
+      exit 1
+    }
+    pkgutil --check-signature "$package_path" >/dev/null
+  fi
+
+  if [[ $formula_installed == true ]]; then
+    echo "🧹 Removing the conflicting Homebrew Tailscale formula"
+    brew services stop tailscale >/dev/null 2>&1 || true
+    sudo "$(command -v brew)" services stop tailscale >/dev/null 2>&1 || true
+    brew uninstall --formula tailscale
+  fi
+
+  if [[ $cask_installed == true ]]; then
+    echo "🧹 Moving Tailscale app ownership away from Homebrew"
+    brew uninstall --cask tailscale-app
+  fi
+
+  if [[ $install_pkg == true ]]; then
+    sudo installer -pkg "$package_path" -target /
+  else
+    echo "Tailscale native macOS app already installed, skipping"
+  fi
+)
+
 # --------------------------------------
 # ------ CLEANUP EXISTING CONF ---------
 # --------------------------------------
 rm -f ~/.gitconfig ~/.zprofile
+
+# --------------------------------------
+# ---------- INSTALL TAILSCALE ---------
+# --------------------------------------
+install_tailscale_app
 
 # --------------------------------------
 # -------- TRUST THIRD-PARTY TAPS ------
@@ -159,4 +219,5 @@ npm uninstall --global --ignore-scripts @opencode-ai/cli
 npm install --global --allow-scripts=@opencode/cli @opencode/cli
 
 "$HOME/.local/bin/update-zsh-completions"
-printf '\nFor Local + Box in Herdr, run ./macos/setup-box from a local Mac terminal.\n'
+printf '\nOpen Tailscale.app and complete its attended sign-in/system-extension setup if needed.\n'
+printf 'For Local + Box in Herdr, run ./macos/setup-box from a local Mac terminal.\n'

@@ -74,7 +74,7 @@ Run the workstation installer:
 ./macos/install
 ```
 
-It installs command-line dependencies with Homebrew, installs Pi and OpenCode, applies the macOS Stow packages, installs package dependencies, and refreshes configured services and plugins. It removes existing `~/.gitconfig` and `~/.zprofile` before Stow takes ownership, so inspect the script before using it on a new machine.
+It installs Tailscale's recommended standalone macOS app directly from Tailscale's signed package, installs command-line dependencies with Homebrew, installs Pi and OpenCode, applies the macOS Stow packages, installs package dependencies, and refreshes configured services and plugins. It removes conflicting Homebrew `tailscale` formula or `tailscale-app` cask installations first because the CLI-only formula can fail to register macOS split-DNS routes. Tailscale sign-in and system-extension approval remain attended steps. The installer also removes existing `~/.gitconfig` and `~/.zprofile` before Stow takes ownership, so inspect the script before using it on a new machine.
 
 Install the optional desktop application set separately:
 
@@ -191,9 +191,10 @@ local terminal, follow Herdr's prompts, then restart the combined client.
 
 Skip these steps if `ssh box` already works without a password prompt:
 
-1. Install the Tailscale Mac app, sign in to the approved tailnet, and connect.
-   Enrollment, access policy, and SSH key authorization are attended steps; neither
-   installer copies private keys or bypasses authentication.
+1. Open the standalone Tailscale Mac app installed by `./macos/install`, sign in to the
+   approved tailnet, approve its system extension when prompted, and connect. Enrollment,
+   access policy, and SSH key authorization are attended steps; neither installer copies
+   private keys or bypasses authentication.
 2. Configure the existing `Host box` entry in `~/.ssh/config`, or add one if absent,
    **before any `Host *` defaults**. Do not create a competing duplicate entry:
 
