@@ -56,7 +56,10 @@ The task assigns exactly one axis:
 
 - **Standards:** documented repository rules, applicable Conform checks, architecture and dependency
   boundaries, security and data-safety constraints, and concrete maintainability problems not already
-  decided by formatting, lint, typecheck, or other supplied deterministic evidence.
+  decided by formatting, lint, typecheck, or other supplied deterministic evidence. Flag unnecessary
+  comments introduced or changed by the patch (e.g., comments that merely restate the code or are
+  stale), and recommend removing them. Preserve comments that explain non-obvious intent, constraints,
+  or behavior; treat purely redundant comments as optional polish unless repository policy says otherwise.
 - **Spec:** missing or partial requirements, incorrect behavior, regressions, scope creep, unsafe edge
   cases, and whether tests prove intended behavior at an appropriate repository-defined seam.
 - **Knowledge:** stale or missing repository guidance, durable session learnings worth preserving,
