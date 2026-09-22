@@ -13,7 +13,7 @@ Local Pi extension for Claude Pro/Max OAuth compatibility.
 - strips transcribed `[Assistant thinking]` segments from Pi-generated compaction, turn-prefix, and branch-summary requests before computing billing metadata; ordinary chat and native thinking blocks are unchanged
 - delegates auth headers, beta flags, Claude identity, and tool-name casing to Pi
 
-Pi auto-discovers this directory. Run `/login anthropic`, then choose an Anthropic model. Run `/reload` after local updates. Set `ANTHROPIC_CLI_VERSION` to override the billing and user-agent version (default `2.1.272`, verified against npm on 2026-09-15).
+Pi auto-discovers this directory. Run `/login anthropic`, then choose an Anthropic model. Run `/reload` after local updates. Set `ANTHROPIC_CLI_VERSION` to override the billing and user-agent version (default `2.1.280`, verified against the current npm release).
 
 Shaping covers requests routed through Pi's registered provider. Direct `pi-ai` compatibility API calls from extensions/background agents bypass it; this extension does not override the shared API registry.
 

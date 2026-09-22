@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { SUMMARIZATION_PROMPT_ANCHOR, stripTranscribedThinking } from "./summarization.ts";
 
-const DEFAULT_CLAUDE_CODE_VERSION = "2.1.272";
+const DEFAULT_CLAUDE_CODE_VERSION = "2.1.280";
 const CLAUDE_CODE_ENTRYPOINT = "sdk-cli";
 const BILLING_HEADER_PREFIX = "x-anthropic-billing-header:";
 const BILLING_HEADER_SALT = "59cf53e54c78";

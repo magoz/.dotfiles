@@ -98,7 +98,7 @@ test("uses the current version pin and preserves the local override", (t) => {
 		else process.env.ANTHROPIC_CLI_VERSION = previous;
 	});
 	delete process.env.ANTHROPIC_CLI_VERSION;
-	assert.equal(getClaudeCodeVersion(), "2.1.272");
+	assert.equal(getClaudeCodeVersion(), "2.1.280");
 	process.env.ANTHROPIC_CLI_VERSION = "2.1.300";
 	assert.equal(getClaudeCodeVersion(), "2.1.300");
 });

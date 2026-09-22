@@ -61,6 +61,7 @@ test("rewrites Anthropic request fingerprint", () => {
 
   const output = JSON.parse(transformRequestBody(input).body);
   assert.match(output.system[0].text, /^x-anthropic-billing-header:/);
+  assert.match(output.system[0].text, /cc_version=2\.1\.280\./);
   assert.equal(
     output.system[1].text,
     "You are Claude Code, Anthropic's official CLI for Claude.",

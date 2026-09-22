@@ -35,12 +35,12 @@ for (const system of [summarySystem, [{ type: "text", text: summarySystem }]]) {
 	test(`strips full reasoning segments for ${typeof system === "string" ? "string" : "block"} summarization systems before billing`, () => {
 		const input = payload(system, transcript);
 		const original = structuredClone(input);
-		const expected = shapeAnthropicOAuthPayload(payload(system, cleaned), "2.1.272");
-		const output = shapeAnthropicOAuthPayload(input, "2.1.272");
+		const expected = shapeAnthropicOAuthPayload(payload(system, cleaned), "2.1.280");
+		const output = shapeAnthropicOAuthPayload(input, "2.1.280");
 		assert.deepEqual(output, expected);
 		assert.deepEqual((output as typeof input).messages, [{ role: "user", content: cleaned }]);
 		assert.deepEqual(input, original);
-		assert.deepEqual(shapeAnthropicOAuthPayload(output, "2.1.272"), output);
+		assert.deepEqual(shapeAnthropicOAuthPayload(output, "2.1.280"), output);
 		const hash = createHash("sha256").update(cleaned).digest("hex").slice(0, 5);
 		assert.match(JSON.stringify(output), new RegExp(`cch=${hash};`));
 	});

@@ -6,7 +6,7 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 
 const CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
-const CLAUDE_CODE_VERSION = "2.1.112";
+const CLAUDE_CODE_VERSION = "2.1.280";
 const CLAUDE_CODE_ENTRYPOINT = "sdk-cli";
 const TOKEN_URL = "https://platform.claude.com/v1/oauth/token";
 const CODE_CALLBACK_URL = "https://platform.claude.com/oauth/code/callback";
