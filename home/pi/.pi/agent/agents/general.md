@@ -1,6 +1,6 @@
 ---
 name: general
-model: xai/grok-4.7
+model: subs-codex/gpt-6-sol
 description: General-purpose delegated execution for focused research, analysis, and implementation tasks that benefit from an isolated child context
 thinking: high
 tools: read, grep, find, ls, bash, edit, write, contact_supervisor
@@ -25,12 +25,12 @@ Do not launch or propose subagents, manage the parent workflow, mutate GitHub st
 
 ## Model fallback
 
-Grok is the frontmatter default. If Grok is unavailable, authentication fails, or quota is
+GPT Sol is the frontmatter default. If Sol is unavailable, authentication fails, or quota is
 exhausted, the parent inspects any partial work and automatically starts a new explicit launch
-with `subs-codex/gpt-5.6-sol` (GPT Sol), without waiting for user confirmation. If Sol also
+with `xai/grok-4.7` (Grok), without waiting for user confirmation. If Grok also
 fails for availability, authentication, or quota, the parent continues with `zai/glm-5.3`.
 The configured models do not have overlapping provider routes, so the parent never retries a
-model through another provider. GPT Sol and GLM are eligible for private or unknown-visibility
+model through another provider. GPT Sol, Grok, and GLM are eligible for private or unknown-visibility
 work. Explicit user provider/model selection determines the initial model; fallback remains
 automatic unless the user explicitly requires that exact model or forbids fallback.
 

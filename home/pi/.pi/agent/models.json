@@ -28,6 +28,28 @@
           }
         },
         {
+          "id": "gpt-6-sol",
+          "name": "GPT-6 Sol (Subs Codex Pool)",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 272000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "minimal": "low",
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "cost": {
+            "input": 2,
+            "output": 10,
+            "cacheRead": 0.2,
+            "cacheWrite": 2.5
+          },
+          "compat": {
+            "supportsOpenAIGrammarTools": true
+          }
+        },
+        {
           "id": "gpt-6-astra",
           "name": "GPT-6 Astra (Subs Codex Pool)",
           "reasoning": true,

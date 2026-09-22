@@ -1,6 +1,6 @@
 ---
 name: tech-lead
-model: subs-codex/gpt-6-astra
+model: anthropic/claude-opus-5-5
 description: Frontier judgment checkpoint for architecture, difficult tradeoffs, and contested decisions; read-only advisor
 thinking: high
 tools: read, grep, find, ls, contact_supervisor
@@ -52,18 +52,18 @@ gap to report, not permission to invent policy.
 
 ## Model fallback
 
-Preferred model is Astra via Subs (frontmatter default). Explicit user provider/model selection
+Preferred model is Opus 5.5 (frontmatter default). Explicit user provider/model selection
 determines the initial route; fallback remains automatic unless the user explicitly requires that
 exact route or forbids fallback. After pi-subagents model/authentication/execution preflight, the
 parent automatically advances through this chain using a new explicit launch for each attempt:
 
-1. `subs-codex/gpt-6-astra` (default)
-2. `anthropic/claude-opus-5-5`
+1. `anthropic/claude-opus-5-5` (default)
+2. `subs-codex/gpt-6-astra`
 3. `opencode-go/muse-spark-1.3-contributor` — only if parent verified public repository and handoff
-   contains no private material; otherwise skip to 4
-4. `xai/grok-4.7`
-5. `subs-codex/gpt-5.6-sol` — GPT Sol fallback from Grok
-6. `zai/glm-5.3` — final fallback after Grok and Sol
+   contains no private material; otherwise skip it
+
+The chain ends there. If no eligible model remains, the parent reports the tech-lead checkpoint
+as blocked instead of consulting any other model.
 
 On model availability, authentication, or quota failure, inspect any partial work and immediately
 try the next eligible model without waiting for user confirmation. The configured models do not

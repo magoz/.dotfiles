@@ -142,8 +142,8 @@ reason to repeat work.
 Whenever a fresh independent review is needed, use two fresh-context, read-only `pr-reviewer`
 children with explicit model overrides:
 
-- **Astra:** `subs-codex/gpt-6-astra`
-- **Opus:** `anthropic/claude-opus-5-5`
+- **Opus (primary):** `anthropic/claude-opus-5-5` — the `pr-reviewer` frontmatter default
+- **Astra (secondary):** `subs-codex/gpt-6-astra`
 
 The configured review models do not have overlapping provider routes. Never retry the same model
 through another provider. Explicit user provider/model selection determines the initial model;
@@ -151,13 +151,13 @@ fallback remains automatic unless the user explicitly requires that exact model 
 
 Both review the **same frozen bundle, scope, requirements, validation evidence, and assigned axes**.
 These are two opinions on the same work, not complementary assignments: never give Standards only to
-Astra and Spec only to Opus. A normal full review uses two children total, each covering Standards,
+Opus and Spec only to Astra. A normal full review uses two children total, each covering Standards,
 Spec, and Knowledge in separately labeled sections, rather than one child per model per axis. For a
 focused follow-up, give both the same affected scope and axes. Do not show either reviewer the other's
 findings or inherited implementation rationale before their independent reports are complete.
 
 Before launching, use pi-subagents capability/model discovery and its supported authentication and
-execution preflight; a configured model name is not availability proof. If Astra or Opus is
+execution preflight; a configured model name is not availability proof. If Opus or Astra is
 unavailable, automatically fall back to the caller agent's model for the affected slot without waiting
 for user confirmation. Resolve the caller's exact provider/model and pass it as an explicit override:
 omitting the override uses the `pr-reviewer` frontmatter default, not necessarily the caller's model.
@@ -168,12 +168,12 @@ reason, and actual model used. A caller-model fallback must be labeled as such.
 Deduplicate by underlying model: if the caller matches the other reviewer's model, reuse that opinion
 for the same bundle and axes rather than launching a duplicate. If both preferred models are
 unavailable, run only once on the available caller model. Never count two runs of the same model as
-two independent opinions. Stricter repository or user requirements for both Astra and Opus still
+two independent opinions. Stricter repository or user requirements for both Opus and Astra still
 block readiness when either preferred opinion is missing.
 
 A post-dispatch failure indicating model unavailability (authentication failure, exhausted
 quota/credits, rate-limit exhaustion with no retry-after that can make progress, model not found, or
-account limit) uses the same automatic order: Astra → available caller model; Opus → available caller
+account limit) uses the same automatic order: Opus → available caller model; Astra → available caller
 model. Record the exact failure/run identity, signal, and partial evidence, then start the fallback as
 a new explicit launch without asking for approval. Do not revisit models already known unavailable in
 this invocation. Allow at most one same-model retry for a genuinely transient network blip or timeout,
@@ -518,7 +518,7 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
    - compute the patch digest with `git hash-object --stdin` over the exact binary diff;
    - do not edit while reviewers inspect it.
 6. When independent review is missing or invalidated, apply Two independent review opinions. For a
-   full review, both Astra and Opus cover all three axes against that same complete bundle:
+   full review, both Opus and Astra cover all three axes against that same complete bundle:
    - **Standards**, with the `conform` skill supplied and explicit `--check`/no-edit instructions;
    - **Spec**, with the exact requirements and no inherited implementation rationale;
    - **Knowledge**, with `learn` and `tidy` supplied in `--check`/no-edit mode.
