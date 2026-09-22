@@ -60,6 +60,56 @@ install_tailscale_app() (
   fi
 )
 
+# Point Leader Key at the Stow-managed config. A leftover sandbox container
+# makes `defaults write com.brnbw.Leader-Key` update ~/Library/Containers/...
+# instead of the preferences file the current unsandboxed app reads.
+configure_leader_key() {
+  local config_dir=$HOME/.config/leaderkey
+  local prefs=$HOME/Library/Preferences/com.brnbw.Leader-Key.plist
+  local current=""
+  local was_running=false
+
+  if [[ ! -d $config_dir ]]; then
+    printf 'Leader Key config directory is missing: %s\n' "$config_dir" >&2
+    return 1
+  fi
+
+  current=$(defaults read "$prefs" configDir 2>/dev/null || true)
+  if [[ $current == "$config_dir" ]]; then
+    defaults write com.brnbw.Leader-Key configDir -string "$config_dir"
+    return 0
+  fi
+
+  if pgrep -x 'Leader Key' >/dev/null; then
+    was_running=true
+    osascript -e 'quit app "Leader Key"' >/dev/null 2>&1 || true
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      pgrep -x 'Leader Key' >/dev/null || break
+      sleep 0.4
+    done
+    if pgrep -x 'Leader Key' >/dev/null; then
+      pkill -TERM -x 'Leader Key' || true
+      sleep 1
+    fi
+    pgrep -x 'Leader Key' >/dev/null && return 1
+    sleep 0.5
+  fi
+
+  defaults write "$prefs" configDir -string "$config_dir"
+  defaults write com.brnbw.Leader-Key configDir -string "$config_dir"
+
+  # Drop a stale cfprefsd cache so the next launch cannot restore the old path.
+  killall cfprefsd >/dev/null 2>&1 || true
+  if [[ $was_running == true ]]; then
+    open -a "Leader Key"
+  fi
+}
+
+if [[ ${1:-} == --configure-leader-key ]]; then
+  configure_leader_key
+  exit 0
+fi
+
 # --------------------------------------
 # ------ CLEANUP EXISTING CONF ---------
 # --------------------------------------
@@ -130,6 +180,7 @@ brew install borders
 # --------------  STOW -----------------
 # --------------------------------------
 "$SCRIPT_DIR/stow"
+configure_leader_key
 
 # --------------------------------------
 # -------- CONFIG DEPENDENCIES ----------

@@ -52,6 +52,8 @@ grep -Fq 'https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg' "$MACOS_
 grep -Fq 'pkgutil --check-signature "$package_path"' "$MACOS_DIR/install"
 grep -Fq 'brew uninstall --formula tailscale' "$MACOS_DIR/install"
 grep -Fq 'sudo installer -pkg "$package_path" -target /' "$MACOS_DIR/install"
+grep -Fq 'configure_leader_key' "$MACOS_DIR/install"
+grep -Fq './install --configure-leader-key' "$MACOS_DIR/install-apps"
 ! grep -Eq 'brew install( --formula)? tailscale([[:space:]\\]|$)' "$MACOS_DIR/install"
 ! grep -Eiq 'iterm2|tmux|wezterm' "$MACOS_DIR/install" "$MACOS_DIR/stow"
 [[ ! -e $REPO_ROOT/home/iterm2 ]]

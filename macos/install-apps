@@ -25,5 +25,6 @@ brew install \
   todoist \
   fontbase
 
-# Point Leader Key at the configuration managed by the leaderkey Stow package.
-defaults write com.brnbw.Leader-Key configDir -string "$HOME/.config/leaderkey"
+# The workstation installer owns this. Running it here covers a machine that
+# installs the app after the Stow package is already in place.
+./install --configure-leader-key || exit 1
