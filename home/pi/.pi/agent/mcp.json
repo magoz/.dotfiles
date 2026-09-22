@@ -1,5 +1,10 @@
 {
   "mcpServers": {
+    "shhh": {
+      "url": "https://shhh.shhhlabs.com/api/mcp",
+      "auth": "bearer",
+      "bearerTokenStore": true
+    },
     "executor": {
       "url": "https://executor.magoz.is/mcp",
       "auth": "oauth",

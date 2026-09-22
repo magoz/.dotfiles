@@ -1,6 +1,6 @@
 ---
 name: ui-design
-model: anthropic/claude-fable-5-1
+model: anthropic/claude-opus-5-5
 description: Read-only UI design specialist producing visual direction, interaction specifications, and actionable implementation guidelines
 thinking: high
 tools: read, grep, find, ls, contact_supervisor

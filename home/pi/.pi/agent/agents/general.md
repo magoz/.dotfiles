@@ -1,6 +1,6 @@
 ---
 name: general
-model: zai/glm-5.3
+model: xai/grok-4.7
 description: General-purpose delegated execution for focused research, analysis, and implementation tasks that benefit from an isolated child context
 thinking: high
 tools: read, grep, find, ls, bash, edit, write, contact_supervisor
@@ -25,15 +25,16 @@ Do not launch or propose subagents, manage the parent workflow, mutate GitHub st
 
 ## Model fallback
 
-GLM remains the frontmatter default. If GLM is unavailable, authentication fails, or quota is
+Grok is the frontmatter default. If Grok is unavailable, authentication fails, or quota is
 exhausted, the parent inspects any partial work and automatically starts a new explicit launch
-with `subs-codex/gpt-5.6-sol` (GPT Sol), without waiting for user confirmation. The configured
-models do not have overlapping provider routes, so the parent never retries GLM or Sol through
-another provider. GPT Sol is eligible for private or unknown-visibility work. Explicit user
-provider/model selection determines the initial model; fallback remains automatic unless the user
-explicitly requires that exact model or forbids fallback.
+with `subs-codex/gpt-5.6-sol` (GPT Sol), without waiting for user confirmation. If Sol also
+fails for availability, authentication, or quota, the parent continues with `zai/glm-5.3`.
+The configured models do not have overlapping provider routes, so the parent never retries a
+model through another provider. GPT Sol and GLM are eligible for private or unknown-visibility
+work. Explicit user provider/model selection determines the initial model; fallback remains
+automatic unless the user explicitly requires that exact model or forbids fallback.
 
-The parent reports the exact failed model, reason, and fallback model so the automatic fallback
+The parent reports each failed model, reason, and selected fallback so the automatic fallback
 is not silent. Unrelated launch, tooling, or workflow failures remain infrastructure blockers
 and must not trigger fallback. The child never switches its own model or changes execution
 engines.

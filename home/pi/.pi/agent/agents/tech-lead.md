@@ -58,11 +58,12 @@ exact route or forbids fallback. After pi-subagents model/authentication/executi
 parent automatically advances through this chain using a new explicit launch for each attempt:
 
 1. `subs-codex/gpt-6-astra` (default)
-2. `anthropic/claude-fable-5-1`
+2. `anthropic/claude-opus-5-5`
 3. `opencode-go/muse-spark-1.3-contributor` — only if parent verified public repository and handoff
    contains no private material; otherwise skip to 4
-4. `zai/glm-5.3`
-5. `subs-codex/gpt-5.6-sol` — GPT Sol fallback from GLM
+4. `xai/grok-4.7`
+5. `subs-codex/gpt-5.6-sol` — GPT Sol fallback from Grok
+6. `zai/glm-5.3` — final fallback after Grok and Sol
 
 On model availability, authentication, or quota failure, inspect any partial work and immediately
 try the next eligible model without waiting for user confirmation. The configured models do not

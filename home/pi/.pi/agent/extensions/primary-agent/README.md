@@ -69,11 +69,11 @@ no mandatory phases or delegation quota are imposed.
 | Work | Preferred model |
 | --- | --- |
 | Main coding agent | `subs-codex/gpt-6-astra` |
-| `pr-reviewer` | `subs-codex/gpt-6-astra` (default); the PR skill also requests `anthropic/claude-fable-5-1` for a second independent opinion |
-| `tech-lead` | `subs-codex/gpt-6-astra` (default); automatic chain through Fable, public-only Muse, GLM 5.3, and GPT Sol |
-| `ui-design` (public or private repo) | `anthropic/claude-fable-5-1` |
+| `pr-reviewer` | `subs-codex/gpt-6-astra` (default); the PR skill also requests `anthropic/claude-opus-5-5` for a second independent opinion |
+| `tech-lead` | `subs-codex/gpt-6-astra` (default); automatic chain through Opus 5.5, public-only Muse, Grok 4.7, GPT Sol, and GLM 5.3 |
+| `ui-design` (public or private repo) | `anthropic/claude-opus-5-5` |
 | `general` implementation, including UI, in a verified public repo | `opencode-go/muse-spark-1.3-contributor` |
-| `general` implementation, including UI, in a private/unknown-visibility repo | `zai/glm-5.3`; automatic `subs-codex/gpt-5.6-sol` fallback for availability/auth/quota failures |
+| `general` implementation, including UI, in a private/unknown-visibility repo | `xai/grok-4.7`; automatic `subs-codex/gpt-5.6-sol`, then `zai/glm-5.3`, fallback for availability/auth/quota failures |
 | `explore-codebase` in a verified public repo | `opencode-go/muse-spark-1.3-contributor` via explicit per-launch override |
 | `explore-codebase` in a private/unknown-visibility repo | `opencode-go/deepseek-v4.1-flash` |
 | `web-researcher` | `opencode-go/deepseek-v4.1-flash` |
@@ -89,10 +89,10 @@ selected fallback so the transition is observable. Unrelated tooling or workflow
 failures remain infrastructure blockers. Fallback never changes the execution engine.
 
 The PR skill uses two fresh-context `pr-reviewer` children when both models are
-available: Astra and Fable independently review the same frozen patch and assigned
+available: Astra and Opus independently review the same frozen patch and assigned
 criteria, not different axes. Each can cover Standards, Spec, and Knowledge in one
 report with separate axis verdicts. The skill owns availability handling, evidence
-reuse, and parent reconciliation; outside it, Fable remains an optional review
+reuse, and parent reconciliation; outside it, Opus 5.5 remains an optional review
 alternative. Astra occupies one model slot through its configured Subs route.
 Single-axis reviewer assignments remain supported.
 
@@ -102,24 +102,26 @@ passes accepted guidelines to `general` for UI implementation; an already settle
 design does not require another design pass. Design proposals do not authorize
 production edits, and the designer reports any browser/visual validation gaps.
 
-`general` defaults to `zai/glm-5.3` so omitting a launch override does not inherit
+`general` defaults to `xai/grok-4.7` so omitting a launch override does not inherit
 the frontier parent model. Coding explicitly selects
 `opencode-go/muse-spark-1.3-contributor` for public-repository implementation
 (including UI) and `explore-codebase`. Before using `opencode-go/muse-spark-1.3-contributor` by default,
 coding verifies the actual repository is public and that the handoff contains no private
 material; a remote URL alone is not proof of visibility. Unknown visibility routes
-to `zai/glm-5.3` for implementation (including UI) and
-`opencode-go/deepseek-v4.1-flash` for `explore-codebase` by default. An explicit user instruction to use a specific model
-overrides this default visibility routing; coding confirms the requested scope and
-proceeds with the user's choice.
+to `xai/grok-4.7` for implementation (including UI), then `subs-codex/gpt-5.6-sol`,
+and finally `zai/glm-5.3` if earlier models are unavailable. Unknown visibility still routes
+to `opencode-go/deepseek-v4.1-flash` for `explore-codebase` by default. An explicit user
+instruction to use a specific model overrides this default visibility routing; coding
+confirms the requested scope and proceeds with the user's choice.
 
-When GLM is unavailable, authentication fails, or quota is exhausted, the parent
+When Grok is unavailable, authentication fails, or quota is exhausted, the parent
 inspects any partial work and automatically starts a new explicit pi-subagents launch
-with `subs-codex/gpt-5.6-sol`, without waiting for user confirmation. No second provider
-route is attempted for GLM or Sol. GPT Sol is eligible for private/unknown-visibility
-work too. GLM remains the default, and the parent reports the failed model, reason, and
-selected fallback so the automatic switch is not silent. Unrelated
-launch/tooling/workflow failures remain infrastructure blockers, not fallback triggers.
+with `subs-codex/gpt-5.6-sol`, without waiting for user confirmation. If Sol also fails,
+the parent continues with `zai/glm-5.3`. No second provider route is attempted for any
+model. GPT Sol and GLM are eligible for private/unknown-visibility work, and the parent
+reports each failed model, reason, and selected fallback so the automatic switch is not
+silent. Unrelated launch/tooling/workflow failures remain infrastructure blockers, not
+fallback triggers.
 
 `subs-codex/gpt-6-astra` is already Pi's configured main-model default. Identity activation still
 preserves a manually selected model. All configured provider/model fallback chains are
