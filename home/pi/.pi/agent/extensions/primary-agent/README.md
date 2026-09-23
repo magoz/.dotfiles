@@ -72,6 +72,7 @@ no mandatory phases or delegation quota are imposed.
 | `pr-reviewer` | `anthropic/claude-opus-5-5` (default); the PR skill also requests `subs-codex/gpt-6-astra` for a secondary independent opinion |
 | `tech-lead` | `anthropic/claude-opus-5-5` (default); automatic fallback to Astra, then public-only Muse; no further fallback |
 | `ui-design` (public or private repo) | `anthropic/claude-opus-5-5` |
+| `aha` (one Aha page per launch) | `anthropic/claude-opus-5-5`, thinking medium |
 | `general` implementation, including UI, in a verified public repo | `opencode-go/muse-spark-1.3-contributor` |
 | `general` implementation, including UI, in a private/unknown-visibility repo | `subs-codex/gpt-6-sol`; automatic `xai/grok-4.7`, then `zai/glm-5.3`, fallback for availability/auth/quota failures |
 | `explore-codebase` in a verified public repo | `opencode-go/muse-spark-1.3-contributor` via explicit per-launch override |

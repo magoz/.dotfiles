@@ -4,7 +4,7 @@
     "coding": {
       "description": "Architecture, supervision, and delivery; direct work or delegation by judgment",
       "prompt": "primary-agents/coding.md",
-      "workers": ["general", "ui-design", "explore-codebase", "pr-reviewer", "tech-lead", "web-researcher"],
+      "workers": ["general", "aha", "ui-design", "explore-codebase", "pr-reviewer", "tech-lead", "web-researcher"],
       "models": [
         {
           "id": "subs-codex/gpt-6-astra",
@@ -12,7 +12,7 @@
         },
         {
           "id": "anthropic/claude-opus-5-5",
-          "guidance": "Configured default for pr-reviewer, for tech-lead (fallback: Astra, then public-only Muse, nothing else), and for ui-design in either public or private repositories. For ui-design: design direction, interaction specifications, and implementation guidelines, not routine UI implementation. UI implementation belongs to general using the Sol/Grok/GLM/Muse visibility routing and following accepted design guidelines. In the PR skill, Opus is the primary independent opinion and Astra the secondary one, both reviewing the same patch and criteria when available."
+          "guidance": "Configured default for pr-reviewer, for tech-lead (fallback: Astra, then public-only Muse, nothing else), and for ui-design in either public or private repositories. For ui-design: design direction, interaction specifications, and implementation guidelines, not routine UI implementation. UI implementation belongs to general using the Sol/Grok/GLM/Muse visibility routing and following accepted design guidelines. In the PR skill, Opus is the primary independent opinion and Astra the secondary one, both reviewing the same patch and criteria when available. Also the configured default for aha (thinking medium): one Aha page per launch, public or private content; brief it with the content request only, since the agent prompt carries the Aha workflow and guardrails."
         },
         {
           "id": "opencode-go/muse-spark-1.3-contributor",
