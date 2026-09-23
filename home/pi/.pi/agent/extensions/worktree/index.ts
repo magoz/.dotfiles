@@ -3,13 +3,13 @@ import type {
   ExecResult,
   ExtensionAPI,
   ExtensionCommandContext,
-  ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "typebox";
 import { WorktreeActionService } from "./manager-actions.ts";
 import { parseVercelLinkRequired, VERCEL_LINK_GUIDANCE } from "./vercel-link-recovery.ts";
 import { runWorktreeManager } from "./manager-command.ts";
 import { WorktreeManagerService, type ManagerCommandRunner } from "./manager-service.ts";
+import { resolveSourceRepo, type SourceRepo } from "./source-repo.ts";
 
 const WorktreeInput = Type.Object({
   branch: Type.Optional(
@@ -91,13 +91,14 @@ function requireHerdr(): void {
 async function launch(
   pi: ExtensionAPI,
   input: WorktreeInput,
-  ctx: ExtensionContext,
+  source: SourceRepo,
   signal?: AbortSignal,
 ): Promise<string> {
   requireHerdr();
-  const result = await pi.exec("worktree", buildArgs(input, ctx.cwd), {
+  const result = await pi.exec("worktree", buildArgs(input, source.repo), {
     signal,
     timeout: 30 * 60 * 1_000,
+    cwd: source.repo,
   });
   if (result.code !== 0) {
     const detail = result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`;
@@ -217,6 +218,8 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
       "Use create_worktree only when the user explicitly asks to start work in a new worktree; " +
         "infer a concise conventional branch when omitted, ask the user first when the choice is genuinely " +
         "ambiguous, and remember that a successful call terminates the current Pi session.",
+      "create_worktree still works when this session's own checkout was already removed (for example " +
+        "after PR merge cleanup): it uses the sibling primary checkout. Do not recreate the deleted directory.",
       BASE_GUIDANCE,
       PATH_GUIDANCE,
       VERCEL_LINK_GUIDANCE,
@@ -225,10 +228,15 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
     async execute(_toolCallId, input, signal, onUpdate, ctx) {
       const resolved = resolveInput(input);
       requireHerdr();
+      const source = resolveSourceRepo(ctx.cwd);
+      const recovery = source.recoveredFrom === undefined
+        ? undefined
+        : `This session's directory ${source.recoveredFrom} no longer exists; using primary checkout ${source.repo}.`;
+      if (recovery) onUpdate?.({ content: [{ type: "text", text: recovery }], details: {} });
       signal?.throwIfAborted();
       const preflight = await pi.exec("provision-env", [
-        "--repo", ctx.cwd, "--check-vercel-link", "--non-interactive",
-      ], { signal, timeout: 30_000 });
+        "--repo", source.repo, "--check-vercel-link", "--non-interactive",
+      ], { signal, timeout: 30_000, cwd: source.repo });
       signal?.throwIfAborted();
       if (preflight.code !== 0 || preflight.killed) {
         const required = preflight.code === 3 && !preflight.killed
@@ -255,16 +263,18 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
         content: [{ type: "text", text: `Creating and provisioning ${resolved.branch}…` }],
         details: {},
       });
-      const output = await launch(pi, resolved, ctx, signal);
+      const output = await launch(pi, resolved, source, signal);
       ctx.shutdown();
       return {
         content: [
           {
             type: "text",
-            text: "Destination Pi launched successfully; shutting down this source session.",
+            text: [recovery, "Destination Pi launched successfully; shutting down this source session."]
+              .filter(Boolean)
+              .join("\n"),
           },
         ],
-        details: { output },
+        details: { output, sourceRepo: source.repo },
         terminate: true,
       };
     },

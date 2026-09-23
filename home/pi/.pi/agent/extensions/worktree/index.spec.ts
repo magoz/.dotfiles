@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import register, {
   buildAgentRequest,
   buildArgs,
@@ -6,8 +9,16 @@ import register, {
   parseCommand,
 } from "./index.ts";
 
+const scratch = realpathSync(mkdtempSync(join(tmpdir(), "worktree-spec-")));
+const repo = join(scratch, "repo");
+mkdirSync(repo);
+
 afterEach(() => {
   vi.unstubAllEnvs();
+});
+
+afterAll(() => {
+  rmSync(scratch, { recursive: true, force: true });
 });
 
 describe("worktree extension", () => {
@@ -153,7 +164,7 @@ describe("worktree extension", () => {
       { prompt: "Add reporting exports" },
       new AbortController().signal,
       undefined,
-      { cwd: "/repo", shutdown: vi.fn() },
+      { cwd: repo, shutdown: vi.fn() },
     );
 
     expect(exec.mock.calls[1]?.[1]).toContain("feat/reporting-exports");
@@ -181,7 +192,7 @@ describe("worktree extension", () => {
       { branch: "feat/reporting", prompt: "Implement reports" },
       new AbortController().signal,
       undefined,
-      { cwd: "/repo", shutdown },
+      { cwd: repo, shutdown },
     );
 
     expect(exec).toHaveBeenCalledWith(
@@ -189,7 +200,7 @@ describe("worktree extension", () => {
       [
         "create",
         "--repo",
-        "/repo",
+        repo,
         "--branch",
         "feat/reporting",
         "--prompt",
@@ -217,12 +228,12 @@ describe("worktree extension", () => {
     } as never);
     const input = { branch: "feat/reporting", prompt: "Implement reports", ttl: "3d", setup: ["pnpm db:push"] };
     const shutdown = vi.fn();
-    const ctx = { cwd: "/repo", shutdown };
+    const ctx = { cwd: repo, shutdown };
     const signal = new AbortController().signal;
     const result = await tool.execute("preflight", input, signal, undefined, ctx);
     expect(exec).toHaveBeenCalledExactlyOnceWith("provision-env", [
-      "--repo", "/repo", "--check-vercel-link", "--non-interactive",
-    ], { signal, timeout: 30_000 });
+      "--repo", repo, "--check-vercel-link", "--non-interactive",
+    ], { signal, timeout: 30_000, cwd: repo });
     expect(shutdown).not.toHaveBeenCalled();
     expect(result.terminate).toBeUndefined();
     expect(result.details).toEqual({
@@ -236,7 +247,7 @@ describe("worktree extension", () => {
 
     const retried = await tool.execute("retry", result.details.retry, signal, undefined, ctx);
     expect(exec.mock.calls.map(([command]) => command)).toEqual(["provision-env", "provision-env", "worktree"]);
-    expect(exec.mock.calls[2]?.[1]).toEqual(buildArgs(input, "/repo"));
+    expect(exec.mock.calls[2]?.[1]).toEqual(buildArgs(input, repo));
     expect(retried.terminate).toBe(true);
     expect(shutdown).toHaveBeenCalledOnce();
   });
@@ -252,7 +263,7 @@ describe("worktree extension", () => {
     const exec = vi.fn().mockResolvedValue(preflight);
     register({ registerCommand() {}, registerTool(value: unknown) { tool = value; }, exec } as never);
     const shutdown = vi.fn();
-    await expect(tool.execute("call", { branch: "feat/test" }, undefined, undefined, { cwd: "/repo", shutdown }))
+    await expect(tool.execute("call", { branch: "feat/test" }, undefined, undefined, { cwd: repo, shutdown }))
       .rejects.toThrow("preflight failed");
     expect(exec).toHaveBeenCalledOnce();
     expect(shutdown).not.toHaveBeenCalled();
@@ -268,9 +279,62 @@ describe("worktree extension", () => {
     });
     register({ registerCommand() {}, registerTool(value: unknown) { tool = value; }, exec } as never);
     const shutdown = vi.fn();
-    await expect(tool.execute("call", { branch: "feat/test" }, controller.signal, undefined, { cwd: "/repo", shutdown }))
+    await expect(tool.execute("call", { branch: "feat/test" }, controller.signal, undefined, { cwd: repo, shutdown }))
       .rejects.toThrow();
     expect(exec).toHaveBeenCalledOnce();
+    expect(shutdown).not.toHaveBeenCalled();
+  });
+
+  it("creates from the primary checkout when this session's worktree was already removed", async () => {
+    vi.stubEnv("HERDR_ENV", "1");
+    const primary = join(scratch, "app");
+    mkdirSync(join(primary, ".git"), { recursive: true });
+    const removed = join(scratch, "app-fix-merged-work");
+    let tool: any;
+    const exec = vi.fn().mockResolvedValue({ code: 0, stdout: "ready", stderr: "" });
+    register({ registerCommand() {}, registerTool(value: unknown) { tool = value; }, exec } as never);
+    const onUpdate = vi.fn();
+    const shutdown = vi.fn();
+    const signal = new AbortController().signal;
+
+    const result = await tool.execute(
+      "after-merge",
+      { branch: "fix/next-thing", prompt: "Next task" },
+      signal,
+      onUpdate,
+      { cwd: removed, shutdown },
+    );
+
+    expect(exec).toHaveBeenNthCalledWith(1, "provision-env", [
+      "--repo", primary, "--check-vercel-link", "--non-interactive",
+    ], { signal, timeout: 30_000, cwd: primary });
+    expect(exec).toHaveBeenNthCalledWith(
+      2,
+      "worktree",
+      buildArgs({ branch: "fix/next-thing", prompt: "Next task" }, primary),
+      expect.objectContaining({ cwd: primary }),
+    );
+    expect(onUpdate.mock.calls[0]?.[0].content[0].text).toContain(`using primary checkout ${primary}`);
+    expect(result.content[0].text).toContain(`${removed} no longer exists`);
+    expect(result.details.sourceRepo).toBe(primary);
+    expect(shutdown).toHaveBeenCalledOnce();
+  });
+
+  it("explains a missing session directory without running commands when no primary is found", async () => {
+    vi.stubEnv("HERDR_ENV", "1");
+    let tool: any;
+    const exec = vi.fn();
+    register({ registerCommand() {}, registerTool(value: unknown) { tool = value; }, exec } as never);
+    const shutdown = vi.fn();
+
+    await expect(tool.execute(
+      "orphan",
+      { branch: "fix/next-thing" },
+      undefined,
+      undefined,
+      { cwd: join(scratch, "nothing-matches", "here"), shutdown },
+    )).rejects.toThrow("Start Pi in the primary checkout");
+    expect(exec).not.toHaveBeenCalled();
     expect(shutdown).not.toHaveBeenCalled();
   });
 
@@ -294,7 +358,7 @@ describe("worktree extension", () => {
         { branch: "feat/reporting" },
         new AbortController().signal,
         undefined,
-        { cwd: "/repo", shutdown },
+        { cwd: repo, shutdown },
       ),
     ).rejects.toThrow("provisioning failed");
     expect(shutdown).not.toHaveBeenCalled();

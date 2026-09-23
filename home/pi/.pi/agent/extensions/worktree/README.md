@@ -26,6 +26,19 @@ The agent must not choose a centralized worktree root on the user's behalf.
 An explicit `path` remains available for intentional custom locations and is
 forwarded unchanged to the shared CLI.
 
+## Removed source checkout
+
+A session whose own linked worktree was removed (typically by PR merge cleanup)
+keeps a deleted working directory. `create_worktree` then recovers the source
+from the shared CLI's naming policy: the longest sibling `<name>` of the nearest
+existing ancestor for which the removed checkout is `<name>-…` and whose `.git`
+is a directory (a primary checkout, never another linked worktree). Both
+`provision-env` and `worktree create` receive that primary as `--repo` and run
+with it as their working directory, and the recovery is reported to the agent.
+Without a matching primary, the tool fails before running any command and asks
+for Pi to be started in the primary checkout. Never recreate the deleted
+directory as a workaround.
+
 ## Agent-owned Vercel linking
 
 Before allocating a worktree, `create_worktree` runs
