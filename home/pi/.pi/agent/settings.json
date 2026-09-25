@@ -1,8 +1,8 @@
 {
   "lastChangelogVersion": "0.87.1",
   "theme": "tokyonight-moon",
-  "defaultProvider": "subs-codex",
-  "defaultModel": "gpt-6-sol",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-opus-5-5",
   "defaultThinkingLevel": "high",
   "packages": [
     "npm:pi-subagents@0.70.1",
