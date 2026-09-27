@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Run pnpm in its own transient user scope under app.slice.
+#
+# Herdr, its shells, and every Pi agent share one login-session scope, which
+# systemd-oomd must never kill. app.slice is the only cgroup marked as an oomd
+# kill candidate (see box provision), so giving each pnpm invocation (dev
+# servers, builds, test runs) its own scope there lets oomd remove the one
+# that is thrashing memory instead of letting the whole box freeze.
+#
+# systemd-run --scope execs the command in this same process, so the TTY,
+# process group, signals, and exit status are unchanged.
+set -euo pipefail
+
+real_pnpm=${BOX_REAL_PNPM:-/usr/bin/pnpm}
+cgroup_file=${BOX_PNPM_CGROUP_FILE:-/proc/self/cgroup}
+
+already_in_app_slice() {
+  grep -q '/app\.slice/' "$cgroup_file" 2>/dev/null
+}
+
+user_manager_reachable() {
+  [[ -S ${XDG_RUNTIME_DIR:-/run/user/$UID}/bus ]] && command -v systemd-run >/dev/null
+}
+
+if [[ -n ${BOX_PNPM_NO_SCOPE:-} ]] || already_in_app_slice || ! user_manager_reachable; then
+  exec "$real_pnpm" "$@"
+fi
+
+exec systemd-run --user --scope --quiet --collect --slice=app.slice \
+  --description="pnpm $* ($PWD)" -- "$real_pnpm" "$@"
