@@ -11,29 +11,12 @@ if [[ $# -eq 1 ]]; then
 else
   selected=$(
     (
-      find ~/dev/core-projects/clients \
-        ~/dev/core-projects/studio \
-        ~/dev/repos \
-        ~/dev/core-projects/clients/duck \
-        ~/dev/core-projects/clients/geoplan \
-        ~/dev/core-projects/clients/impressions \
-        ~/dev/core-projects/afloat/local-dev-setup \
-        ~/dev/core-projects/open-source \
-        ~/dev/core-projects/rust \
-        ~/dev/ecosystem \
+      find ~/dev/repos \
         -mindepth 1 -maxdepth 1 -type d 2>/dev/null || true
       find ~/.dotfiles \
-        ~/dev/docs \
-        ~/dev/core-projects/magoz.com \
-        ~/dev/core-projects/guestbook \
-        ~/dev/core-projects/afloat2 \
-        ~/dev/core-projects/afloat-pdf-generator \
-        ~/dev/core-projects/archival* \
-        ~/dev/core-projects/intellect/intellect-monorepo \
-        ~/dev/core-projects/intellect/intellect-notes \
-        ~/dev/core-projects/intellect/intellect-ai \
-        ~/dev/core-projects/intellect/2022/intellect-notes \
-        ~/dev/core-projects/reality-score* \
+        ~/aha \
+        ~/collie \
+        ~/subs \
         -mindepth 0 -maxdepth 0 -type d 2>/dev/null || true
     ) | fzf
   )
