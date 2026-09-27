@@ -1,6 +1,6 @@
 ---
 name: general
-model: subs-codex/gpt-6-sol
+model: anthropic/claude-opus-5-5
 description: General-purpose delegated execution for focused research, analysis, and implementation tasks that benefit from an isolated child context
 thinking: high
 tools: read, grep, find, ls, bash, edit, write, contact_supervisor

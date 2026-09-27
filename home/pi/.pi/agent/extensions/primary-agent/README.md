@@ -68,13 +68,12 @@ no mandatory phases or delegation quota are imposed.
 
 | Work | Preferred model |
 | --- | --- |
-| Main coding agent | `subs-codex/gpt-6-astra` |
+| Main coding agent | `anthropic/claude-opus-5-5` |
 | `pr-reviewer` | `anthropic/claude-opus-5-5` (default); the PR skill also requests `subs-codex/gpt-6-astra` for a secondary independent opinion |
 | `tech-lead` | `anthropic/claude-opus-5-5` (default); automatic fallback to Astra, then public-only Muse; no further fallback |
 | `ui-design` (public or private repo) | `anthropic/claude-opus-5-5` |
 | `aha` (one Aha page per launch) | `anthropic/claude-opus-5-5`, thinking medium |
-| `general` implementation, including UI, in a verified public repo | `opencode-go/muse-spark-1.3-contributor` |
-| `general` implementation, including UI, in a private/unknown-visibility repo | `subs-codex/gpt-6-sol`; automatic `xai/grok-4.7`, then `zai/glm-5.3`, fallback for availability/auth/quota failures |
+| `general` (including all implementation and UI implementation, public or private repo) | `anthropic/claude-opus-5-5`; automatic `subs-codex/gpt-6-sol`, then `xai/grok-4.7`, then `zai/glm-5.3`, fallback for availability/auth/quota failures |
 | `explore-codebase` in a verified public repo | `opencode-go/muse-spark-1.3-contributor` via explicit per-launch override |
 | `explore-codebase` in a private/unknown-visibility repo | `opencode-go/deepseek-v4.1-flash` |
 | `web-researcher` | `opencode-go/deepseek-v4.1-flash` |
@@ -103,19 +102,19 @@ passes accepted guidelines to `general` for UI implementation; an already settle
 design does not require another design pass. Design proposals do not authorize
 production edits, and the designer reports any browser/visual validation gaps.
 
-`general` defaults to `subs-codex/gpt-6-sol` so omitting a launch override does not inherit
-the frontier parent model. Coding explicitly selects
-`opencode-go/muse-spark-1.3-contributor` for public-repository implementation
-(including UI) and `explore-codebase`. Before using `opencode-go/muse-spark-1.3-contributor` by default,
-coding verifies the actual repository is public and that the handoff contains no private
-material; a remote URL alone is not proof of visibility. Unknown visibility routes
-to `subs-codex/gpt-6-sol` for implementation (including UI), then `xai/grok-4.7`,
-and finally `zai/glm-5.3` if earlier models are unavailable. Unknown visibility still routes
-to `opencode-go/deepseek-v4.1-flash` for `explore-codebase` by default. An explicit user
+`general` defaults to `anthropic/claude-opus-5-5` and handles all implementation (including
+UI) regardless of repository visibility, with `subs-codex/gpt-6-sol`, then `xai/grok-4.7`,
+and finally `zai/glm-5.3` if earlier models are unavailable. Coding explicitly selects
+`opencode-go/muse-spark-1.3-contributor` for `explore-codebase` in public repositories.
+Before using `opencode-go/muse-spark-1.3-contributor` by default, coding verifies the actual
+repository is public and that the handoff contains no private material; a remote URL alone
+is not proof of visibility. Unknown visibility routes to `opencode-go/deepseek-v4.1-flash`
+for `explore-codebase` by default. An explicit user
 instruction to use a specific model overrides this default visibility routing; coding
 confirms the requested scope and proceeds with the user's choice.
 
-When Sol is unavailable, authentication fails, or quota is exhausted, the parent
+When Opus is unavailable for `general`, the parent continues with Sol. When Sol is
+unavailable, authentication fails, or quota is exhausted, the parent
 inspects any partial work and automatically starts a new explicit pi-subagents launch
 with `xai/grok-4.7`, without waiting for user confirmation. If Grok also fails,
 the parent continues with `zai/glm-5.3`. No second provider route is attempted for any
@@ -124,7 +123,7 @@ reports each failed model, reason, and selected fallback so the automatic switch
 silent. Unrelated launch/tooling/workflow failures remain infrastructure blockers, not
 fallback triggers.
 
-`subs-codex/gpt-6-astra` is already Pi's configured main-model default. Identity activation still
+`anthropic/claude-opus-5-5` is already Pi's configured main-model default. Identity activation still
 preserves a manually selected model. All configured provider/model fallback chains are
 automatic for availability, authentication, and quota failures. When no explicit chain
 is defined, coding selects the closest suitable permitted model for the role while
