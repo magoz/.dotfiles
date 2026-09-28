@@ -42,6 +42,10 @@ function normalizeAnthropicReset(value: unknown): number | undefined {
   return numeric > 10_000_000_000 ? numeric : numeric * 1_000;
 }
 
+// Model display names become part of a rendered footer label, so accept only
+// short, plain names (shared by the direct Anthropic and subs-claude paths).
+const SCOPED_NAME = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/;
+
 export function normalizeAnthropicUsage(payload: unknown): SubscriptionWindow[] {
   if (!isRecord(payload)) return [];
   const standard = [
@@ -59,7 +63,7 @@ export function normalizeAnthropicUsage(payload: unknown): SubscriptionWindow[] 
         const model = scope && isRecord(scope.model) ? scope.model : undefined;
         const displayName = typeof model?.display_name === "string" ? model.display_name.trim() : "";
         const used = finiteNumber(candidate.percent);
-        if (!/^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/.test(displayName) || used === undefined)
+        if (!SCOPED_NAME.test(displayName) || used === undefined)
           return [];
         const resetsAt = normalizeAnthropicReset(
           candidate.resets_at ?? candidate.nextResetTime ?? candidate.resetsAt,
@@ -108,6 +112,16 @@ export function normalizeCodexUsage(payload: unknown, now = Date.now()): Subscri
 
 function subsWindowLabel(value: JsonRecord): string | undefined {
   const durationMinutes = finiteNumber(value.durationMinutes);
+  // Model-scoped weekly windows (for example `weekly-scoped-fable`, labelled
+  // "Fable weekly") share the aggregate weekly duration. Mirror the direct
+  // Anthropic label (`Fable 7d`) so they never collapse into the `7d` group.
+  if (typeof value.id === "string" && value.id.startsWith("weekly-scoped-")) {
+    const name = typeof value.label === "string" ? value.label.replace(/\s+weekly$/i, "").trim() : "";
+    if (!SCOPED_NAME.test(name)) return undefined;
+    const period = durationMinutes !== undefined && durationMinutes > 0
+      ? formatWindowLabel(durationMinutes * 60, "7d") : "7d";
+    return `${name} ${period}`;
+  }
   if (durationMinutes !== undefined && durationMinutes > 0) {
     return formatWindowLabel(durationMinutes * 60, "usage");
   }
@@ -117,10 +131,14 @@ function subsWindowLabel(value: JsonRecord): string | undefined {
   return typeof value.label === "string" && value.label.length > 0 ? value.label : undefined;
 }
 
-export function normalizeSubsCodexUsage(payload: unknown): SubscriptionWindow[] {
+// Aggregates one provider's accounts from the local subs usage service. Window
+// ids are not used as the group key: Codex ids are positional (`primary` /
+// `secondary`) and their meaning varies by plan, whereas the rendered label
+// already encodes duration and any model scope.
+export function normalizeSubsUsage(payload: unknown, provider: "codex" | "anthropic"): SubscriptionWindow[] {
   if (!isRecord(payload) || !Array.isArray(payload.accounts)) return [];
   const accounts = payload.accounts.filter((account): account is JsonRecord =>
-    isRecord(account) && account.provider === "codex");
+    isRecord(account) && account.provider === provider);
   if (accounts.length === 0 || accounts.some((account) => account.status !== "fresh")) return [];
 
   const grouped = new Map<string, { label: string; remaining: number; capacity: number; resets: number[] }>();
@@ -132,7 +150,7 @@ export function normalizeSubsCodexUsage(payload: unknown): SubscriptionWindow[] 
       const label = subsWindowLabel(candidate);
       if (remaining === undefined || !label) continue;
       const durationMinutes = finiteNumber(candidate.durationMinutes);
-      const key = durationMinutes !== undefined ? `duration:${durationMinutes}` : `label:${label}`;
+      const key = durationMinutes !== undefined ? `duration:${durationMinutes}|label:${label}` : `label:${label}`;
       const group = grouped.get(key) ?? { label, remaining: 0, capacity: 0, resets: [] };
       group.remaining += Math.max(0, Math.min(100, remaining));
       group.capacity += 100;
@@ -150,6 +168,14 @@ export function normalizeSubsCodexUsage(payload: unknown): SubscriptionWindow[] 
     capacityPercent: group.capacity,
     resetsAt: group.resets.length > 0 ? Math.min(...group.resets) : undefined,
   }));
+}
+
+export function normalizeSubsCodexUsage(payload: unknown): SubscriptionWindow[] {
+  return normalizeSubsUsage(payload, "codex");
+}
+
+export function normalizeSubsClaudeUsage(payload: unknown): SubscriptionWindow[] {
+  return normalizeSubsUsage(payload, "anthropic");
 }
 
 function grokWindowLabel(type: unknown): string {
@@ -293,6 +319,13 @@ function providerUsageConfig(provider: string): ProviderUsageConfig | undefined 
     refreshMs: MINUTE,
     authKind: "none",
     normalize: normalizeSubsCodexUsage,
+  };
+  if (provider === "subs-claude") return {
+    endpoint: "http://127.0.0.1:8320/api/usage",
+    origin: "http://127.0.0.1:8317",
+    refreshMs: MINUTE,
+    authKind: "none",
+    normalize: normalizeSubsClaudeUsage,
   };
   if (provider === "xai") return {
     endpoint: "https://cli-chat-proxy.grok.com/v1/billing?format=credits",

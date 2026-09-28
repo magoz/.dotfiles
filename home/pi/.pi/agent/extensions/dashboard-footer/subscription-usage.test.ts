@@ -7,6 +7,7 @@ import {
   normalizeCodexUsage,
   normalizeGrokUsage,
   normalizeOpencodeGoUsage,
+  normalizeSubsClaudeUsage,
   normalizeSubsCodexUsage,
   normalizeZaiUsage,
   quotaColor,
@@ -58,6 +59,25 @@ const subsPayload = {
   ],
 };
 const SUBS_EXPECTED = "7d 140% of 200% left / 4d 3h";
+const claudeAccount = (remaining: [number, number, number], resets: [number, number, number]) => ({
+  provider: "anthropic",
+  status: "fresh",
+  windows: [
+    { id: "five-hour", label: "5-hour", remainingPercent: remaining[0], resetsAt: new Date(NOW + resets[0] * MINUTE).toISOString(), durationMinutes: 300 },
+    { id: "weekly", label: "Weekly", remainingPercent: remaining[1], resetsAt: new Date(NOW + resets[1] * MINUTE).toISOString(), durationMinutes: 10_080 },
+    { id: "weekly-scoped-fable", label: "Fable weekly", remainingPercent: remaining[2], resetsAt: new Date(NOW + resets[2] * MINUTE).toISOString(), durationMinutes: 10_080 },
+  ],
+});
+const subsClaudePayload = {
+  generatedAt: new Date(NOW).toISOString(),
+  accounts: [
+    claudeAccount([71, 65, 100], [134, 99 * 60, 100 * 60]),
+    subsPayload.accounts[0],
+    claudeAccount([40, 20, 5], [200, 120 * 60, 99 * 60]),
+    subsPayload.accounts[1],
+  ],
+};
+const SUBS_CLAUDE_EXPECTED = "5h 111% of 200% left / 2h 14m · 7d 85% of 200% left / 4d 3h · Fable 7d 105% of 200% left / 4d 3h";
 
 function defaultBaseUrl(provider: string) {
   if (provider === "anthropic") return "https://api.anthropic.com";
@@ -65,6 +85,7 @@ function defaultBaseUrl(provider: string) {
   if (provider === "opencode-go") return "https://opencode.ai/zen/go/v1";
   if (provider === "zai") return "https://api.z.ai/api/coding/paas/v4";
   if (provider === "subs-codex") return "http://127.0.0.1:8317/v1";
+  if (provider === "subs-claude") return "http://127.0.0.1:8317";
   return "https://chatgpt.com/backend-api";
 }
 
@@ -116,6 +137,44 @@ test("aggregates the local subs Codex pool across accounts", () => {
   assert.deepEqual(normalizeSubsCodexUsage({
     accounts: [{ provider: "codex", status: "unavailable", windows: [] }],
   }), []);
+  // Anthropic accounts in the same payload never leak into the Codex pool.
+  assert.deepEqual(normalizeSubsCodexUsage(subsClaudePayload), windows);
+  // Codex window ids are positional; the same weekly duration still pools.
+  assert.deepEqual(normalizeSubsCodexUsage({
+    accounts: [
+      { ...subsPayload.accounts[0], windows: [{ ...subsPayload.accounts[0]!.windows[0], id: "primary" }] },
+      { ...subsPayload.accounts[1], windows: [{ ...subsPayload.accounts[1]!.windows[0], id: "secondary" }] },
+    ],
+  }), windows);
+});
+
+test("aggregates the local subs Claude pool and keeps scoped weekly limits separate", () => {
+  const windows = normalizeSubsClaudeUsage(subsClaudePayload);
+  assert.deepEqual(windows, [
+    { label: "5h", remainingPercent: 111, capacityPercent: 200, resetsAt: NOW + 134 * MINUTE },
+    { label: "7d", remainingPercent: 85, capacityPercent: 200, resetsAt: NOW + 99 * 60 * MINUTE },
+    { label: "Fable 7d", remainingPercent: 105, capacityPercent: 200, resetsAt: NOW + 99 * 60 * MINUTE },
+  ]);
+  assert.equal(formatSubscriptionUsage(windows, NOW), SUBS_CLAUDE_EXPECTED);
+  // Same scoped label as the direct Anthropic OAuth path.
+  assert.deepEqual(
+    normalizeAnthropicUsage({ limits: [{ kind: "weekly_scoped", percent: 0, scope: { model: { display_name: "Fable" } } }] })
+      .map((window) => window.label),
+    ["Fable 7d"],
+  );
+  // Codex-only payloads yield nothing for subs-claude.
+  assert.deepEqual(normalizeSubsClaudeUsage(subsPayload), []);
+  // Any non-fresh Anthropic account withholds the whole pool.
+  assert.deepEqual(normalizeSubsClaudeUsage({
+    accounts: [...subsClaudePayload.accounts, { provider: "anthropic", status: "stale", windows: [] }],
+  }), []);
+  // Unsafe scoped names are dropped rather than merged into the aggregate 7d.
+  assert.deepEqual(normalizeSubsClaudeUsage({
+    accounts: [{ provider: "anthropic", status: "fresh", windows: [
+      { id: "weekly", label: "Weekly", remainingPercent: 50, durationMinutes: 10_080 },
+      { id: "weekly-scoped-x", label: "\u001b[31mEvil weekly", remainingPercent: 0, durationMinutes: 10_080 },
+    ] }],
+  }), [{ label: "7d", remainingPercent: 50, capacityPercent: 100, resetsAt: undefined }]);
 });
 
 test("parses Grok included-pool percent and exact weekly/monthly labels without trusting server strings", () => {
@@ -421,6 +480,25 @@ test("subs-codex reads the loopback usage service without resolving or forwardin
   tracker.stop();
 });
 
+test("subs-claude reads the loopback usage service without resolving or forwarding credentials", async () => {
+  let calls = 0;
+  const { ctx, authCalls } = context("subs-claude", { oauth: false });
+  const tracker = new SubscriptionUsageTracker(() => {}, async (url, init) => {
+    calls += 1;
+    assert.equal(url, "http://127.0.0.1:8320/api/usage");
+    const headers = new Headers(init?.headers);
+    assert.equal([...headers.keys()].join(","), "accept");
+    assert.equal(init?.redirect, "error");
+    return Response.json(subsClaudePayload);
+  }, () => NOW);
+  await tracker.refresh(ctx);
+  await tracker.refresh(ctx);
+  assert.equal(calls, 1);
+  assert.equal(authCalls(), 0);
+  assert.equal(tracker.getText(), SUBS_CLAUDE_EXPECTED);
+  tracker.stop();
+});
+
 test("Codex account ID can come from Pi's resolved access token without reading auth files", async () => {
   const payload = Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "test-account" } })).toString("base64url");
   const { ctx } = context("openai-codex", { apiKey: `test.${payload}.signature` });
@@ -509,6 +587,8 @@ test("unsupported providers, API keys and nonofficial origins do not resolve aut
     context("zai", { oauth: true }),
     context("subs-codex", { oauth: false, baseUrl: "https://subs.example/v1" }),
     context("subs-codex", { oauth: false, baseUrl: "http://127.0.0.1:8318/v1" }),
+    context("subs-claude", { oauth: false, baseUrl: "https://subs.example" }),
+    context("subs-claude", { oauth: false, baseUrl: "http://127.0.0.1:8318" }),
     ...["https://proxy.example", "http://chatgpt.com", "https://chatgpt.com:8443", "https://user@chatgpt.com", "not a URL"]
       .map((baseUrl) => context("openai-codex", { baseUrl })),
     ...["https://cli-chat-proxy.grok.com", "https://cli-chat-proxy.grok.com/v1", "http://api.x.ai/v1",

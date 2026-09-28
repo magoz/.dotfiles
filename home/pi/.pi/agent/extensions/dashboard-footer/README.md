@@ -18,6 +18,13 @@ No dependency on `pi-multi-account` remains.
   no gateway key, management key, account token, or other authorization header.
   If any Codex account is unavailable, the prior pool reading is retained as
   stale rather than treating the missing account as 0% remaining.
+- **Local `subs-claude` pool:** the same read-only service and gateway-origin rule,
+  aggregating fresh `anthropic` accounts instead (for example
+  `5h 111% of 200% left · 7d 85% of 200% left · Fable 7d 105% of 200% left`).
+  Model-scoped weekly windows (ids `weekly-scoped-*`) are labelled like the direct
+  Anthropic path (`Fable 7d`) and pooled separately from the aggregate `7d` window.
+  Pools group by duration plus rendered label, not by window id, because Codex ids
+  (`primary`/`secondary`) are positional.
 - **Anthropic OAuth:** aggregate 5-hour and 7-day allowance from `https://api.anthropic.com/api/oauth/usage`, plus model-scoped weekly limits from its `limits` array (for example an exhausted `Fable 7d` quota that the aggregate 7-day window would otherwise hide).
 - **Grok / SuperGrok OAuth:** remaining included-pool allowance from
   `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` when the selected
@@ -72,7 +79,7 @@ Missing reset metadata says `reset unknown`; elapsed resets say `reset pending`
 until refreshed, never an invented 100%. Failed refreshes retain muted, labeled
 `(stale)` readings rather than pretending they are live.
 
-HTTP refresh is throttled per provider (1 minute for the local `subs-codex` snapshot,
+HTTP refresh is throttled per provider (1 minute for the local `subs-codex`/`subs-claude` snapshot,
 5 minutes Codex, Grok, Go, and Z.ai, 10 minutes Anthropic);
 countdowns repaint every minute without extra HTTP requests. HTTP 429
 `Retry-After` can extend the interval. Requests have a 15-second deadline and do
@@ -80,8 +87,8 @@ not block startup. Provider changes and shutdown cancel pending work; late
 responses cannot update another provider/session's footer.
 
 Authentication is resolved by Pi's model registry for provider-hosted usage endpoints;
-the local `subs-codex` endpoint deliberately requires no credential. Requests use fixed
-official HTTPS endpoints (or exact loopback origins for `subs-codex`), allowlisted auth
+the local `subs-*` endpoint deliberately requires no credential. Requests use fixed
+official HTTPS endpoints (or exact loopback origins for `subs-codex`/`subs-claude`), allowlisted auth
 headers, and reject redirects. The tracker
 never reads credential files, stores credentials, writes shared state, selects
 models, changes thinking levels, registers providers, retries inference, or
