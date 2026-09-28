@@ -106,7 +106,7 @@
           "compat": {
             "supportsMidConvoEffort": true,
             "supportsMidConvoSystemMessages": true,
-            "supportsMidConvoToolChanges": true,
+            "supportsMidConvoToolChanges": false,
             "forceAdaptiveThinking": true,
             "supportsTemperature": false,
             "supportsStrictTools": true
