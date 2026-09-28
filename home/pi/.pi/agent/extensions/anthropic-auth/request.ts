@@ -128,17 +128,25 @@ export function shapePiSystemPrompt(text: string): string {
 	return text.slice(0, prefixIndex) + replacement + text.slice(end);
 }
 
-function shapeSystem(system: unknown, header: string | undefined): unknown {
-	const blocks = Array.isArray(system)
+function sanitizeSystemBlock(block: unknown): unknown {
+	const text = systemText(block);
+	return text?.includes(PI_PROMPT_PREFIX)
+		? replaceSystemText(block, shapePiSystemPrompt(text))
+		: block;
+}
+
+/** Sanitize Pi prompt fingerprints while preserving the system field's shape. */
+function sanitizeSystem(system: unknown): unknown {
+	if (typeof system === "string") {
+		return system.includes(PI_PROMPT_PREFIX) ? shapePiSystemPrompt(system) : system;
+	}
+	return Array.isArray(system) ? system.map(sanitizeSystemBlock) : system;
+}
+
+function withBillingHeader(system: unknown, header: string | undefined): unknown {
+	const shaped = Array.isArray(system)
 		? system
 		: typeof system === "string" ? [{ type: "text", text: system }] : [];
-
-	const shaped = blocks.map((block) => {
-		const text = systemText(block);
-		return text?.includes(PI_PROMPT_PREFIX)
-			? replaceSystemText(block, shapePiSystemPrompt(text))
-			: block;
-	});
 	if (!header) return shaped;
 	if (shaped.some((block) => systemText(block)?.includes(BILLING_HEADER_PREFIX))) {
 		return shaped;
@@ -195,11 +203,12 @@ function stripThinkingFromUserMessage(message: unknown): unknown {
 	};
 }
 
-/** Apply only post-serialization fixes Pi does not natively provide. */
-export function shapeAnthropicOAuthPayload(
-	payload: unknown,
-	claudeCodeVersion = getClaudeCodeVersion(),
-): unknown {
+/**
+ * Content-only fixes shared by every mode: Pi prompt sanitization,
+ * summarization thinking stripping, and assistant text/tool ordering. Adds no
+ * billing, identity, or transport metadata, and keeps the system field's shape.
+ */
+export function shapeAnthropicContentPayload(payload: unknown): unknown {
 	if (!isAnthropicPayload(payload)) return payload;
 
 	// Only Pi-generated summary requests may rewrite transcript text. Normal chat,
@@ -211,14 +220,26 @@ export function shapeAnthropicOAuthPayload(
 	const transcriptMessages = summarizing
 		? payload.messages.map(stripThinkingFromUserMessage)
 		: payload.messages;
-	// Billing must describe the sanitized first user message, not the original.
 	const messages = transcriptMessages.flatMap(splitInvalidAssistantMessage);
+	return "system" in payload
+		? { ...payload, messages, system: sanitizeSystem(payload.system) }
+		: { ...payload, messages };
+}
+
+/** Direct OAuth: content fixes plus Claude Code billing metadata. */
+export function shapeAnthropicOAuthPayload(
+	payload: unknown,
+	claudeCodeVersion = getClaudeCodeVersion(),
+): unknown {
+	const content = shapeAnthropicContentPayload(payload);
+	if (!isAnthropicPayload(content)) return content;
+
+	// Billing must describe the sanitized first user message, not the original.
 	return {
-		...payload,
-		messages,
-		system: shapeSystem(
-			payload.system,
-			billingHeader(messages, claudeCodeVersion),
+		...content,
+		system: withBillingHeader(
+			content.system,
+			billingHeader(content.messages, claudeCodeVersion),
 		),
 	};
 }

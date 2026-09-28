@@ -7,6 +7,7 @@ import type {
 } from "@earendil-works/pi-ai";
 import {
 	getClaudeCodeVersion,
+	shapeAnthropicContentPayload,
 	shapeAnthropicOAuthPayload,
 } from "./request.ts";
 
@@ -34,6 +35,15 @@ export async function applyPayloadTransforms(
 	return isAnthropicOAuthToken(apiKey)
 		? shapeAnthropicOAuthPayload(upstream, claudeCodeVersion)
 		: upstream;
+}
+
+/** Gateway mode: content fixes only; the gateway owns billing and identity. */
+export async function applyGatewayPayloadTransforms(
+	payload: unknown,
+	caller?: () => unknown | Promise<unknown>,
+): Promise<unknown> {
+	const replaced = caller ? await caller() : undefined;
+	return shapeAnthropicContentPayload(replaced ?? payload);
 }
 
 function withClaudeUserAgent(
@@ -73,5 +83,30 @@ export function createAnthropicOAuthStream(
 			: options?.headers;
 
 		return delegate(model, context, { ...options, headers, onPayload });
+	};
+}
+
+/**
+ * Wrap a Claude Code-impersonating gateway provider (e.g. CLIProxyAPI). Applies
+ * content fixes regardless of credential; leaves headers, billing, and identity
+ * to the gateway.
+ */
+export function createAnthropicGatewayStream(
+	delegate: AnthropicStream,
+): AnthropicStream {
+	return (model, context, options) => {
+		const callerOnPayload = options?.onPayload;
+		const onPayload: SimpleStreamOptions["onPayload"] = async (
+			payload,
+			payloadModel,
+		) =>
+			applyGatewayPayloadTransforms(
+				payload,
+				callerOnPayload
+					? () => callerOnPayload(payload, payloadModel)
+					: undefined,
+			);
+
+		return delegate(model, context, { ...options, onPayload });
 	};
 }
