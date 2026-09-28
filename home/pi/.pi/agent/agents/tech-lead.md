@@ -1,6 +1,6 @@
 ---
 name: tech-lead
-model: anthropic/claude-opus-5-5
+model: subs-claude/claude-opus-5-5
 description: Frontier judgment checkpoint for architecture, difficult tradeoffs, and contested decisions; read-only advisor
 thinking: high
 tools: read, grep, find, ls, contact_supervisor
@@ -57,7 +57,7 @@ determines the initial route; fallback remains automatic unless the user explici
 exact route or forbids fallback. After pi-subagents model/authentication/execution preflight, the
 parent automatically advances through this chain using a new explicit launch for each attempt:
 
-1. `anthropic/claude-opus-5-5` (default)
+1. `subs-claude/claude-opus-5-5` (default)
 2. `subs-codex/gpt-6-astra`
 3. `opencode-go/muse-spark-1.3-contributor` — only if parent verified public repository and handoff
    contains no private material; otherwise skip it

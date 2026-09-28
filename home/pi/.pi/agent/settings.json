@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "0.87.1",
   "theme": "tokyonight-moon",
-  "defaultProvider": "anthropic",
+  "defaultProvider": "subs-claude",
   "defaultModel": "claude-opus-5-5",
   "defaultThinkingLevel": "high",
   "packages": [
@@ -33,7 +33,6 @@
     "defaultExtensions": []
   },
   "enabledModels": [
-    "anthropic/claude-opus-5-5",
     "subs-claude/claude-opus-5-5",
     "subs-codex/gpt-6-astra",
     "zai/glm-5.3",

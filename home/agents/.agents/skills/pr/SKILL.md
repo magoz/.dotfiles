@@ -142,7 +142,7 @@ reason to repeat work.
 Whenever a fresh independent review is needed, use two fresh-context, read-only `pr-reviewer`
 children with explicit model overrides:
 
-- **Opus (primary):** `anthropic/claude-opus-5-5` — the `pr-reviewer` frontmatter default
+- **Opus (primary):** `subs-claude/claude-opus-5-5` — the `pr-reviewer` frontmatter default
 - **Astra (secondary):** `subs-codex/gpt-6-astra`
 
 The configured review models do not have overlapping provider routes. Never retry the same model

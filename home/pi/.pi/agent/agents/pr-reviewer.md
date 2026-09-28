@@ -1,6 +1,6 @@
 ---
 name: pr-reviewer
-model: anthropic/claude-opus-5-5
+model: subs-claude/claude-opus-5-5
 description: Read-only independent reviewer for repository pull request standards, specification, and knowledge audits
 thinking: high
 tools: read, grep, find, ls

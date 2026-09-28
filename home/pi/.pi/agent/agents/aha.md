@@ -1,6 +1,6 @@
 ---
 name: aha
-model: anthropic/claude-opus-5-5
+model: subs-claude/claude-opus-5-5
 description: Writes, previews and privately uploads one Aha page (a self-contained HTML explainer, comparison, recipe, chart or plan) from a content request
 thinking: medium
 tools: read, bash, write, edit
