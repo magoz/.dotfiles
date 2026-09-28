@@ -65,7 +65,7 @@ const claudeAccount = (remaining: [number, number, number], resets: [number, num
   windows: [
     { id: "five-hour", label: "5-hour", remainingPercent: remaining[0], resetsAt: new Date(NOW + resets[0] * MINUTE).toISOString(), durationMinutes: 300 },
     { id: "weekly", label: "Weekly", remainingPercent: remaining[1], resetsAt: new Date(NOW + resets[1] * MINUTE).toISOString(), durationMinutes: 10_080 },
-    { id: "weekly-scoped-fable", label: "Fable weekly", remainingPercent: remaining[2], resetsAt: new Date(NOW + resets[2] * MINUTE).toISOString(), durationMinutes: 10_080 },
+    { id: "weekly-scoped-opus", label: "Opus weekly", remainingPercent: remaining[2], resetsAt: new Date(NOW + resets[2] * MINUTE).toISOString(), durationMinutes: 10_080 },
   ],
 });
 const subsClaudePayload = {
@@ -77,7 +77,7 @@ const subsClaudePayload = {
     subsPayload.accounts[1],
   ],
 };
-const SUBS_CLAUDE_EXPECTED = "5h 111% of 200% left / 2h 14m · 7d 85% of 200% left / 4d 3h · Fable 7d 105% of 200% left / 4d 3h";
+const SUBS_CLAUDE_EXPECTED = "5h 111% of 200% left / 2h 14m · 7d 85% of 200% left / 4d 3h · Opus 7d 105% of 200% left / 4d 3h";
 
 function defaultBaseUrl(provider: string) {
   if (provider === "anthropic") return "https://api.anthropic.com";
@@ -94,7 +94,7 @@ test("restores Anthropic and Codex remaining allowance and reset countdowns", ()
   assert.equal(formatSubscriptionUsage(normalizeCodexUsage(codexPayload), NOW), EXPECTED);
 });
 
-test("surfaces Anthropic model-scoped weekly limits such as exhausted Fable", () => {
+test("surfaces Anthropic model-scoped weekly limits such as an exhausted Opus allowance", () => {
   const payload = {
     ...anthropicPayload,
     limits: [
@@ -102,16 +102,16 @@ test("surfaces Anthropic model-scoped weekly limits such as exhausted Fable", ()
         kind: "weekly_scoped",
         percent: 100,
         resets_at: "2026-08-15T15:00:00.000Z",
-        scope: { model: { id: null, display_name: "Fable" } },
+        scope: { model: { id: null, display_name: "Opus" } },
       },
     ],
   };
   const windows = normalizeAnthropicUsage(payload);
-  assert.deepEqual(windows.map((w) => w.label), ["5h", "7d", "Fable 7d"]);
+  assert.deepEqual(windows.map((w) => w.label), ["5h", "7d", "Opus 7d"]);
   assert.equal(windows[2].remainingPercent, 0);
   assert.equal(
     formatSubscriptionUsage(windows, NOW),
-    `${EXPECTED} · Fable 7d 0% left / 4d 3h`,
+    `${EXPECTED} · Opus 7d 0% left / 4d 3h`,
   );
   // Non-scoped limit kinds and malformed scopes never render as allowance.
   assert.deepEqual(
@@ -153,14 +153,14 @@ test("aggregates the local subs Claude pool and keeps scoped weekly limits separ
   assert.deepEqual(windows, [
     { label: "5h", remainingPercent: 111, capacityPercent: 200, resetsAt: NOW + 134 * MINUTE },
     { label: "7d", remainingPercent: 85, capacityPercent: 200, resetsAt: NOW + 99 * 60 * MINUTE },
-    { label: "Fable 7d", remainingPercent: 105, capacityPercent: 200, resetsAt: NOW + 99 * 60 * MINUTE },
+    { label: "Opus 7d", remainingPercent: 105, capacityPercent: 200, resetsAt: NOW + 99 * 60 * MINUTE },
   ]);
   assert.equal(formatSubscriptionUsage(windows, NOW), SUBS_CLAUDE_EXPECTED);
   // Same scoped label as the direct Anthropic OAuth path.
   assert.deepEqual(
-    normalizeAnthropicUsage({ limits: [{ kind: "weekly_scoped", percent: 0, scope: { model: { display_name: "Fable" } } }] })
+    normalizeAnthropicUsage({ limits: [{ kind: "weekly_scoped", percent: 0, scope: { model: { display_name: "Opus" } } }] })
       .map((window) => window.label),
-    ["Fable 7d"],
+    ["Opus 7d"],
   );
   // Codex-only payloads yield nothing for subs-claude.
   assert.deepEqual(normalizeSubsClaudeUsage(subsPayload), []);
@@ -173,6 +173,23 @@ test("aggregates the local subs Claude pool and keeps scoped weekly limits separ
     accounts: [{ provider: "anthropic", status: "fresh", windows: [
       { id: "weekly", label: "Weekly", remainingPercent: 50, durationMinutes: 10_080 },
       { id: "weekly-scoped-x", label: "\u001b[31mEvil weekly", remainingPercent: 0, durationMinutes: 10_080 },
+    ] }],
+  }), [{ label: "7d", remainingPercent: 50, capacityPercent: 100, resetsAt: undefined }]);
+});
+
+test("hides Fable model-scoped weekly limits on both Anthropic paths", () => {
+  const fableLimits = [
+    { kind: "weekly_scoped", percent: 0, scope: { model: { id: null, display_name: "Fable" } } },
+    { kind: "weekly_scoped", percent: 10, scope: { model: { id: "claude-fable-5-1", display_name: "Fable 5.1" } } },
+  ];
+  assert.deepEqual(
+    normalizeAnthropicUsage({ ...anthropicPayload, limits: fableLimits }).map((w) => w.label),
+    ["5h", "7d"],
+  );
+  assert.deepEqual(normalizeSubsClaudeUsage({
+    accounts: [{ provider: "anthropic", status: "fresh", windows: [
+      { id: "weekly", label: "Weekly", remainingPercent: 50, durationMinutes: 10_080 },
+      { id: "weekly-scoped-fable", label: "Fable weekly", remainingPercent: 100, durationMinutes: 10_080 },
     ] }],
   }), [{ label: "7d", remainingPercent: 50, capacityPercent: 100, resetsAt: undefined }]);
 });

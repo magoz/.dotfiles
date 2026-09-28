@@ -46,6 +46,15 @@ function normalizeAnthropicReset(value: unknown): number | undefined {
 // short, plain names (shared by the direct Anthropic and subs-claude paths).
 const SCOPED_NAME = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$/;
 
+// Model-scoped weekly limits for models no longer in use (matched by display-name
+// prefix, e.g. "Fable", "Fable 5.1"); hidden on both Anthropic paths.
+const HIDDEN_SCOPED_MODELS = ["fable"];
+
+function isHiddenScopedModel(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return HIDDEN_SCOPED_MODELS.some((hidden) => normalized.startsWith(hidden));
+}
+
 export function normalizeAnthropicUsage(payload: unknown): SubscriptionWindow[] {
   if (!isRecord(payload)) return [];
   const standard = [
@@ -53,9 +62,9 @@ export function normalizeAnthropicUsage(payload: unknown): SubscriptionWindow[] 
     normalizeAnthropicWindow(payload.seven_day, "7d"),
   ].filter((window): window is SubscriptionWindow => window !== undefined);
 
-  // Model-scoped weekly limits (for example the Fable allowance) live in
-  // `limits` alongside the aggregate windows. Surface them so an exhausted
-  // Fable quota cannot hide behind a healthy aggregate 7d window.
+  // Model-scoped weekly limits (for example an Opus allowance) live in `limits`
+  // alongside the aggregate windows. Surface them so an exhausted model quota
+  // cannot hide behind a healthy aggregate 7d window; hidden models are skipped.
   const scoped = Array.isArray(payload.limits)
     ? payload.limits.flatMap((candidate): SubscriptionWindow[] => {
         if (!isRecord(candidate) || candidate.kind !== "weekly_scoped") return [];
@@ -65,6 +74,7 @@ export function normalizeAnthropicUsage(payload: unknown): SubscriptionWindow[] 
         const used = finiteNumber(candidate.percent);
         if (!SCOPED_NAME.test(displayName) || used === undefined)
           return [];
+        if (isHiddenScopedModel(displayName)) return [];
         const resetsAt = normalizeAnthropicReset(
           candidate.resets_at ?? candidate.nextResetTime ?? candidate.resetsAt,
         );
@@ -112,12 +122,13 @@ export function normalizeCodexUsage(payload: unknown, now = Date.now()): Subscri
 
 function subsWindowLabel(value: JsonRecord): string | undefined {
   const durationMinutes = finiteNumber(value.durationMinutes);
-  // Model-scoped weekly windows (for example `weekly-scoped-fable`, labelled
-  // "Fable weekly") share the aggregate weekly duration. Mirror the direct
-  // Anthropic label (`Fable 7d`) so they never collapse into the `7d` group.
+  // Model-scoped weekly windows (for example `weekly-scoped-opus`, labelled
+  // "Opus weekly") share the aggregate weekly duration. Mirror the direct
+  // Anthropic label (`Opus 7d`) so they never collapse into the `7d` group.
+  // Returning undefined drops the window (hidden models, unsafe names).
   if (typeof value.id === "string" && value.id.startsWith("weekly-scoped-")) {
     const name = typeof value.label === "string" ? value.label.replace(/\s+weekly$/i, "").trim() : "";
-    if (!SCOPED_NAME.test(name)) return undefined;
+    if (!SCOPED_NAME.test(name) || isHiddenScopedModel(name)) return undefined;
     const period = durationMinutes !== undefined && durationMinutes > 0
       ? formatWindowLabel(durationMinutes * 60, "7d") : "7d";
     return `${name} ${period}`;

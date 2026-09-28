@@ -20,12 +20,12 @@ No dependency on `pi-multi-account` remains.
   stale rather than treating the missing account as 0% remaining.
 - **Local `subs-claude` pool:** the same read-only service and gateway-origin rule,
   aggregating fresh `anthropic` accounts instead (for example
-  `5h 111% of 200% left · 7d 85% of 200% left · Fable 7d 105% of 200% left`).
+  `5h 111% of 200% left · 7d 85% of 200% left · Opus 7d 105% of 200% left`).
   Model-scoped weekly windows (ids `weekly-scoped-*`) are labelled like the direct
-  Anthropic path (`Fable 7d`) and pooled separately from the aggregate `7d` window.
+  Anthropic path (`Opus 7d`) and pooled separately from the aggregate `7d` window.
   Pools group by duration plus rendered label, not by window id, because Codex ids
   (`primary`/`secondary`) are positional.
-- **Anthropic OAuth:** aggregate 5-hour and 7-day allowance from `https://api.anthropic.com/api/oauth/usage`, plus model-scoped weekly limits from its `limits` array (for example an exhausted `Fable 7d` quota that the aggregate 7-day window would otherwise hide).
+- **Anthropic OAuth:** aggregate 5-hour and 7-day allowance from `https://api.anthropic.com/api/oauth/usage`, plus model-scoped weekly limits from its `limits` array (for example an exhausted `Opus 7d` quota that the aggregate 7-day window would otherwise hide). Limits for models no longer in use (`HIDDEN_SCOPED_MODELS`, currently Fable) are hidden on both Anthropic paths.
 - **Grok / SuperGrok OAuth:** remaining included-pool allowance from
   `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` when the selected
   model is xAI OAuth on the official inference origin `https://api.x.ai/v1`.
