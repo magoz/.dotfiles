@@ -34,6 +34,7 @@
   },
   "enabledModels": [
     "anthropic/claude-opus-5-5",
+    "subs-claude/claude-opus-5-5",
     "subs-codex/gpt-6-astra",
     "zai/glm-5.3",
     "opencode-go/muse-spark-1.3-contributor",
