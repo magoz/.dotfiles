@@ -28,8 +28,8 @@
           }
         },
         {
-          "id": "gpt-6-sol",
-          "name": "GPT-6 Sol (Subs Codex Pool)",
+          "id": "gpt-6.1-sol",
+          "name": "GPT-6.1 Sol (Subs Codex Pool)",
           "reasoning": true,
           "input": ["text", "image"],
           "contextWindow": 272000,

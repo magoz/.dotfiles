@@ -73,7 +73,7 @@ no mandatory phases or delegation quota are imposed.
 | `tech-lead` | `subs-claude/claude-opus-5-5` (default); automatic fallback to Astra, then public-only Muse; no further fallback |
 | `ui-design` (public or private repo) | `subs-claude/claude-opus-5-5` |
 | `aha` (one Aha page per launch) | `subs-claude/claude-opus-5-5`, thinking medium |
-| `general` (including all implementation and UI implementation, public or private repo) | `subs-claude/claude-opus-5-5`; automatic `subs-codex/gpt-6-sol`, then `xai/grok-4.7`, then `zai/glm-5.3`, fallback for availability/auth/quota failures |
+| `general` (including all implementation and UI implementation, public or private repo) | `subs-claude/claude-opus-5-5`; automatic `subs-codex/gpt-6.1-sol`, then `xai/grok-4.7`, then `zai/glm-5.3`, fallback for availability/auth/quota failures |
 | `explore-codebase` in a verified public repo | `opencode-go/muse-spark-1.3-contributor` via explicit per-launch override |
 | `explore-codebase` in a private/unknown-visibility repo | `opencode-go/deepseek-v4.1-flash` |
 | `web-researcher` | `opencode-go/deepseek-v4.1-flash` |
@@ -103,7 +103,7 @@ design does not require another design pass. Design proposals do not authorize
 production edits, and the designer reports any browser/visual validation gaps.
 
 `general` defaults to `subs-claude/claude-opus-5-5` and handles all implementation (including
-UI) regardless of repository visibility, with `subs-codex/gpt-6-sol`, then `xai/grok-4.7`,
+UI) regardless of repository visibility, with `subs-codex/gpt-6.1-sol`, then `xai/grok-4.7`,
 and finally `zai/glm-5.3` if earlier models are unavailable. Coding explicitly selects
 `opencode-go/muse-spark-1.3-contributor` for `explore-codebase` in public repositories.
 Before using `opencode-go/muse-spark-1.3-contributor` by default, coding verifies the actual
