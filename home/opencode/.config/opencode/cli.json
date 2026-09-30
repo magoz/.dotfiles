@@ -3,7 +3,8 @@
     "name": "tokyonight"
   },
   "keybinds": {
-    "leader": "ctrl+o",
+    "leader": "ctrl+t",
+    "variant.cycle": "<leader>v",
     "session.half.page.up": "ctrl+u",
     "session.half.page.down": "ctrl+d",
     "input.delete.to.line.start": "none",
