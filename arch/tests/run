@@ -21,13 +21,14 @@ for entrypoint in install stow; do
 done
 printf 'ok: entrypoints parse, expose help, and reject unknown arguments\n'
 
-# V2 discovers local plugin directories. A direct tui.js target can leave the
-# auto-discovered plugin running without these options (Enter becomes newline).
-jq -e '.plugins[] | select(.package == "./plugins/opencode-vim-compat") |
-  .options.vim_initial_mode == "normal" and .options.vim_enter_submit == true' \
+# V2 auto-discovers every directory under plugins/, so removing a cli.json
+# entry does not unload it. The V1-era Vim plugin (id ocv-plugin) blanks the
+# 2.0.20 TUI in normal mode and blocks Enter submission with any options, so
+# it must stay explicitly disabled until it is ported.
+jq -e '(.plugins | index("-ocv-plugin")) != null and
+  ([.plugins[] | objects | select(.package == "./plugins/opencode-vim-compat")] | length == 0)' \
   "$REPO_ROOT/home/opencode/.config/opencode/cli.json" >/dev/null
-[[ -f $REPO_ROOT/home/opencode/.config/opencode/plugins/opencode-vim-compat/tui.js ]]
-printf 'ok: OpenCode Vim options target the plugin directory and enable Enter submission\n'
+printf 'ok: legacy OpenCode Vim plugin stays disabled so the 2.0.20 prompt submits\n'
 
 # Keep completion generation and dependency installation offline and isolated.
 mkdir -p "$TEST_ROOT/bin"

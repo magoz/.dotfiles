@@ -21,7 +21,12 @@ test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', asy
     });
   }
   const cli = JSON.parse(await read('cli.json'));
-  for (const entry of cli.plugins) await access(new URL(`${entry.package}/tui.js`, root));
+  // String entries starting with "-" disable an auto-discovered plugin by id.
+  for (const entry of cli.plugins) {
+    if (typeof entry === 'string' && entry.startsWith('-')) continue;
+    await access(new URL(`${entry.package}/tui.js`, root));
+  }
+  assert.ok(cli.plugins.includes('-ocv-plugin'));
   assert.match(await read('plugins/herdr-opencode/tui.js'), /HERDR_INTEGRATION_VERSION=12/);
   assert.match(await read('plugins/herdr-opencode/server.js'), /setup\(\) \{\}/);
   const pkg = JSON.parse(await read('package.json'));
