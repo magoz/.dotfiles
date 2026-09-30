@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# ocb: OpenCode on Box. Runs the local OpenCode 2 terminal client against the
+# Box server published tailnet-only through Tailscale Serve. Agents, tools and
+# repositories stay on Box; only the UI runs here.
+#
+#   ocb --setup      store the Box server password in the macOS Keychain
+#   ocb [args...]    same flags as `opencode` (e.g. -c, -s <session>)
+#
+# The client opens in ~ on Box (a Mac path means nothing there); use Ctrl+O to
+# pick a project, worktree or session. See ~/.box/opencode.md on Box.
+set -euo pipefail
+
+url=${OCB_URL:-https://box.tail129a86.ts.net:9446}
+host=${OCB_SSH_HOST:-box}
+service=opencode-box
+account=opencode
+
+if [[ $OSTYPE != darwin* ]]; then
+  echo "ocb: macOS client only; on Box run \`opencode\` (it uses the local service)" >&2
+  exit 2
+fi
+
+if [[ ${1:-} == --setup ]]; then
+  # Read over the verified SSH connection; the value never reaches the terminal.
+  password=$(ssh "$host" 'jq -er .password ~/.config/opencode/service.json')
+  [[ -n $password ]] || { echo "ocb: empty password from $host" >&2; exit 1; }
+  security add-generic-password -U -s "$service" -a "$account" -w "$password"
+  unset password
+  echo "ocb: stored Keychain item '$service'"
+  exit 0
+fi
+
+if ! password=$(security find-generic-password -s "$service" -a "$account" -w 2>/dev/null); then
+  echo "ocb: no Keychain item '$service'; run \`ocb --setup\` first" >&2
+  exit 1
+fi
+
+# The client asks the server to open its *local* cwd and falls back to the
+# server default ($HOME on Box) when that path does not exist there. Start in
+# the Mac home (/Users/...), which Box lacks; `/` or /tmp would open on Box.
+cd "$HOME"
+export OPENCODE_PASSWORD=$password
+unset password
+exec opencode --server "$url" "$@"
