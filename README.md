@@ -190,10 +190,12 @@ local terminal, follow Herdr's prompts, then restart the combined client.
 It then sets up `ocb`, the OpenCode 2 client for Box's tailnet-only OpenCode
 server: it reads the server password over `ssh box` into the Keychain item
 `opencode-box` (never printed), verifies the server with `ocb --check`, and
-installs the `@opencode/cli` version the server runs if this Mac differs. Rerun
+installs the `@opencode/cli` version the server runs if this Mac differs, and
+registers `OCB Link.app` for `ocb://session/<id>` links (Fleet's "Open in terminal"), which
+open a new Ghostty window running `ocb -s <id>`. Rerun
 `./macos/setup-box` after a password rotation or an OpenCode upgrade on Box.
 Daily use: `ocb` (UI on the Mac, agents on Box; both Macs see the same
-sessions), `ocb -c` to continue the last session, and `<leader>l` or
+sessions), `ocb -c` to continue the last session, and `ctrl+x l` or
 `/sessions` to list every session across projects. Server operations live in
 the private Box repo's `opencode.md`.
 

@@ -80,7 +80,10 @@ if [[ $client_version != "$server_version" ]]; then
 fi
 printf 'OpenCode client and Box server: %s\n' "$server_version"
 
-printf '\nRun `ocb` for OpenCode on Box (list sessions with <leader>l or /sessions).\n'
+# ocb://session/<id> links (Fleet's "Open in terminal") → new Ghostty window running ocb.
+"$(dirname "${BASH_SOURCE[0]}")/ocb-link/install" || fail "could not register the ocb:// link handler"
+
+printf '\nRun `ocb` for OpenCode on Box (list sessions with ctrl+x l or /sessions).\n'
 printf 'Run `herdr` for Local + Box, or `box` for remote-only access.\n'
 printf 'Select a machine in the sidebar. Reload local config with Ctrl+T, then R.\n'
 printf 'If Box shows Attention, run `box` in a local terminal and follow its prompts.\n'

@@ -45,7 +45,24 @@ cat >"$TEST_ROOT/bin/npm" <<'EOF'
 #!/usr/bin/env bash
 printf 'npm %s\n' "$*" >>"$CALLS"
 EOF
-export TEST_ROOT
+cat >"$TEST_ROOT/bin/osacompile" <<'EOF'
+#!/usr/bin/env bash
+printf 'osacompile %s\n' "${*##*/}" >>"$CALLS"
+mkdir -p "$2/Contents" && : >"$2/Contents/Info.plist"
+EOF
+cat >"$TEST_ROOT/bin/codesign" <<'EOF'
+#!/usr/bin/env bash
+printf 'codesign %s\n' "$*" >>"$CALLS"
+EOF
+cat >"$TEST_ROOT/bin/plistbuddy" <<'EOF'
+#!/usr/bin/env bash
+printf 'plistbuddy %s\n' "$*" >>"$CALLS"
+EOF
+cat >"$TEST_ROOT/bin/lsregister" <<'EOF'
+#!/usr/bin/env bash
+printf 'lsregister %s\n' "$*" >>"$CALLS"
+EOF
+export TEST_ROOT PLISTBUDDY=$TEST_ROOT/bin/plistbuddy LSREGISTER=$TEST_ROOT/bin/lsregister
 cat >"$TEST_ROOT/bin/herdr" <<'EOF'
 #!/usr/bin/env bash
 printf 'herdr %s\n' "$*" >>"$CALLS"
@@ -139,6 +156,16 @@ absent -Fq 'npm ' "$CALLS"
 absent -Fq 'fake-secret' "$TEST_ROOT/output"
 grep -Fq 'OpenCode client and Box server: 2.0.20' "$TEST_ROOT/output"
 printf 'ok: ocb setup stores the password without exposing it and verifies the server\n'
+
+grep -Eq '^osacompile -o .*OCB Link.app ocb-link.applescript$' "$CALLS"
+grep -Fq 'CFBundleURLSchemes:0 string ocb' "$CALLS"
+grep -Eq '^codesign --force --deep --sign - .*/Applications/OCB Link.app$' "$CALLS"
+grep -Eq '^lsregister -f .*/Applications/OCB Link.app$' "$CALLS"
+script=$MACOS_DIR/ocb-link/ocb-link.applescript
+grep -Fq 'on open location theURL' "$script"
+grep -Fq 'does not start with "ses_" then return' "$script"
+grep -Fq 'quoted form of' "$script"
+printf 'ok: the ocb:// handler is compiled, signed, registered and validates session ids\n'
 
 reset
 CLIENT_VERSION=2.0.19 run_setup
