@@ -187,6 +187,16 @@ finish running work before approving, or decline and migrate later. Experimental
 handoff is not requested. If a saved machine shows Attention, run `box` from a
 local terminal, follow Herdr's prompts, then restart the combined client.
 
+It then sets up `ocb`, the OpenCode 2 client for Box's tailnet-only OpenCode
+server: it reads the server password over `ssh box` into the Keychain item
+`opencode-box` (never printed), verifies the server with `ocb --check`, and
+installs the `@opencode/cli` version the server runs if this Mac differs. Rerun
+`./macos/setup-box` after a password rotation or an OpenCode upgrade on Box.
+Daily use: `ocb` (UI on the Mac, agents on Box; both Macs see the same
+sessions), `ocb -c` to continue the last session, and `<leader>l` or
+`/sessions` to list every session across projects. Server operations live in
+the private Box repo's `opencode.md`.
+
 ### First connection from a new Mac
 
 Skip these steps if `ssh box` already works without a password prompt:

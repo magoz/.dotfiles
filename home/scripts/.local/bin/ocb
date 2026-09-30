@@ -4,10 +4,11 @@
 # repositories stay on Box; only the UI runs here.
 #
 #   ocb --setup      store the Box server password in the macOS Keychain
+#   ocb --check      print the Box server version (verifies URL + password)
 #   ocb [args...]    same flags as `opencode` (e.g. -c, -s <session>)
 #
-# The client opens in ~ on Box (a Mac path means nothing there); use Ctrl+O to
-# pick a project, worktree or session. See ~/.box/opencode.md on Box.
+# The client opens in ~ on Box (a Mac path means nothing there). List every
+# session with <leader>l or /sessions. See ~/.box/opencode.md on Box.
 set -euo pipefail
 
 url=${OCB_URL:-https://box.tail129a86.ts.net:9446}
@@ -15,25 +16,43 @@ host=${OCB_SSH_HOST:-box}
 service=opencode-box
 account=opencode
 
-if [[ $OSTYPE != darwin* ]]; then
+fail() { printf 'ocb: %s\n' "$*" >&2; exit 1; }
+
+[[ $(uname -s) == Darwin ]] || {
   echo "ocb: macOS client only; on Box run \`opencode\` (it uses the local service)" >&2
   exit 2
-fi
+}
 
-if [[ ${1:-} == --setup ]]; then
-  # Read over the verified SSH connection; the value never reaches the terminal.
-  password=$(ssh "$host" 'jq -er .password ~/.config/opencode/service.json')
-  [[ -n $password ]] || { echo "ocb: empty password from $host" >&2; exit 1; }
-  security add-generic-password -U -s "$service" -a "$account" -w "$password"
-  unset password
-  echo "ocb: stored Keychain item '$service'"
-  exit 0
-fi
+keychain_password() {
+  security find-generic-password -s "$service" -a "$account" -w 2>/dev/null ||
+    fail "no Keychain item '$service'; run \`ocb --setup\` first"
+}
 
-if ! password=$(security find-generic-password -s "$service" -a "$account" -w 2>/dev/null); then
-  echo "ocb: no Keychain item '$service'; run \`ocb --setup\` first" >&2
-  exit 1
-fi
+case ${1:-} in
+  --setup)
+    # Read over the verified SSH connection; the value never reaches the terminal.
+    password=$(ssh "$host" 'jq -er .password ~/.config/opencode/service.json') ||
+      fail "cannot read the server password from $host"
+    [[ -n $password ]] || fail "empty password from $host"
+    security add-generic-password -U -s "$service" -a "$account" -w "$password"
+    unset password
+    echo "ocb: stored Keychain item '$service'" >&2
+    exit 0
+    ;;
+  --check)
+    password=$(keychain_password)
+    # curl -K - keeps the credential out of argv.
+    info=$(printf 'user = "opencode:%s"\n' "$password" |
+      curl -fsS --max-time 10 -K - "$url/api/info") ||
+      fail "cannot reach $url with the stored password (Tailscale up? rerun \`ocb --setup\` after a rotation)"
+    unset password
+    version=$(jq -er '.version' <<<"$info") || fail "unexpected response from $url/api/info"
+    printf '%s\n' "$version"
+    exit 0
+    ;;
+esac
+
+password=$(keychain_password)
 
 # The client asks the server to open its *local* cwd and falls back to the
 # server default ($HOME on Box) when that path does not exist there. Start in

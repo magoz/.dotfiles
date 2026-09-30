@@ -5,8 +5,12 @@ usage() {
   cat <<'EOF'
 Usage: ./macos/setup-box
 
-Register the existing SSH host `box` as a saved Herdr machine on this Mac.
-Run once per Mac, from a normal local terminal after ./macos/install.
+Register the existing SSH host `box` as a saved Herdr machine on this Mac, and
+set up `ocb` (OpenCode client for the Box OpenCode server): store the server
+password in the Keychain, verify the tailnet URL, and install the OpenCode CLI
+version that matches the server.
+Run once per Mac, from a normal local terminal after ./macos/install. Rerun
+after a server password rotation or an OpenCode upgrade on Box.
 
 Prerequisites: Herdr 0.9+, jq, Tailscale connected, and working key-based SSH.
 This command preserves SSH configuration and keys. Authenticate and approve
@@ -31,7 +35,7 @@ esac
 [[ ${HERDR_ENV:-0} != 1 && -z ${SSH_CONNECTION:-} && -z ${SSH_TTY:-} ]] || \
   fail "run from a normal local Mac terminal, outside Herdr and SSH"
 
-for tool in herdr jq ssh; do
+for tool in herdr jq ssh curl npm security; do
   command -v "$tool" >/dev/null 2>&1 || fail "$tool is missing; run ./macos/install first"
 done
 
@@ -64,6 +68,19 @@ else
   herdr machine add box --label "Box"
 fi
 
-printf '\nRun `herdr` for Local + Box, or `box` for remote-only access.\n'
+# OpenCode on Box: Keychain password, reachability, and a matching client.
+ocb=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)/home/scripts/.local/bin/ocb
+"$ocb" --setup || fail "could not store the Box OpenCode password (see ~/.box/opencode.md on Box)"
+server_version=$("$ocb" --check) || fail "Box OpenCode server is unreachable; is opencode.service running on Box?"
+[[ $server_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "unexpected Box OpenCode version: $server_version"
+client_version=$(opencode --version 2>/dev/null | sed -n 's/^opencode v//p') || client_version=
+if [[ $client_version != "$server_version" ]]; then
+  printf 'Installing OpenCode %s to match Box (local: %s)\n' "$server_version" "${client_version:-none}"
+  npm install --global --allow-scripts=@opencode/cli "@opencode/cli@$server_version"
+fi
+printf 'OpenCode client and Box server: %s\n' "$server_version"
+
+printf '\nRun `ocb` for OpenCode on Box (list sessions with <leader>l or /sessions).\n'
+printf 'Run `herdr` for Local + Box, or `box` for remote-only access.\n'
 printf 'Select a machine in the sidebar. Reload local config with Ctrl+T, then R.\n'
 printf 'If Box shows Attention, run `box` in a local terminal and follow its prompts.\n'

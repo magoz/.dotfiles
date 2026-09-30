@@ -17,8 +17,35 @@ EOF
 cat >"$TEST_ROOT/bin/ssh" <<'EOF'
 #!/usr/bin/env bash
 printf 'ssh %s\n' "$*" >>"$CALLS"
+case "$*" in
+  *'jq -er .password'*) [[ -n ${PASSWORD_EXIT:-} ]] && exit "$PASSWORD_EXIT"; printf 'fake-secret\n' ;;
+esac
 exit "${SSH_EXIT:-0}"
 EOF
+cat >"$TEST_ROOT/bin/security" <<'EOF'
+#!/usr/bin/env bash
+case $1 in
+  add-generic-password) printf 'security add %s\n' "${*: -1}" >>"$CALLS"; printf '%s' "${*: -1}" >"$TEST_ROOT/keychain" ;;
+  find-generic-password) [[ -f $TEST_ROOT/keychain ]] && cat "$TEST_ROOT/keychain" ;;
+  *) exit 92 ;;
+esac
+EOF
+cat >"$TEST_ROOT/bin/curl" <<'EOF'
+#!/usr/bin/env bash
+printf 'curl %s\n' "$*" >>"$CALLS"
+printf 'curl-stdin %s\n' "$(cat)" >>"$CALLS"
+[[ -n ${CURL_EXIT:-} ]] && exit "$CURL_EXIT"
+printf '{"version":"%s"}\n' "${SERVER_VERSION:-2.0.20}"
+EOF
+cat >"$TEST_ROOT/bin/opencode" <<'EOF'
+#!/usr/bin/env bash
+[[ $* == --version ]] && printf 'opencode v%s\n' "${CLIENT_VERSION:-2.0.20}"
+EOF
+cat >"$TEST_ROOT/bin/npm" <<'EOF'
+#!/usr/bin/env bash
+printf 'npm %s\n' "$*" >>"$CALLS"
+EOF
+export TEST_ROOT
 cat >"$TEST_ROOT/bin/herdr" <<'EOF'
 #!/usr/bin/env bash
 printf 'herdr %s\n' "$*" >>"$CALLS"
@@ -32,7 +59,7 @@ esac
 EOF
 chmod +x "$TEST_ROOT/bin/"*
 
-reset() { : >"$CALLS"; printf '[]\n' >"$PROFILES"; }
+reset() { : >"$CALLS"; printf '[]\n' >"$PROFILES"; rm -f "$TEST_ROOT/keychain"; }
 run_setup() { bash "$MACOS_DIR/setup-box" "$@" >"$TEST_ROOT/output" 2>&1; }
 reject() { if run_setup "$@"; then printf 'expected setup failure\n' >&2; exit 1; fi; }
 absent() { if grep "$@"; then printf 'unexpected command or output\n' >&2; exit 1; fi; }
@@ -101,3 +128,31 @@ printf '[{"id":"a","label":"A","target":"box","session":"default","enabled":true
 reject
 no_mutation
 printf 'ok: label collisions and duplicate profiles require operator resolution\n'
+
+reset
+run_setup
+grep -Fxq 'security add fake-secret' "$CALLS"
+grep -Fxq 'curl -fsS --max-time 10 -K - https://box.tail129a86.ts.net:9446/api/info' "$CALLS"
+grep -Fxq 'curl-stdin user = "opencode:fake-secret"' "$CALLS"
+absent -Eq '^curl .*fake-secret' "$CALLS"
+absent -Fq 'npm ' "$CALLS"
+absent -Fq 'fake-secret' "$TEST_ROOT/output"
+grep -Fq 'OpenCode client and Box server: 2.0.20' "$TEST_ROOT/output"
+printf 'ok: ocb setup stores the password without exposing it and verifies the server\n'
+
+reset
+CLIENT_VERSION=2.0.19 run_setup
+grep -Fxq 'npm install --global --allow-scripts=@opencode/cli @opencode/cli@2.0.20' "$CALLS"
+reset
+SERVER_VERSION='2.0.20; rm -rf ~' CLIENT_VERSION=2.0.19 reject
+absent -Fq 'npm ' "$CALLS"
+printf 'ok: the OpenCode client is aligned to the validated server version\n'
+
+reset
+PASSWORD_EXIT=1 reject
+absent -Fq 'curl ' "$CALLS"
+reset
+CURL_EXIT=22 reject
+absent -Fq 'npm ' "$CALLS"
+absent -Fq 'Run `ocb`' "$TEST_ROOT/output"
+printf 'ok: unreadable password or unreachable server stops setup before installing\n'
