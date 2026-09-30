@@ -14,14 +14,7 @@
     { "package": "./plugins/dotfiles-tools" },
     { "package": "./plugins/worktree-manager" },
     { "package": "./plugins/subscription-usage" },
-    {
-      "package": "./plugins/opencode-vim-compat",
-      "options": {
-        "enabled": true,
-        "vim_enter_submit": true,
-        "indicator": true
-      }
-    }
+    "-ocv-plugin"
   ],
   "diffs": {
     "wrap": "word"
