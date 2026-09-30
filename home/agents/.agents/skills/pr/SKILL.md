@@ -684,7 +684,8 @@ another merge.
    state. Record worktree and local-ref skips with reasons, never as successful deletions.
    Persist milestones crash-durably: write and sync a temporary file, atomically replace the receipt,
    then sync its parent directory before the next destructive step. Use `prepared`, `merged`,
-   `remote-deleted`, `worktree-removed` (or `worktree-skipped`), and `local-ref-deleted` (or
+   `remote-deleted`, `leases-released` (or `leases-skipped`), `worktree-removed` (or
+   `worktree-skipped`), and `local-ref-deleted` (or
    `local-ref-skipped`, including an already-absent ref). Only a receipt containing the
    verified `merged` milestone, with either `performed-squash` direct-response evidence or
    `observed-existing` GitHub evidence, may resume automatic cleanup or bypass the open-PR requirement.
@@ -755,6 +756,21 @@ another merge.
      checkout just to delete the ref. If the local ref is absent, record that outcome. If it is present
      at the receipt SHA and not checked out, delete it using step 10's expected-old-SHA guard. If it
      moved, retain it and report the conflict. Then proceed to step 11.
+
+   - **Sandbox database leases (recorded linked target only):** before removing the worktree,
+     release every sandbox database lease recorded for that exact canonical checkout path, while its
+     ignored environment files still hold the credentials the release needs. After the worktree is
+     gone, the lease tool cannot authenticate and the databases wait for their expiry instead. When
+     the repository or host provides a lease tool (for example `sandbox-db`), enumerate leases from
+     its own records (`sandbox-db list`), match on the exact recorded canonical path, and release
+     each one with `sandbox-db release --worktree <path> --lease <name>`, covering `default`, `test`,
+     and any extra named leases. Never read, print, or copy environment values. Release only leases
+     whose recorded path equals the target; never release by label or name pattern alone. Persist
+     `leases-released` with the released lease names before worktree removal, or `leases-skipped`
+     with the reason when no lease tool or no recorded lease exists. If any release fails or cannot
+     be verified, persist the partial outcome, do not remove the worktree, and report cleanup as
+     incomplete so it can be retired manually; never force a release. Recovery from
+     `leases-released` proceeds to worktree removal without releasing again.
 
    - **Recorded linked target:** re-enumerate every registered worktree and require that only the
      recorded target has a symbolic `HEAD` for the local branch. Revalidate its administrative ID,
