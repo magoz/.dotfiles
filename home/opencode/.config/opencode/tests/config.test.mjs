@@ -27,6 +27,9 @@ test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', asy
     await access(new URL(`${entry.package}/tui.js`, root));
   }
   assert.ok(cli.plugins.includes('-ocv-plugin'));
+  // Fleet is auto-discovered from plugins/fleet; its entry imports only host-provided modules.
+  const fleet = await read('plugins/fleet/tui.js');
+  assert.deepEqual([...fleet.matchAll(/from '([^']+)'/g)].map((m) => m[1]), ['@opentui/solid', 'solid-js', './view.js']);
   assert.match(await read('plugins/herdr-opencode/tui.js'), /HERDR_INTEGRATION_VERSION=12/);
   assert.match(await read('plugins/herdr-opencode/server.js'), /setup\(\) \{\}/);
   const pkg = JSON.parse(await read('package.json'));

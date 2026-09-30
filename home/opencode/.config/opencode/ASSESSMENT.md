@@ -20,6 +20,7 @@ No Pi credentials/sessions are imported and no Pi extension is required by OpenC
 | Review UI | Pinned Plannotator 0.27.14, native V2 wrapper |
 | Shell-condition wake | Session-owned `until`, explicit local consent |
 | Allowance | `/quota` / `/subscription-usage`, cached on-demand OAuth snapshot |
+| Fleet (all Box sessions) | Footer badge, `/fleet` page (`ctrl+x f`), next needs-you (`ctrl+x j`) |
 | Compaction/search/questions/MCP | Native V2; executor MCP uses native Code Mode |
 
 Astra variants: build/plan/general/reviewer high, explore low, web research medium.
