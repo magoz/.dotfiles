@@ -188,7 +188,7 @@ handoff is not requested. If a saved machine shows Attention, run `box` from a
 local terminal, follow Herdr's prompts, then restart the combined client.
 
 It then sets up `ocb`, the OpenCode 2 client for Box's tailnet-only OpenCode
-server: it reads the server password over `ssh box` into the Keychain item
+server at `https://opencode.oox.sh`: it reads the server password over `ssh box` into the Keychain item
 `opencode-box` (never printed), verifies the server with `ocb --check`, and
 installs the `@opencode/cli` version the server runs if this Mac differs, and
 registers `OCB Link.app` for `ocb://session/<id>` links (Fleet's "Open in terminal"), which
