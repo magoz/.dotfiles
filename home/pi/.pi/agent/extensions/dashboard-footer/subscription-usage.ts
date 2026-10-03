@@ -142,7 +142,7 @@ function subsWindowLabel(value: JsonRecord): string | undefined {
   return typeof value.label === "string" && value.label.length > 0 ? value.label : undefined;
 }
 
-// Aggregates one provider's accounts from the local subs usage service. Window
+// Aggregates one provider's accounts from the subs usage service. Window
 // ids are not used as the group key: Codex ids are positional (`primary` /
 // `secondary`) and their meaning varies by plan, whereas the rendered label
 // already encodes duration and any model scope.
@@ -325,15 +325,15 @@ function providerUsageConfig(provider: string): ProviderUsageConfig | undefined 
     normalize: normalizeCodexUsage,
   };
   if (provider === "subs-codex") return {
-    endpoint: "http://127.0.0.1:8320/api/usage",
-    origin: "http://127.0.0.1:8317",
+    endpoint: "https://usage.oox.sh/api/usage",
+    origin: "https://subs.oox.sh",
     refreshMs: MINUTE,
     authKind: "none",
     normalize: normalizeSubsCodexUsage,
   };
   if (provider === "subs-claude") return {
-    endpoint: "http://127.0.0.1:8320/api/usage",
-    origin: "http://127.0.0.1:8317",
+    endpoint: "https://usage.oox.sh/api/usage",
+    origin: "https://subs.oox.sh",
     refreshMs: MINUTE,
     authKind: "none",
     normalize: normalizeSubsClaudeUsage,

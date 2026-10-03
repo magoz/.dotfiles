@@ -84,8 +84,8 @@ function defaultBaseUrl(provider: string) {
   if (provider === "xai") return "https://api.x.ai/v1";
   if (provider === "opencode-go") return "https://opencode.ai/zen/go/v1";
   if (provider === "zai") return "https://api.z.ai/api/coding/paas/v4";
-  if (provider === "subs-codex") return "http://127.0.0.1:8317/v1";
-  if (provider === "subs-claude") return "http://127.0.0.1:8317";
+  if (provider === "subs-codex") return "https://subs.oox.sh/v1";
+  if (provider === "subs-claude") return "https://subs.oox.sh";
   return "https://chatgpt.com/backend-api";
 }
 
@@ -476,12 +476,12 @@ test("only requests official OAuth usage endpoints with allowlisted headers and 
   }
 });
 
-test("subs-codex reads the loopback usage service without resolving or forwarding credentials", async () => {
+test("subs-codex reads the usage service without resolving or forwarding credentials", async () => {
   let calls = 0;
   const { ctx, authCalls } = context("subs-codex", { oauth: false });
   const tracker = new SubscriptionUsageTracker(() => {}, async (url, init) => {
     calls += 1;
-    assert.equal(url, "http://127.0.0.1:8320/api/usage");
+    assert.equal(url, "https://usage.oox.sh/api/usage");
     const headers = new Headers(init?.headers);
     assert.equal([...headers.keys()].join(","), "accept");
     assert.equal(headers.get("accept"), "application/json");
@@ -497,12 +497,12 @@ test("subs-codex reads the loopback usage service without resolving or forwardin
   tracker.stop();
 });
 
-test("subs-claude reads the loopback usage service without resolving or forwarding credentials", async () => {
+test("subs-claude reads the usage service without resolving or forwarding credentials", async () => {
   let calls = 0;
   const { ctx, authCalls } = context("subs-claude", { oauth: false });
   const tracker = new SubscriptionUsageTracker(() => {}, async (url, init) => {
     calls += 1;
-    assert.equal(url, "http://127.0.0.1:8320/api/usage");
+    assert.equal(url, "https://usage.oox.sh/api/usage");
     const headers = new Headers(init?.headers);
     assert.equal([...headers.keys()].join(","), "accept");
     assert.equal(init?.redirect, "error");
@@ -602,10 +602,14 @@ test("unsupported providers, API keys and nonofficial origins do not resolve aut
     context("xai", { oauth: false }),
     context("opencode-go", { oauth: true }),
     context("zai", { oauth: true }),
-    context("subs-codex", { oauth: false, baseUrl: "https://subs.example/v1" }),
-    context("subs-codex", { oauth: false, baseUrl: "http://127.0.0.1:8318/v1" }),
-    context("subs-claude", { oauth: false, baseUrl: "https://subs.example" }),
-    context("subs-claude", { oauth: false, baseUrl: "http://127.0.0.1:8318" }),
+    ...["https://subs.example/v1", "http://127.0.0.1:8317/v1", "http://127.0.0.1:8318/v1", "http://subs.oox.sh/v1",
+      "https://subs.oox.sh:444/v1", "https://evil.subs.oox.sh/v1", "https://subs.oox.sh.evil.com/v1",
+      "https://usage.oox.sh/v1", "https://user@subs.oox.sh/v1", "not a URL"]
+      .map((baseUrl) => context("subs-codex", { oauth: false, baseUrl })),
+    ...["https://subs.example", "http://127.0.0.1:8317", "http://127.0.0.1:8318", "http://subs.oox.sh",
+      "https://subs.oox.sh:444", "https://evil.subs.oox.sh", "https://subs.oox.sh.evil.com",
+      "https://usage.oox.sh", "https://user@subs.oox.sh", "not a URL"]
+      .map((baseUrl) => context("subs-claude", { oauth: false, baseUrl })),
     ...["https://proxy.example", "http://chatgpt.com", "https://chatgpt.com:8443", "https://user@chatgpt.com", "not a URL"]
       .map((baseUrl) => context("openai-codex", { baseUrl })),
     ...["https://cli-chat-proxy.grok.com", "https://cli-chat-proxy.grok.com/v1", "http://api.x.ai/v1",

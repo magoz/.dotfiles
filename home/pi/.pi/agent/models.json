@@ -1,7 +1,7 @@
 {
   "providers": {
     "subs-codex": {
-      "baseUrl": "http://127.0.0.1:8317/v1",
+      "baseUrl": "https://subs.oox.sh/v1",
       "api": "openai-responses",
       "authHeader": true,
       "models": [
@@ -78,7 +78,7 @@
       ]
     },
     "subs-claude": {
-      "baseUrl": "http://127.0.0.1:8317",
+      "baseUrl": "https://subs.oox.sh",
       "api": "anthropic-messages",
       "models": [
         {

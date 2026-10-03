@@ -17,7 +17,7 @@ Pi auto-discovers this directory. Run `/login anthropic`, then choose an Anthrop
 
 ## `subs-claude` gateway mode
 
-`subs-claude` routes Claude through a local CLIProxyAPI gateway holding pooled Claude OAuth accounts. Pi authenticates with a plain gateway key, so token-based detection never fires; the extension registers a stream-only overlay (`api` + `streamSimple`, no models/baseUrl/apiKey). Models, `baseUrl`, and auth still come from `models.json`/`auth.json`, so `subs-claude` must be defined in `models.json` or the overlay has no models to apply to.
+`subs-claude` routes Claude through the CLIProxyAPI gateway (`https://subs.oox.sh`) holding pooled Claude OAuth accounts. Pi authenticates with a plain gateway key, so token-based detection never fires; the extension registers a stream-only overlay (`api` + `streamSimple`, no models/baseUrl/apiKey). Models, `baseUrl`, and auth still come from `models.json`/`auth.json`, so `subs-claude` must be defined in `models.json` or the overlay has no models to apply to.
 
 | Plugin (content) | Gateway (transport/identity) |
 | --- | --- |
