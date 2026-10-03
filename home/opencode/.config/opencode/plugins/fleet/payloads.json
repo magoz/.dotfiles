@@ -1,0 +1,749 @@
+{
+  "now": 1790172800000,
+  "snapshot": {
+    "generatedAt": 1790172800000,
+    "connection": {
+      "status": "connected",
+      "since": 1790172800000,
+      "failures": 0,
+      "version": "2.0.20"
+    },
+    "counts": {
+      "blocked": 3,
+      "finished": 4,
+      "working": 3,
+      "stuck": 2,
+      "handled": 3
+    },
+    "projects": [
+      {
+        "id": "prj_fleet",
+        "name": "fleet",
+        "directory": "/home/magoz/dev/repos/fleet",
+        "worktrees": [
+          {
+            "directory": "/home/magoz/dev/repos/fleet",
+            "kind": "root",
+            "rows": [
+              {
+                "id": "ses_wait_sub",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet",
+                "title": "Wait on subagent",
+                "cost": 0,
+                "created": 1790165600000,
+                "gone": false,
+                "ownState": "working",
+                "state": "blocked",
+                "running": true,
+                "activityAt": 1790169800000,
+                "activeAt": 1790169800000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_wait_sub",
+                  "terminal": "ocb://session/ses_wait_sub",
+                  "command": "ocb -s ses_wait_sub"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 1
+                },
+                "children": [
+                  {
+                    "id": "ses_wait_sub_child",
+                    "parentID": "ses_wait_sub",
+                    "projectID": "prj_fleet",
+                    "directory": "/home/magoz/dev/repos/fleet",
+                    "title": "Explore schema",
+                    "agent": "explore",
+                    "cost": 0,
+                    "created": 1790167400000,
+                    "gone": false,
+                    "ownState": "blocked",
+                    "state": "blocked",
+                    "running": true,
+                    "activityAt": 1790169800000,
+                    "activeAt": 1790169800000,
+                    "permissions": [],
+                    "forms": [
+                      {
+                        "id": "frm_sub",
+                        "sessionID": "ses_wait_sub_child",
+                        "title": "Which database?",
+                        "fields": [
+                          {
+                            "key": "db",
+                            "type": "string",
+                            "options": [
+                              {
+                                "value": "neon",
+                                "label": "Neon"
+                              },
+                              {
+                                "value": "local",
+                                "label": "Local"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ],
+                    "links": {
+                      "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_wait_sub_child",
+                      "terminal": "ocb://session/ses_wait_sub_child",
+                      "command": "ocb -s ses_wait_sub_child"
+                    },
+                    "depth": 1
+                  }
+                ]
+              },
+              {
+                "id": "ses_wait_old",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet",
+                "title": "Wait old",
+                "cost": 0,
+                "created": 1790162000000,
+                "gone": false,
+                "ownState": "blocked",
+                "state": "blocked",
+                "running": false,
+                "activeAt": 1790162000000,
+                "permissions": [
+                  {
+                    "id": "per_old",
+                    "sessionID": "ses_wait_old",
+                    "action": "bash",
+                    "resources": [
+                      "pnpm db:push"
+                    ]
+                  }
+                ],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_wait_old",
+                  "terminal": "ocb://session/ses_wait_old",
+                  "command": "ocb -s ses_wait_old"
+                },
+                "pending": {
+                  "permissions": 1,
+                  "forms": 0
+                },
+                "children": []
+              },
+              {
+                "id": "ses_busy",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet",
+                "title": "Busy run",
+                "cost": 0,
+                "created": 1790171000000,
+                "gone": false,
+                "ownState": "working",
+                "state": "working",
+                "running": true,
+                "activity": {
+                  "kind": "tool",
+                  "tool": "bash",
+                  "detail": "pnpm test"
+                },
+                "activityAt": 1790172740000,
+                "activeAt": 1790172740000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_busy",
+                  "terminal": "ocb://session/ses_busy",
+                  "command": "ocb -s ses_busy"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": []
+              },
+              {
+                "id": "ses_quiet",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet",
+                "title": "Quiet run",
+                "cost": 0,
+                "created": 1790165600000,
+                "gone": false,
+                "ownState": "working",
+                "state": "working",
+                "running": true,
+                "activityAt": 1790171900000,
+                "activeAt": 1790171900000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_quiet",
+                  "terminal": "ocb://session/ses_quiet",
+                  "command": "ocb -s ses_quiet"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": []
+              },
+              {
+                "id": "ses_done_stop",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet",
+                "title": "Stopped run",
+                "cost": 0,
+                "created": 1790000000000,
+                "idle": 1790165600000,
+                "outcome": "interrupted",
+                "interrupt": "inactivity",
+                "gone": false,
+                "ownState": "finished",
+                "state": "finished",
+                "running": false,
+                "activeAt": 1790165600000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_done_stop",
+                  "terminal": "ocb://session/ses_done_stop",
+                  "command": "ocb -s ses_done_stop"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": []
+              },
+              {
+                "id": "ses_done_old",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet",
+                "title": "Done old",
+                "cost": 0,
+                "created": 1790000000000,
+                "idle": 1790154800000,
+                "outcome": "failed",
+                "gone": false,
+                "ownState": "finished",
+                "state": "finished",
+                "running": false,
+                "activeAt": 1790154800000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_done_old",
+                  "terminal": "ocb://session/ses_done_old",
+                  "command": "ocb -s ses_done_old"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": []
+              },
+              {
+                "id": "ses_handled",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet",
+                "title": "Handled one",
+                "cost": 0,
+                "created": 1790000000000,
+                "idle": 1790165600000,
+                "outcome": "succeeded",
+                "handled": 1790165600000,
+                "gone": false,
+                "ownState": "handled",
+                "state": "handled",
+                "running": false,
+                "activeAt": 1790165600000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_handled",
+                  "terminal": "ocb://session/ses_handled",
+                  "command": "ocb -s ses_handled"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "directory": "/home/magoz/dev/repos/fleet-feat-x",
+            "kind": "worktree",
+            "rows": [
+              {
+                "id": "ses_wait_new",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet-feat-x",
+                "title": "Wait new",
+                "cost": 0,
+                "created": 1790169200000,
+                "gone": false,
+                "ownState": "blocked",
+                "state": "blocked",
+                "running": false,
+                "activeAt": 1790169200000,
+                "permissions": [],
+                "forms": [
+                  {
+                    "id": "frm_new",
+                    "sessionID": "ses_wait_new",
+                    "title": "Ship it?",
+                    "fields": [
+                      {
+                        "key": "ok",
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                ],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_wait_new",
+                  "terminal": "ocb://session/ses_wait_new",
+                  "command": "ocb -s ses_wait_new"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 1
+                },
+                "children": []
+              },
+              {
+                "id": "ses_retry",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet-feat-x",
+                "title": "Retry run",
+                "cost": 0,
+                "created": 1790162000000,
+                "gone": false,
+                "ownState": "working",
+                "state": "working",
+                "running": true,
+                "retry": {
+                  "attempt": 2,
+                  "at": 1790172800000,
+                  "message": "rate limited"
+                },
+                "activityAt": 1790172740000,
+                "activeAt": 1790172740000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_retry",
+                  "terminal": "ocb://session/ses_retry",
+                  "command": "ocb -s ses_retry"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": []
+              },
+              {
+                "id": "ses_done_new",
+                "projectID": "prj_fleet",
+                "directory": "/home/magoz/dev/repos/fleet-feat-x",
+                "title": "Done new",
+                "cost": 0,
+                "created": 1790000000000,
+                "idle": 1790171000000,
+                "outcome": "succeeded",
+                "gone": false,
+                "ownState": "finished",
+                "state": "finished",
+                "running": false,
+                "activeAt": 1790171000000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_done_new",
+                  "terminal": "ocb://session/ses_done_new",
+                  "command": "ocb -s ses_done_new"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": [
+                  {
+                    "id": "ses_done_new_child",
+                    "parentID": "ses_done_new",
+                    "projectID": "prj_fleet",
+                    "directory": "/home/magoz/dev/repos/fleet",
+                    "title": "Child run",
+                    "cost": 0,
+                    "created": 1790000000000,
+                    "idle": 1790170940000,
+                    "outcome": "succeeded",
+                    "gone": false,
+                    "ownState": "finished",
+                    "state": "finished",
+                    "running": false,
+                    "activeAt": 1790170940000,
+                    "permissions": [],
+                    "forms": [],
+                    "links": {
+                      "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_done_new_child",
+                      "terminal": "ocb://session/ses_done_new_child",
+                      "command": "ocb -s ses_done_new_child"
+                    },
+                    "depth": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "global",
+        "name": "/",
+        "directory": "/",
+        "worktrees": [
+          {
+            "directory": "/tmp/scratch",
+            "kind": "directory",
+            "rows": [
+              {
+                "id": "ses_tmp",
+                "projectID": "global",
+                "directory": "/tmp/scratch",
+                "title": "Scratch",
+                "cost": 0,
+                "created": 1790000000000,
+                "idle": 1790172200000,
+                "outcome": "succeeded",
+                "gone": false,
+                "ownState": "finished",
+                "state": "finished",
+                "running": false,
+                "activeAt": 1790172200000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_tmp",
+                  "terminal": "ocb://session/ses_tmp",
+                  "command": "ocb -s ses_tmp"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "directory": "/tmp/tmp.gone",
+            "kind": "directory",
+            "rows": [
+              {
+                "id": "ses_gone",
+                "projectID": "global",
+                "directory": "/tmp/tmp.gone",
+                "title": "Gone scratch",
+                "cost": 0,
+                "created": 1790000000000,
+                "idle": 1790158400000,
+                "outcome": "succeeded",
+                "gone": true,
+                "ownState": "handled",
+                "state": "handled",
+                "running": false,
+                "activeAt": 1790158400000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_gone",
+                  "terminal": "ocb://session/ses_gone",
+                  "command": "ocb -s ses_gone"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "prj_box",
+        "name": "box",
+        "directory": "/home/magoz/dev/repos/box",
+        "worktrees": [
+          {
+            "directory": "/home/magoz/dev/repos/box",
+            "kind": "root",
+            "rows": [
+              {
+                "id": "ses_box",
+                "projectID": "prj_box",
+                "directory": "/home/magoz/dev/repos/box",
+                "title": "Box route",
+                "cost": 0,
+                "created": 1790000000000,
+                "gone": false,
+                "ownState": "handled",
+                "state": "handled",
+                "running": false,
+                "activeAt": 1790000000000,
+                "permissions": [],
+                "forms": [],
+                "links": {
+                  "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_box",
+                  "terminal": "ocb://session/ses_box",
+                  "command": "ocb -s ses_box"
+                },
+                "pending": {
+                  "permissions": 0,
+                  "forms": 0
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "launches": [
+      {
+        "id": "launch-1",
+        "repo": "/home/magoz/dev/repos/fleet",
+        "repoName": "fleet",
+        "branch": "feat/palette",
+        "task": "Add the launcher palette",
+        "status": "provisioning",
+        "startedAt": 1790172758000,
+        "updatedAt": 1790172758000
+      },
+      {
+        "id": "launch-2",
+        "repo": "/home/magoz/dev/repos/fleet",
+        "repoName": "fleet",
+        "branch": "fix/broken",
+        "task": "Fix the broken thing",
+        "status": "failed",
+        "error": "No exact worktree name for fix/broken",
+        "preserved": "nothing",
+        "startedAt": 1790172758000,
+        "updatedAt": 1790172790000
+      },
+      {
+        "id": "launch-3",
+        "repo": "/home/magoz/dev/repos/fleet",
+        "repoName": "fleet",
+        "branch": "feat/x",
+        "task": "Build x",
+        "status": "ready",
+        "directory": "/home/magoz/dev/repos/fleet-feat-x",
+        "sessionID": "ses_busy",
+        "startedAt": 1790172758000,
+        "updatedAt": 1790172795000
+      }
+    ]
+  },
+  "change": {
+    "initial": false,
+    "connection": {
+      "status": "connected",
+      "since": 1790172800000,
+      "failures": 0,
+      "version": "2.0.20"
+    },
+    "counts": {
+      "blocked": 3,
+      "finished": 4,
+      "working": 3,
+      "stuck": 2,
+      "handled": 3
+    },
+    "rows": [
+      {
+        "id": "ses_busy",
+        "projectID": "prj_fleet",
+        "directory": "/home/magoz/dev/repos/fleet",
+        "title": "Busy run",
+        "cost": 0,
+        "created": 1790171000000,
+        "gone": false,
+        "ownState": "working",
+        "state": "working",
+        "running": true,
+        "activity": {
+          "kind": "tool",
+          "tool": "bash",
+          "detail": "pnpm test"
+        },
+        "activityAt": 1790172740000,
+        "activeAt": 1790172740000,
+        "permissions": [],
+        "forms": [],
+        "links": {
+          "web": "https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_busy",
+          "terminal": "ocb://session/ses_busy",
+          "command": "ocb -s ses_busy"
+        },
+        "pending": {
+          "permissions": 0,
+          "forms": 0
+        },
+        "children": []
+      }
+    ],
+    "removed": [
+      "ses_tmp"
+    ],
+    "launches": [
+      {
+        "id": "launch-1",
+        "repo": "/home/magoz/dev/repos/fleet",
+        "repoName": "fleet",
+        "branch": "feat/palette",
+        "task": "Add the launcher palette",
+        "status": "provisioning",
+        "startedAt": 1790172758000,
+        "updatedAt": 1790172758000
+      },
+      {
+        "id": "launch-2",
+        "repo": "/home/magoz/dev/repos/fleet",
+        "repoName": "fleet",
+        "branch": "fix/broken",
+        "task": "Fix the broken thing",
+        "status": "failed",
+        "error": "No exact worktree name for fix/broken",
+        "preserved": "nothing",
+        "startedAt": 1790172758000,
+        "updatedAt": 1790172790000
+      },
+      {
+        "id": "launch-3",
+        "repo": "/home/magoz/dev/repos/fleet",
+        "repoName": "fleet",
+        "branch": "feat/x",
+        "task": "Build x",
+        "status": "ready",
+        "directory": "/home/magoz/dev/repos/fleet-feat-x",
+        "sessionID": "ses_busy",
+        "startedAt": 1790172758000,
+        "updatedAt": 1790172795000
+      }
+    ]
+  },
+  "launcher": {
+    "generatedAt": 1790172800000,
+    "entries": [
+      {
+        "directory": "/home/magoz/dev/repos/fleet",
+        "sessions": {
+          "blocked": 2,
+          "working": 2,
+          "finished": 2,
+          "handled": 1
+        },
+        "latestSession": "ses_busy",
+        "activeAt": 1790172740000,
+        "name": "fleet",
+        "projectID": "prj_fleet",
+        "worktrees": [
+          {
+            "directory": "/home/magoz/dev/repos/fleet-feat-x",
+            "sessions": {
+              "blocked": 1,
+              "working": 1,
+              "finished": 1,
+              "handled": 0
+            },
+            "latestSession": "ses_retry",
+            "activeAt": 1790172740000,
+            "branch": "feat/x",
+            "owner": "dotfiles",
+            "pr": {
+              "state": "open",
+              "number": 7,
+              "url": "https://github.com/o/fleet/pull/7"
+            }
+          },
+          {
+            "directory": "/home/magoz/dev/repos/fleet-pi-thing",
+            "sessions": {
+              "blocked": 0,
+              "working": 0,
+              "finished": 0,
+              "handled": 0
+            },
+            "branch": "pi/thing",
+            "owner": "other",
+            "pr": {
+              "state": "closed",
+              "number": 3
+            }
+          }
+        ],
+        "lastActivity": 1790172740000
+      },
+      {
+        "directory": "/home/magoz/dev/repos/box",
+        "sessions": {
+          "blocked": 0,
+          "working": 0,
+          "finished": 0,
+          "handled": 1
+        },
+        "latestSession": "ses_box",
+        "activeAt": 1790154800000,
+        "name": "box",
+        "projectID": "prj_box",
+        "worktrees": [],
+        "lastActivity": 1790154800000
+      },
+      {
+        "directory": "/home/magoz/dev/repos/anvil",
+        "sessions": {
+          "blocked": 0,
+          "working": 0,
+          "finished": 0,
+          "handled": 0
+        },
+        "name": "anvil",
+        "worktrees": []
+      }
+    ]
+  },
+  "summary": {
+    "sessionID": "ses_done_new",
+    "idle": 1790171000000,
+    "answer": "Added the palette.\nAll tests pass.",
+    "changes": {
+      "files": 3,
+      "additions": 40,
+      "deletions": 2
+    }
+  },
+  "results": {
+    "handled": {
+      "sessionID": "ses_done_new",
+      "outcome": "handled"
+    },
+    "reopen": {
+      "sessionID": "ses_done_new",
+      "outcome": "reopened"
+    },
+    "launch": {
+      "launchID": "launch-4"
+    },
+    "opened": {
+      "sessionID": "ses_retry",
+      "created": false
+    }
+  }
+}
