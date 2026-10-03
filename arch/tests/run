@@ -146,3 +146,4 @@ fi
 printf 'ok: no machine provisioning commands in Arch entrypoints\n'
 
 "$REPO_ROOT/tests/aha-launcher.sh"
+"$REPO_ROOT/tests/pnpm-shim.sh"

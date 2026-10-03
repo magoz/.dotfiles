@@ -9,9 +9,30 @@
 #
 # systemd-run --scope execs the command in this same process, so the TTY,
 # process group, signals, and exit status are unchanged.
+#
+# Stow installs this on macOS too, where there is no systemd: there it just
+# runs the next pnpm on PATH (Homebrew, npm, Corepack).
 set -euo pipefail
 
-real_pnpm=${BOX_REAL_PNPM:-/usr/bin/pnpm}
+# The next pnpm on PATH that is not this script (stow links resolve to it too).
+find_real_pnpm() {
+  local dir candidate
+  local IFS=:
+  for dir in $PATH; do
+    candidate=${dir:-.}/pnpm
+    [[ -x $candidate && ! -d $candidate && ! $candidate -ef ${BASH_SOURCE[0]} ]] || continue
+    printf '%s\n' "$candidate"
+    return 0
+  done
+  return 1
+}
+
+if [[ -n ${BOX_REAL_PNPM:-} ]]; then
+  real_pnpm=$BOX_REAL_PNPM
+elif ! real_pnpm=$(find_real_pnpm); then
+  printf 'pnpm: no pnpm installation found on PATH besides %s\n' "${BASH_SOURCE[0]}" >&2
+  exit 127
+fi
 cgroup_file=${BOX_PNPM_CGROUP_FILE:-/proc/self/cgroup}
 
 already_in_app_slice() {

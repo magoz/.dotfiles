@@ -76,3 +76,5 @@ if HOME=$negative_home "$MACOS_DIR/stow" >/dev/null 2>&1; then
 fi
 [[ $(readlink "$negative_home/.config/nvim") == "$foreign_link" ]]
 printf 'ok: unrelated same-basename links are preserved\n'
+
+"$REPO_ROOT/tests/pnpm-shim.sh"

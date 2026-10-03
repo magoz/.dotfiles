@@ -16,7 +16,15 @@ write_completion() {
   fi
 
   temporary=$(mktemp "$completion_dir/.$name.XXXXXX")
-  if "$@" >"$temporary" && [[ -s $temporary ]]; then
+  local status=0
+  "$@" >"$temporary" || status=$?
+  # 127: a wrapper (e.g. ~/.local/bin/pnpm) exists but the real tool is not installed yet.
+  if [[ $status -eq 127 ]]; then
+    rm -f "$temporary"
+    printf 'warning: skipping %s completion; %s is not installed yet\n' "$name" "$1" >&2
+    return 0
+  fi
+  if [[ $status -eq 0 && -s $temporary ]]; then
     if [[ ! -f $target ]] || ! cmp -s "$temporary" "$target"; then
       mv "$temporary" "$target"
     else
