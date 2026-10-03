@@ -11,6 +11,7 @@ Local OpenCode runtime plugins.
 - `dotfiles-tools`: pane-local worktree/condition bridge; never trust server Herdr env.
 - `herdr-opencode`: unchanged vendored V12; preserve provenance.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.
+- `worktrees`: server worktree strategy `dotfiles` (Herdr-free `worktree checkout` + `retire-checkout`); `name` `feat--x` → branch `feat/x`.
 - `skill-adapters`: canonical source overlays (id allowlist) and native harness substitutions.
 - `subscription-usage`: server-only OAuth resolution, sanitized on-demand TUI output.
 - `fleet`: auto-discovered TUI-only Fleet view (read-only HTTP client of `fleet.oox.sh`).

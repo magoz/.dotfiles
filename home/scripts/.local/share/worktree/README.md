@@ -5,6 +5,10 @@ development, and launches a fresh agent in the new Herdr workspace. Pi remains
 the default; `--agent opencode` explicitly selects the additive OpenCode assessment.
 Existing Pi entry points are unchanged and continue to use Pi.
 
+`worktree checkout` is the Herdr-free, agent-free variant: same fresh base, sibling
+path and provisioning, plain `git worktree add`, no workspace or agent. OpenCode's
+`dotfiles` worktree strategy uses it (see [Provision-only checkout](#provision-only-checkout-herdr-free)).
+
 ## Pi-only quick start
 
 For local work without a GitHub issue:
@@ -255,6 +259,85 @@ bun install
 bun test
 bun run typecheck
 ```
+
+## Provision-only checkout (Herdr-free)
+
+```sh
+worktree checkout --repo /path/to/source --branch feat/x \
+  [--base REF] [--path DIR] [--label LABEL] [--ttl 7d] [--setup CMD ...] --json
+```
+
+Used by OpenCode's server-side `dotfiles` worktree strategy
+(`home/opencode/.config/opencode/plugins/worktrees`), which runs without Herdr or a
+pane. In order, it:
+
+1. resolves the source and primary checkout, validates the branch with
+   `git check-ref-format --branch`, **always** requires a new branch (even with
+   `--base`), pins the base exactly like `create` (fresh origin default tip through a
+   unique temporary ref, fail closed; explicit `--base` used without fetching),
+   resolves the sibling path `<primary>-<branch-slug>` (or `--path`), refuses an
+   existing destination, and decides the provisioning plan — all before allocating;
+2. runs `git -C <primary> worktree add -b <branch> -- <path> <base>`;
+3. provisions (rule below);
+4. runs every `--setup` command through `$SHELL -lc` in the checkout.
+
+`--json` prints exactly one object on stdout. Success:
+`{source, branch, base, path, warnings}`. Failure exits 2 and prints a report with no
+free text, stating what exists; the diagnostic goes to stderr:
+
+| `stage` | `checkout` | Meaning |
+| --- | --- | --- |
+| `preflight` | `none` | nothing allocated (existing branch, invalid name, stale/missing base, occupied path) |
+| `create` | `unknown` | `git worktree add` failed; inspect `path` and the branch |
+| `provision` / `setup` | `preserved` | checkout and branch exist at `path`; nothing rolled back |
+
+Progress, warnings, and provisioning/setup output go to stderr. `worktree create`
+(the Herdr flow) is unchanged; both commands share the same resolution and
+provisioning steps (`src/steps.ts`).
+
+### Provisioning rule (no-Vercel repos never fail)
+
+Decided from local evidence only (no network, no env-file reads):
+
+- **Vercel-configured** — the source `package.json` declares `provisionEnv`, or any
+  checkout of the repository (`git worktree list`) has a root `.vercel/project.json`
+  (the link `provision-env` reuses from siblings): run the full
+  `provision-env --repo <path> --source <source> --database --non-interactive --label --ttl`,
+  exactly like `create`. Any failure fails (checkout preserved). A configured repo that
+  is not linked anywhere fails in `provision-env` — link it; that is a real problem.
+- **Not configured, supported lockfile** (`pnpm-lock.yaml`, `bun.lock`, `bun.lockb`,
+  `package-lock.json`, `yarn.lock` at the checkout root, mirroring `provision-env`):
+  `provision-env --repo <path> --skip-vercel --non-interactive` installs dependencies
+  only. No env files, no databases (a repo without Vercel has no sandbox-db profile and
+  must not consume the global sandbox). Warning: no Vercel configuration.
+- **Not configured, no lockfile** (e.g. `~/.dotfiles`): `provision-env` is skipped.
+  Warnings: no Vercel configuration, no supported lockfile.
+
+`--check-vercel-link` is deliberately not used for this decision: it fails (exit 2,
+not 3) in repos whose `.vercel`/env paths are not ignored, such as `~/dev/repos/fleet`.
+
+### Herdr-free retirement
+
+```sh
+worktree-manage plan-checkout --cwd /canonical/source --path /canonical/target
+worktree-manage retire-checkout --cwd /canonical/source --path /canonical/target \
+  --confirm /canonical/target --expect-plan TOKEN_FROM_PLAN [--delete-branch]
+```
+
+For checkouts created by `worktree checkout` (no Herdr workspace). Needs no
+`HERDR_ENV` and never calls Herdr; `--cwd` is required. Inventory comes from
+`git worktree list --porcelain -z` plus `sandbox-db` leases. Same guarantees as the Herdr
+path: canonical exact target, primary/current/detached/locked/prunable/dirty refused,
+token pins repository, branch, HEAD and lease IDs (separate token domain from Herdr
+plans), every lease checked before any release, full re-checks before each release
+and before removal, private receipts. It then runs `git worktree remove` **without**
+`--force` (Git also refuses modified or untracked files; ignored files such as
+`.env.local` are removed with the checkout). The branch is kept; `--delete-branch` uses
+only `git branch -d`.
+
+**No agent checks.** Herdr is not consulted, so the caller (OpenCode, Fleet) must not
+retire a checkout that still has working sessions. Never use these commands on
+Herdr-created worktrees; use `plan`/`retire` with `--workspace` instead.
 
 ## Mixed-agent management (additive)
 
