@@ -62,11 +62,21 @@ const parseTtl = (value: string) =>
 const timestamp = (offsetSeconds = 0) =>
   new Date(Date.now() + offsetSeconds * 1000).toISOString().replace(/\.\d{3}Z$/, "Z")
 
+/**
+ * Write to stdout and wait until it is flushed. `NodeRuntime.runMain` exits the process on
+ * completion, and under Bun a piped stdout is cut at the pipe buffer (64 KiB) unless the write
+ * has drained first, which truncated `list --json` for callers such as worktree-manage.
+ */
+const writeStdout = (text: string) =>
+  Effect.async<void>((resume) => {
+    process.stdout.write(`${text}\n`, () => resume(Effect.void))
+  })
+
 const slugify = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "worktree"
 
 const report = (json: boolean, payload: Record<string, string | number | boolean>) => {
-  if (json) return Console.log(JSON.stringify(payload, null, 2))
+  if (json) return writeStdout(JSON.stringify(payload, null, 2))
   const width = Math.max(...Object.keys(payload).map((key) => key.length))
   const lines = Object.entries(payload).map(([key, value]) => `${key.padEnd(width)}  ${value}`)
   return Console.log(lines.join("\n"))
@@ -728,7 +738,7 @@ const release = Command.make(
 const list = Command.make("list", { json: jsonOption }, ({ json }) =>
   Effect.gen(function* () {
     const leases = yield* allLeases
-    if (json) return yield* Console.log(JSON.stringify(leases, null, 2))
+    if (json) return yield* writeStdout(JSON.stringify(leases, null, 2))
     if (leases.length === 0) return yield* Console.log("no leases")
     return yield* Console.log(
       leases
