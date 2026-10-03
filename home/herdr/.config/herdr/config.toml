@@ -19,7 +19,7 @@ agent_panel_sort = "priority"
 
 # Herdr 0.9+: identify agents across Local and saved SSH machines.
 # state_text surfaces the pi-subagents label (e.g. "⏳ 1 subagent (general)")
-# published by home/pi/.pi/agent/extensions/herdr-pi-subagents-status.ts.
+# published by pi-subagents' built-in Herdr bridge (source pi-subagents:herdr).
 [ui.sidebar.agents]
 row_gap = 0
 rows = [
