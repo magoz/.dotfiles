@@ -106,3 +106,54 @@ export interface CreatedEnvironment {
   readonly agentKind: AgentKind
   readonly warnings: ReadonlyArray<string>
 }
+
+/** `worktree checkout`: provision-only creation, no Herdr workspace, no agent. */
+export interface CheckoutOptions {
+  readonly repo: string
+  readonly branch: string
+  readonly base?: string
+  readonly path?: string
+  readonly label?: string
+  readonly ttl: string
+  readonly setupCommands: ReadonlyArray<string>
+}
+
+export interface CheckedOutEnvironment {
+  readonly source: string
+  readonly branch: string
+  readonly base: string
+  readonly path: string
+  readonly warnings: ReadonlyArray<string>
+}
+
+/**
+ * What exists after a failed checkout. Stages are ordered; each one states
+ * exactly which resources may exist, so callers can report or inspect them:
+ * - preflight: nothing was allocated (no branch, no checkout);
+ * - create: `git worktree add` failed; branch/checkout at `path` are unknown;
+ * - provision/setup: the checkout and branch exist at `path` and are preserved.
+ */
+export type CheckoutFailure =
+  | { readonly stage: "preflight" }
+  | { readonly stage: "create"; readonly path: string }
+  | { readonly stage: "provision" | "setup"; readonly path: string; readonly base: string }
+
+export class CheckoutError extends Data.TaggedError("CheckoutError")<{
+  readonly message: string
+  readonly branch: string
+  readonly failure: CheckoutFailure
+}> {}
+
+/** The single stdout object `worktree checkout --json` prints on failure. Never contains free text. */
+export const checkoutFailureReport = (error: CheckoutError) => {
+  const failure = error.failure
+  switch (failure.stage) {
+    case "preflight":
+      return { status: "failed", stage: failure.stage, branch: error.branch, checkout: "none" } as const
+    case "create":
+      return { status: "failed", stage: failure.stage, branch: error.branch, path: failure.path, checkout: "unknown" } as const
+    case "provision":
+    case "setup":
+      return { status: "failed", stage: failure.stage, branch: error.branch, path: failure.path, checkout: "preserved" } as const
+  }
+}

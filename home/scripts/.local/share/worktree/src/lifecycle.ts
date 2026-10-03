@@ -1,6 +1,5 @@
 import { Console, Effect, Either } from "effect"
 import { type CreateOptions, type CreatedEnvironment, WorktreeError, agentDisplayName, resolveAgentKind } from "./domain"
-import { defaultWorktreePath, requireNewBranch, resolveBase, resolvePrimaryRoot, resolveRepository } from "./git"
 import {
   agentNameFor,
   createHerdrWorktree,
@@ -8,60 +7,21 @@ import {
   focusWorkspace,
   startAgent
 } from "./herdr"
-import { Process } from "./process"
-
-const runProvisioning = (
-  source: string,
-  destination: string,
-  label: string,
-  ttl: string
-) =>
-  Effect.gen(function* () {
-    const process = yield* Process
-    yield* Console.log(`worktree: provisioning ${destination}`)
-    yield* process.inherit("provision-env", [
-      "--repo",
-      destination,
-      "--source",
-      source,
-      "--database",
-      "--non-interactive",
-      "--label",
-      label,
-      "--ttl",
-      ttl
-    ])
-  })
-
-const runSetupCommands = (destination: string, commands: ReadonlyArray<string>) =>
-  Effect.gen(function* () {
-    if (commands.length === 0) return
-    const process = yield* Process
-    const shell = processEnvShell()
-    for (const command of commands) {
-      yield* Console.log(`worktree: setup: ${command}`)
-      yield* process.inherit(shell, ["-lc", command], { cwd: destination })
-    }
-  })
-
-const processEnvShell = () => process.env.SHELL || "/bin/sh"
+import { resolveBranchBase, resolveSource, runProvisioning, runSetupCommands } from "./steps"
 
 export const createEnvironment = (options: CreateOptions) =>
   Effect.gen(function* () {
     const agentKind = yield* resolveAgentKind(options.agent)
     const agentLabel = agentDisplayName(agentKind)
-    const source = yield* resolveRepository(options.repo)
     // Herdr groups new worktrees under the repo parent workspace and rejects
     // linked checkouts as the create source (linked_worktree_source), so always
     // hand Herdr the primary root while provisioning stays sourced from the
     // invoking checkout.
-    const herdrSource = yield* resolvePrimaryRoot(source)
+    const { source, primary: herdrSource } = yield* resolveSource(options.repo)
     if (herdrSource !== source) {
       yield* Console.log(`worktree: using primary checkout ${herdrSource} for Herdr (invoked from linked worktree ${source})`)
     }
-    if (options.base === undefined) yield* requireNewBranch(herdrSource, options.branch)
-    const base = yield* resolveBase(herdrSource, options.base)
-    const destinationPath = options.path ?? (yield* defaultWorktreePath(herdrSource, options.branch))
+    const { base, path: destinationPath } = yield* resolveBranchBase(herdrSource, options, "default-base")
     const resolvedOptions = { ...options, path: destinationPath }
 
     yield* Console.log(`worktree: creating ${options.branch} from ${base}`)
