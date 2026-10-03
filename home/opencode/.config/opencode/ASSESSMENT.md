@@ -19,7 +19,7 @@ No Pi credentials/sessions are imported and no Pi extension is required by OpenC
 | Delivery/research skills | Canonical shared skills + OpenCode runtime adapters |
 | Shell-condition wake | Session-owned `until`, explicit local consent |
 | Allowance | `/quota` / `/subscription-usage`, cached on-demand OAuth snapshot |
-| Fleet (all Box sessions) | Footer badge, `/fleet` page (`ctrl+x f`), next needs-you (`ctrl+x j`) |
+| Fleet (all Box sessions) | Needs-me sidebar, footer badge, `/fleet` page (`ctrl+x f`), next needs-me (`ctrl+x j`), launcher (`ctrl+x o`), handled/undo (`ctrl+x h`/`z`) |
 | Compaction/search/questions/MCP | Native V2; executor MCP uses native Code Mode |
 | Claude pool (`subs-claude`) | CLIProxyAPI gateway; `opencode-anthropic-auth/gateway` shapes requests (Pi parity), fails closed via sentinel baseURL |
 

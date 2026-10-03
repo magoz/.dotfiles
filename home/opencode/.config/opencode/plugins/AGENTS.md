@@ -14,7 +14,7 @@ Local OpenCode runtime plugins.
 - `worktrees`: server worktree strategy `dotfiles` (Herdr-free `worktree checkout` + `retire-checkout`); `name` `feat--x` → branch `feat/x`; owns only checkouts with the private-git-dir `dotfiles-worktree` marker.
 - `skill-adapters`: canonical source overlays (id allowlist) and native harness substitutions.
 - `subscription-usage`: server-only OAuth resolution, sanitized on-demand TUI output.
-- `fleet`: auto-discovered TUI-only Fleet view (read-only HTTP client of `fleet.oox.sh`).
+- `fleet`: auto-discovered TUI-only Fleet client of `fleet.oox.sh` (sidebar, launcher, handled/undo via Fleet's JSON routes with `Origin`).
 
 CLI plugins must call `ctx.keymap.layer` inside a rendered slot/route (e.g. `append: 'app'`),
 not directly in `setup`: V2 setup has no Keymap provider ("Keymap.Provider is missing").
