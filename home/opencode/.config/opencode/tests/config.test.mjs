@@ -16,7 +16,7 @@ test('OpenCode assessment uses native compaction/models and explicit shared skil
 test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', async () => {
   for (const target of config.plugins) {
     await access(new URL(`${target}/server.js`, root)).catch(async () => {
-      assert.equal(target, './plugins/opencode-anthropic-auth');
+      assert.ok(['./plugins/opencode-anthropic-auth', './plugins/opencode-anthropic-auth/gateway'].includes(target), target);
       await access(new URL(`${target}/index.mjs`, root));
     });
   }
@@ -32,6 +32,17 @@ test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', asy
   assert.deepEqual([...fleet.matchAll(/from '([^']+)'/g)].map((m) => m[1]), ['@opentui/solid', 'solid-js', './view.js']);
   assert.match(await read('plugins/herdr-opencode/tui.js'), /HERDR_INTEGRATION_VERSION=12/);
   assert.match(await read('plugins/herdr-opencode/server.js'), /setup\(\) \{\}/);
+});
+test('subs-claude fails closed: sentinel baseURL, gateway plugin before direct mode, no key', async () => {
+  const { SENTINEL_ORIGIN, SENTINEL_PREFIX } = await import(
+    new URL('plugins/opencode-anthropic-auth/gateway/shaping.mjs', root).href
+  );
+  const provider = config.providers['subs-claude'];
+  assert.equal(provider.package, '@opencode/ai/providers/anthropic');
+  assert.deepEqual(provider.settings, { baseURL: `${SENTINEL_ORIGIN}${SENTINEL_PREFIX}/v1` });
+  assert.deepEqual(Object.keys(provider.models), ['claude-opus-5-5']);
+  const gateway = config.plugins.indexOf('./plugins/opencode-anthropic-auth/gateway');
+  assert.ok(gateway !== -1 && gateway < config.plugins.indexOf('./plugins/opencode-anthropic-auth'));
 });
 test('readonly roles deny ambient tools and general does not delegate', async () => {
   for (const role of ['general', 'explore', 'pr-reviewer', 'web-researcher']) {

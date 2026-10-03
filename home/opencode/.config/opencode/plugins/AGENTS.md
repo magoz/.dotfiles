@@ -5,6 +5,9 @@ Local OpenCode runtime plugins.
 ## Integrations
 
 - `opencode-anthropic-auth/index.mjs`: existing OAuth compatibility, detailed below.
+  Fails to load on 2.0.20 (`ctx.catalog` removed; now `ctx.provider`/`ctx.model`); not ported.
+- `opencode-anthropic-auth/gateway`: separate entry for `subs-claude` (CLIProxyAPI pool):
+  content-only shaping, sentinel-URL fail closed. See `gateway/README.md`.
 - `dotfiles-tools`: pane-local worktree/condition bridge; never trust server Herdr env.
 - `herdr-opencode`: unchanged vendored V12; preserve provenance.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.

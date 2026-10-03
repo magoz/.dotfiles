@@ -59,9 +59,37 @@
           ]
         }
       }
+    },
+    // Same local CLIProxyAPI Claude pool as Pi's subs-claude. Key is a saved account:
+    //   opencode auth login subs-claude --method key   (paste the gateway key)
+    // Fail closed: baseURL is an unreachable sentinel. The gateway plugin
+    // (plugins/opencode-anthropic-auth/gateway) shapes each request, then re-targets it
+    // to http://127.0.0.1:8317/v1; without the plugin requests fail, never go unshaped.
+    "subs-claude": {
+      "name": "Subs Claude",
+      "package": "@opencode/ai/providers/anthropic",
+      "settings": { "baseURL": "http://127.0.0.1:9/subs-claude-unshaped/v1" },
+      // Mirrors the built-in anthropic catalog entry (models.dev effort values, adaptive thinking).
+      "models": {
+        "claude-opus-5-5": {
+          "name": "Claude Opus 5.5 (Subs Claude Pool)",
+          "family": "claude-opus",
+          "capabilities": { "tools": true, "input": ["text", "image", "pdf"], "output": ["text"] },
+          "limit": { "context": 1000000, "output": 128000 },
+          "variants": [
+            { "id": "low", "settings": { "thinking": { "type": "adaptive", "display": "summarized" }, "effort": "low" } },
+            { "id": "medium", "settings": { "thinking": { "type": "adaptive", "display": "summarized" }, "effort": "medium" } },
+            { "id": "high", "settings": { "thinking": { "type": "adaptive", "display": "summarized" }, "effort": "high" } },
+            { "id": "xhigh", "settings": { "thinking": { "type": "adaptive", "display": "summarized" }, "effort": "xhigh" } },
+            { "id": "max", "settings": { "thinking": { "type": "adaptive", "display": "summarized" }, "effort": "max" } }
+          ]
+        }
+      }
     }
   },
   "plugins": [
+    // Gateway entry first and separate: direct-mode failures cannot disable shaping.
+    "./plugins/opencode-anthropic-auth/gateway",
     "./plugins/opencode-anthropic-auth",
     "./plugins/dotfiles-tools",
     "./plugins/herdr-opencode",

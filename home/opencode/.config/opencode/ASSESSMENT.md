@@ -21,6 +21,7 @@ No Pi credentials/sessions are imported and no Pi extension is required by OpenC
 | Allowance | `/quota` / `/subscription-usage`, cached on-demand OAuth snapshot |
 | Fleet (all Box sessions) | Footer badge, `/fleet` page (`ctrl+x f`), next needs-you (`ctrl+x j`) |
 | Compaction/search/questions/MCP | Native V2; executor MCP uses native Code Mode |
+| Claude pool (`subs-claude`) | CLIProxyAPI gateway; `opencode-anthropic-auth/gateway` shapes requests (Pi parity), fails closed via sentinel baseURL |
 
 Astra variants: build/plan/general/reviewer high, explore low, web research medium.
 Read-only children deny all actions except their explicit read/search allowlists;
@@ -117,6 +118,11 @@ renewal/retirement, delegation, compaction, and delivery-skill completion.
 No provisioned user worktrees, database allocations/deletions, PR mutations, model
 requests or Herdr pane changes are used for these checks. Git fixture tests use
 throwaway temporary repositories. Quota is a snapshot dialog, not Pi-footer parity.
+
+`subs-claude` was verified against OpenCode 2.0.20 only with a fake local server in an
+isolated network namespace (prompt/tool fingerprints, checkpoint reasoning, cross-provider
+reasoning, headers, fail closed), then live through a blocking gate (see gateway/README.md); the direct-mode Anthropic
+OAuth plugin does not load on 2.0.20 (`ctx.catalog`).
 
 Root dependency audit currently reports four vulnerable transitive packages
 (hono, toml, uuid, ws) in the legacy dependency graph. No blanket audit fix was applied; assess
