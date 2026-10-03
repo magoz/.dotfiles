@@ -96,3 +96,14 @@ export const allLeases = Effect.gen(function* () {
     (a, b) => a.worktree.localeCompare(b.worktree) || a.leaseName.localeCompare(b.leaseName)
   )
 })
+
+/**
+ * Neon deletes every sandbox branch at its `expires_at` (TTL is mandatory and capped at seven
+ * days), so a lease record whose expiry passed more than `graceMs` ago points at a branch that is
+ * already gone. Such records can be pruned without Neon credentials.
+ */
+export const expiredBeyondGrace = (lease: Pick<Lease, "expiresAt">, now: number, graceMs: number) => {
+  const expires = Date.parse(lease.expiresAt)
+
+  return Number.isFinite(expires) && expires + graceMs < now
+}

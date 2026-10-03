@@ -212,6 +212,7 @@ removed:
 sandbox-db list
 sandbox-db gc --dry-run
 sandbox-db gc
+sandbox-db gc --prune-expired   # also prune records past expiry (no credentials needed)
 ```
 
 Important lifecycle behavior:
@@ -287,6 +288,14 @@ records.
 it does not assume an inaccessible branch is gone. Neon TTL expiration remains
 the infrastructure cleanup backstop even if the local worktree or environment
 file has already been removed.
+
+`gc --prune-expired` also removes records whose `expiresAt` passed more than a
+day ago, without Neon credentials: every branch is created with a Neon
+`expires_at` (TTL capped at seven days), so Neon has already deleted it. This
+clears records left behind by deleted worktrees, whose credentials went with
+them. Unverifiable records that have not expired yet are reported but do not
+fail the run; a later run prunes them. On Box a daily `systemd --user` timer
+runs it (`~/.box/sandbox-db/`).
 
 ## Development
 

@@ -14,7 +14,7 @@ import {
   writeSettings
 } from "./credentials"
 import { BRANCH_PREFIX, ConfigurationError, MAX_TTL_SECONDS, PolicyError, type Lease } from "./domain"
-import { allLeases, readLease, removeLease, writeLease } from "./lease"
+import { allLeases, expiredBeyondGrace, readLease, removeLease, writeLease } from "./lease"
 import {
   createBranch,
   deleteBranch,
@@ -751,22 +751,38 @@ const list = Command.make("list", { json: jsonOption }, ({ json }) =>
   })
 )
 
+/** `gc --prune-expired`: how long past its expiry a record must be before it is pruned blind. */
+const EXPIRED_GRACE_MS = 24 * 60 * 60 * 1000
+
 const gc = Command.make(
   "gc",
   {
     json: jsonOption,
     dryRun: Options.boolean("dry-run").pipe(
       Options.withDescription("report without removing lease records")
+    ),
+    pruneExpired: Options.boolean("prune-expired").pipe(
+      Options.withDescription(
+        "also remove records whose expiry passed over a day ago, without Neon credentials (Neon already deleted those branches)"
+      )
     )
   },
-  ({ dryRun, json }) =>
+  ({ dryRun, json, pruneExpired }) =>
     Effect.gen(function* () {
       const leases = yield* allLeases
       const stale: Array<string> = []
+      const expired: Array<string> = []
       const inaccessible: Array<string> = []
       let live = 0
+      const now = Date.now()
 
       for (const lease of leases) {
+        if (pruneExpired && expiredBeyondGrace(lease, now, EXPIRED_GRACE_MS)) {
+          expired.push(lease.branchName)
+          if (!dryRun) yield* removeLease(lease.worktree, lease.leaseName)
+          continue
+        }
+
         const resolved = yield* Effect.either(loadConfig(lease.configEnvFile))
         if (
           Either.isLeft(resolved) ||
@@ -794,11 +810,14 @@ const gc = Command.make(
         status: inaccessible.length > 0 ? "partial" : dryRun ? "dry-run" : "pruned",
         live_leases: live,
         stale_leases: stale.length,
+        expired_leases: expired.length,
         inaccessible_leases: inaccessible.length,
-        pruned: stale.join(", ") || "none",
+        pruned: [...stale, ...expired].join(", ") || "none",
         inaccessible: inaccessible.join(", ") || "none"
       })
-      if (inaccessible.length > 0) {
+      // With --prune-expired every remaining unverifiable record expires within the TTL cap and
+      // is pruned by a later run, so it is reported but does not fail the run (daily timer).
+      if (inaccessible.length > 0 && !pruneExpired) {
         yield* Effect.sync(() => {
           process.exitCode = 1
         })

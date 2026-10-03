@@ -6,7 +6,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/pr
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { Lease } from "../src/domain"
-import { allLeases, readLease, removeLease, writeLease } from "../src/lease"
+import { allLeases, expiredBeyondGrace, readLease, removeLease, writeLease } from "../src/lease"
 
 const run = <A>(effect: Effect.Effect<A, unknown, never>) =>
   Effect.runPromise(effect.pipe(Effect.provide(NodeContext.layer)))
@@ -91,4 +91,15 @@ test.serial("named leases coexist and legacy records normalize to default", asyn
     else process.env.XDG_STATE_HOME = previousStateHome
     await rm(stateHome, { recursive: true, force: true })
   }
+})
+
+test("expiredBeyondGrace prunes only records past expiry plus the grace", () => {
+  const day = 24 * 60 * 60 * 1000
+  const expiresAt = "2026-08-20T20:00:00Z"
+  const expires = Date.parse(expiresAt)
+
+  expect(expiredBeyondGrace({ expiresAt }, expires - 1, day)).toBe(false)
+  expect(expiredBeyondGrace({ expiresAt }, expires + day, day)).toBe(false)
+  expect(expiredBeyondGrace({ expiresAt }, expires + day + 1, day)).toBe(true)
+  expect(expiredBeyondGrace({ expiresAt: "not a date" }, Date.now(), day)).toBe(false)
 })
