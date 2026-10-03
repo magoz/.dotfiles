@@ -150,7 +150,7 @@ These npm commands use npm 11.16+ (installed by `arch/install`). System-managed 
 ### OpenCode assessment alongside Pi
 
 OpenCode 2.0.3 now has additive Herdr, pane-local worktree handoff/management,
-native delegation, shared-skill adapters, Plannotator, `until`, and `/quota` wiring.
+native delegation, shared-skill adapters, `until`, and `/quota` wiring.
 Shared worktree creation still defaults to Pi; OpenCode requires `--agent opencode`.
 See [assessment setup, safety restrictions and remaining live checks](home/opencode/.config/opencode/ASSESSMENT.md).
 

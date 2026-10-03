@@ -17,7 +17,6 @@ No Pi credentials/sessions are imported and no Pi extension is required by OpenC
 | Mixed-agent inventory/cleanup | Pane-local `/worktrees`; shared `worktree-manage` |
 | Delegation | Native `general`, `explore`, `pr-reviewer`, `web-researcher` |
 | Delivery/research skills | Canonical shared skills + OpenCode runtime adapters |
-| Review UI | Pinned Plannotator 0.27.14, native V2 wrapper |
 | Shell-condition wake | Session-owned `until`, explicit local consent |
 | Allowance | `/quota` / `/subscription-usage`, cached on-demand OAuth snapshot |
 | Fleet (all Box sessions) | Footer badge, `/fleet` page (`ctrl+x f`), next needs-you (`ctrl+x j`) |
@@ -93,14 +92,8 @@ canonical skills adapt without a blocking review gate. V2 loads config
 skills after user plugins; adapters re-register on plugin updates and synchronously
 at prompt/tool/context boundaries. Context guidance also covers already-persisted
 raw skill activations. Custom compaction/toggle is not ported; old aliases explain native
-compaction instead. Dependency install scripts are disabled to prevent Plannotator
-postinstall from modifying global commands/skills. Plannotator's CLI is installed
-separately into `~/.config/opencode/bin/plannotator`, pinned to 0.27.14 with reviewed
-release SHA-256 checksums. No global binary, Pi hook or shared skill is replaced.
-The native wrapper selects that private binary (explicit `PLANNOTATOR_BIN` wins).
-For CLI-only skills, use that full path. Both platform installers invoke the helper;
-standalone setup: `bun ~/.config/opencode/scripts/install-plannotator.mjs`.
-An existing differing binary is preserved and requires deliberate upgrade inspection.
+compaction instead. Dependency install scripts stay disabled so packages cannot modify
+global commands or shared skills.
 
 ## Verification and remaining gates
 
@@ -118,7 +111,7 @@ bash macos/tests/run
 Synthetic plugin/CLI tests and an isolated-HOME native plugin/agent/skill inventory
 smoke cover activation and safety contracts. They do not prove a complete live
 workflow. Manual assessment still needs: authentication, quota-provider responses,
-interactive Vim/Herdr state and Plannotator UI, a controlled provisioned handoff,
+interactive Vim/Herdr state, a controlled provisioned handoff,
 renewal/retirement, delegation, compaction, and delivery-skill completion.
 
 No provisioned user worktrees, database allocations/deletions, PR mutations, model

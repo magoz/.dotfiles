@@ -12,13 +12,12 @@
     "./plugins/opencode-anthropic-auth",
     "./plugins/dotfiles-tools",
     "./plugins/herdr-opencode",
-    "./plugins/plannotator-v2",
     "./plugins/skill-adapters",
     "./plugins/subscription-usage"
   ],
   // Explicit shared source comes after old OpenCode skill copies. Runtime
   // adapters below change only OpenCode's view, never the shared files.
-  "skills": ["~/.config/opencode/shared-skills", "~/.config/opencode/plannotator-skills"],
+  "skills": ["~/.config/opencode/shared-skills"],
   "mcp": {
     "servers": {
       "executor": { "type": "remote", "url": "https://executor.magoz.is/mcp" }

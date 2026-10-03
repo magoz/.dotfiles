@@ -63,7 +63,6 @@ npm install --global --allow-scripts=@opencode/cli @opencode/cli
 bun install --cwd "$HOME_PACKAGES/scripts/.local/share/sandbox-db"
 bun install --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 bun install --ignore-scripts --cwd "$HOME_PACKAGES/opencode/.config/opencode"
-bun "$HOME_PACKAGES/opencode/.config/opencode/scripts/install-plannotator.mjs"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-anthropic-auth"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-vim-compat"
 npm ci --omit=dev --prefix "$HOME_PACKAGES/pi/.pi"

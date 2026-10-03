@@ -2,7 +2,7 @@
 
 Opt-in, dependency-free **Promise server + pane-local TUI** plugin. Pi, shared
 skills, existing configs, and the worktree CLI are untouched. No skill toggle,
-compaction, Plannotator, Herdr vendor, quota, or configuration migration here.
+compaction, Herdr vendor, quota, or configuration migration here.
 
 ## Entry points / API baseline
 

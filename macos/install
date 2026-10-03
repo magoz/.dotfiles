@@ -192,7 +192,6 @@ bun install --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 
 echo "📦 Installing OpenCode dependencies"
 bun install --ignore-scripts --cwd "$HOME_PACKAGES/opencode/.config/opencode"
-bun "$HOME_PACKAGES/opencode/.config/opencode/scripts/install-plannotator.mjs"
 
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-anthropic-auth"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-vim-compat"

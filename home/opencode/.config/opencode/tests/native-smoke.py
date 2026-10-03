@@ -19,7 +19,7 @@ config_dir.mkdir(parents=True)
 shared = (root / "shared-skills").resolve()
 (home / ".agents").mkdir()
 (home / ".agents/skills").symlink_to(shared, target_is_directory=True)
-for name in ["agents", "skills", "shared-skills", "plannotator-skills"]:
+for name in ["agents", "skills", "shared-skills"]:
     (config_dir / name).symlink_to(root / name, target_is_directory=True)
 config = json.loads(re.sub(r"^\s*//.*$", "", (root / "opencode.jsonc").read_text(), flags=re.M))
 config["plugins"] = [str(root / entry) for entry in config["plugins"]]
@@ -52,7 +52,6 @@ try:
     expected = json.loads((root / "plugins/skill-adapters/sources.json").read_text())
     for name in expected:
         assert skills[name]["content"].startswith("# OpenCode assessment runtime adapter"), name
-    assert "plannotator" in skills
     agents = json.loads(call(["api", "GET", "/api/agent"], "agents.json"))["data"]
     assert {"general", "explore", "pr-reviewer", "web-researcher"} <= {a["id"] for a in agents}
     # Native effective global+agent arrays; shared JS helper faithfully mirrors
@@ -73,7 +72,7 @@ for (const role of ['general', 'explore', 'pr-reviewer']) {
                        check=True, timeout=20)
     assert "INLINE delivery" in skills["pr"]["content"]
     assert "Give both the frozen bundle through `reads`" not in skills["pr"]["content"]
-    print("PASS: configured plugins, 10 canonical adapters, Plannotator, four roles; effective secret read/external denials and INLINE guidance")
+    print("PASS: configured plugins, 10 canonical adapters, four roles; effective secret read/external denials and INLINE guidance")
 finally:
     # Only the service under this freshly-created HOME/XDG profile is stopped.
     call(["service", "stop"], "stop.log")

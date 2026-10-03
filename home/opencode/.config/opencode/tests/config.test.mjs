@@ -32,8 +32,6 @@ test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', asy
   assert.deepEqual([...fleet.matchAll(/from '([^']+)'/g)].map((m) => m[1]), ['@opentui/solid', 'solid-js', './view.js']);
   assert.match(await read('plugins/herdr-opencode/tui.js'), /HERDR_INTEGRATION_VERSION=12/);
   assert.match(await read('plugins/herdr-opencode/server.js'), /setup\(\) \{\}/);
-  const pkg = JSON.parse(await read('package.json'));
-  assert.equal(pkg.dependencies['@plannotator/opencode'], '0.27.14');
 });
 test('readonly roles deny ambient tools and general does not delegate', async () => {
   for (const role of ['general', 'explore', 'pr-reviewer', 'web-researcher']) {

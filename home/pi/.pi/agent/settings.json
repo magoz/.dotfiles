@@ -11,7 +11,6 @@
       "extensions": []
     },
     "npm:@juanibiapina/pi-tokyonight@1.1.0",
-    "npm:@plannotator/pi-extension",
     "npm:pi-context-budget@0.1.2",
     "git:github.com/joelhooks/pi-until@e2eceb0f0cdd7224fed76292be823ebe38615d17"
   ],

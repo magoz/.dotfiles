@@ -10,7 +10,6 @@ Local OpenCode runtime plugins.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.
 - `skill-adapters`: canonical source overlays (id allowlist) and native harness substitutions.
 - `subscription-usage`: server-only OAuth resolution, sanitized on-demand TUI output.
-- `plannotator-v2`: wrapper around pinned upstream native plugin.
 - `fleet`: auto-discovered TUI-only Fleet view (read-only HTTP client of `fleet.oox.sh`).
 
 CLI plugins must call `ctx.keymap.layer` inside a rendered slot/route (e.g. `append: 'app'`),
