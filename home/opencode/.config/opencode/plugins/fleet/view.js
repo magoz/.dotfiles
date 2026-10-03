@@ -3,114 +3,181 @@
 // builds elements without a JSX build step and runs under node --test with a fake runtime.
 import { spawn } from 'node:child_process';
 import {
-  BADGE_MARK, badgeView, buildBoard, elapsedText, launchRunning, launchStatusText, nextNeedsMe, notification, notifyMode,
-  placeLabel, relativeTime, resolveBaseURL, resolveKeys, rowLabel, rowReason, titleOf, transitions, withOverrides,
+  BADGE_MARK, askKind, askText, badgeView, buildBoard, elapsedText, launchRunning, names, nextNeedsMe, notification, notifyMode,
+  relativeTime, resolveBaseURL, resolveKeys, rowLabel, rowReason, titleOf, transitions, withOverrides,
 } from './fleet.js';
 import { createFleetApi } from './api.js';
 import { createLaunchWatch, runLauncher } from './launcher.js';
 import { createFleetSource } from './source.js';
 
 export const ROUTE = 'fleet';
-/** OpenCode's session sidebar is 42 columns with 2+2 padding and 1 column kept for its scrollbar. */
+/**
+ * Content width of OpenCode's session sidebar: `SESSION_SIDEBAR_WIDTH` 42 minus its 2+2 padding,
+ * minus the 1 column the `sidebar.content` box keeps for the scrollbar (`routes/session/sidebar.tsx`).
+ */
 export const SIDEBAR_COLS = 37;
 /** The sidebar offers undo for this long after a handled. */
 export const UNDO_WINDOW = 5 * 60 * 1000;
+/** Footer badge part tones: `N need you` is Fleet's green, never OpenCode's warning orange. */
+export const BADGE_TONES = { need: 'attention', working: 'base', stuck: 'error' };
+/** Session rows the sidebar shows before `+N more`; launches do not count. */
+export const SIDEBAR_ROWS = 6;
+/** The project name in a sidebar row is cut to this many cells. */
+const PROJECT_COLS = 10;
 
-const MARKER = {
-  blocked: { text: '■', tone: 'warning' }, working: { text: '◧', tone: 'base' },
-  finished: { text: '▪', tone: 'base' }, handled: { text: '□', tone: 'muted' },
-};
-const marker = (row) => row.state === 'finished' && row.outcome === 'failed' ? { text: '▪', tone: 'error' } : MARKER[row.state];
-const LAUNCH_MARKER = {
-  provisioning: { text: '◌', tone: 'info' }, 'creating-session': { text: '◌', tone: 'info' },
-  ready: { text: '■', tone: 'success' }, failed: { text: '✕', tone: 'error' },
-};
-
-const width = (text) => [...text].length;
-export function fit(text, max) {
-  if (max <= 0) return '';
-  const chars = [...text];
-  return chars.length <= max ? text : `${chars.slice(0, Math.max(0, max - 1)).join('')}…`;
+/**
+ * Row markers: green (attention) for what needs me, red for failures, blue for work in progress.
+ * Blocked rows say what they wait on: `!` a permission, `?` a question (own or a subagent's).
+ */
+export function marker(row) {
+  if (row.state === 'blocked') return { text: askKind(row) === 'permission' ? '!' : '?', tone: 'attention' };
+  if (row.state === 'finished') return { text: '•', tone: row.outcome === 'failed' ? 'error' : 'attention' };
+  if (row.state === 'working') return { text: '◌', tone: 'running' };
+  return { text: '•', tone: 'muted' };
 }
 
-/** One line: `left` parts truncated (last part first) so `right` fits flush right in `cols`. */
-function spread(left, right, cols, tone = 'muted') {
-  const room = cols - (right ? width(right) + 1 : 0);
-  const parts = [];
-  let used = 0;
-  for (const part of left) {
-    const text = fit(part.text, room - used);
-    parts.push({ ...part, text });
-    used += width(text);
+const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+/** Terminal cells of `text`: `Bun.stringWidth` under Bun (OpenCode's runtime), else code points. */
+export function cells(text) {
+  const stringWidth = globalThis.Bun?.stringWidth;
+  return typeof stringWidth === 'function' ? stringWidth(text) : [...text].length;
+}
+
+/** `text` in at most `max` cells, cut by grapheme with a single `…`. */
+export function fit(text, max) {
+  if (max <= 0) return '';
+  if (cells(text) <= max) return text;
+  let out = '';
+  for (const { segment } of segmenter.segment(text)) {
+    if (cells(`${out}${segment}…`) > max) break;
+    out += segment;
   }
-  if (right) parts.push({ text: `${' '.repeat(Math.max(1, cols - used - width(right)))}${right}`, tone });
-  return parts;
+  return `${out}…`;
+}
+
+/**
+ * One line in `cols` cells: `left` parts, then `right` parts flush right (never cut, at least one
+ * space before them). When `left` does not fit, the part marked `cut` (a title) shrinks first,
+ * then parts are cut from the end.
+ */
+function spread(left, right, cols) {
+  const rightWidth = right.reduce((n, p) => n + cells(p.text), 0);
+  const room = cols - (rightWidth ? rightWidth + 1 : 0);
+  const fixed = left.reduce((n, p) => n + (p.cut ? 0 : cells(p.text)), 0);
+  let used = 0;
+  const parts = left.map(({ cut, ...part }) => {
+    const text = fit(cut ? fit(part.text, room - fixed) : part.text, room - used);
+    used += cells(text);
+    return { ...part, text };
+  });
+  if (!rightWidth) return parts;
+  return [...parts, { text: ' '.repeat(Math.max(1, cols - used - rightWidth)), tone: 'muted' }, ...right];
 }
 
 /** Header status label. */
 export function statusLabel(status, live) {
   if (status === 'unreachable') return { text: 'unreachable', tone: 'error' };
-  if (live && live.connection !== 'connected') return { text: 'Fleet lost OpenCode', tone: 'warning' };
-  if (status === 'live') return { text: 'live', tone: 'success' };
+  if (live && live.connection !== 'connected') return { text: 'Fleet lost OpenCode', tone: 'muted' };
+  if (status === 'live') return { text: 'live', tone: 'muted' };
   return { text: status === 'reconnecting' ? 'reconnecting…' : 'connecting…', tone: 'muted' };
 }
 
-const countsText = (counts) => counts.working
-  ? `${counts.working} working${counts.stuck ? ` · ${counts.stuck} stuck` : ''}` : 'Nothing is working';
+/** `4 working · 1 stuck`, non-zero parts only; nothing when nothing works. */
+function countParts(counts, action) {
+  if (!counts.working) return [];
+  return [
+    { text: `${counts.working} working`, tone: 'muted', action },
+    ...(counts.stuck ? [{ text: ' · ', tone: 'muted', action }, { text: `${counts.stuck} stuck`, tone: 'error', action }] : []),
+  ];
+}
+
+const gutter = (current) => ({ text: current ? '▌' : ' ', tone: 'current' });
+
+/** What a finished row says on the right instead of its age: `failed`, `stopped`, `interrupted`. */
+function endWord(row) {
+  if (row.outcome === 'failed') return { text: 'failed', tone: 'error' };
+  if (row.outcome === 'interrupted') return { text: row.interrupt === 'inactivity' ? 'stopped' : 'interrupted', tone: 'base' };
+  return undefined;
+}
+
+function sessionEntry(live, row, now, current, cols) {
+  const mark = marker(row);
+  const right = (row.state === 'finished' && endWord(row)) || { text: relativeTime(row.activeAt, now), tone: 'muted' };
+  const title = current ? { text: 'this session', tone: 'current', bold: true } : { text: titleOf(row), tone: 'base' };
+  const lines = [spread([
+    gutter(current), { text: mark.text, tone: mark.tone }, { text: ' ', tone: 'base' },
+    { text: `${fit(names(live, row).project, PROJECT_COLS)} `, tone: 'muted' }, { ...title, cut: true },
+  ], [right], cols)];
+  // The current session's ask is already on screen in its chat.
+  if (row.state === 'blocked' && !current) lines.push([gutter(false), { text: fit(`  ${askText(row)}`, cols - 1), tone: 'muted' }]);
+  return { key: `row:${row.id}`, action: { type: 'open', sessionID: row.id }, current, lines };
+}
+
+function launchEntry(launch, now, cols) {
+  const running = launchRunning(launch), ready = launch.status === 'ready';
+  const mark = running ? { text: '◌', tone: 'running' } : { text: '•', tone: ready ? 'attention' : 'error' };
+  const right = running
+    ? [{ text: elapsedText(Math.max(now, launch.updatedAt) - launch.startedAt), tone: 'muted' }]
+    : [{ text: ready ? 'ready' : 'failed', tone: ready ? 'attention' : 'error' }, { text: ' ', tone: 'muted' },
+      { text: '✕', tone: 'muted', action: { type: 'dismiss', launchID: launch.id } }];
+  const action = ready && launch.sessionID ? { type: 'open', sessionID: launch.sessionID }
+    : launch.status === 'failed' ? { type: 'launch-failed', launch } : undefined;
+  return { key: `launch:${launch.id}`, action, lines: [spread([
+    gutter(false), { text: mark.text, tone: mark.tone }, { text: ' ', tone: 'base' },
+    { text: launch.branch, tone: 'base', cut: true }, { text: ` · ${fit(launch.repoName, PROJECT_COLS)}`, tone: 'muted' },
+  ], right, cols)] };
+}
+
+/** At most `max` needs-me rows in order; the current session always keeps a slot. */
+function capRows(rows, currentID, max) {
+  if (rows.length <= max) return rows;
+  const shown = rows.slice(0, max);
+  const current = rows.findIndex((r) => r.id === currentID);
+  return current < max ? shown : [...shown.slice(0, max - 1), rows[current]];
+}
+
+const dimmed = (entry) => ({ ...entry, lines: entry.lines.map((parts) => parts.map((p) => ({ ...p, tone: 'muted' }))) });
 
 /**
- * The focus sidebar's lines (DESIGN.md "Clients" → Terminal): launches, then the needs-me list
- * (blocked, then finished), the current session highlighted; "Nothing needs you" plus the
- * working/stuck counts when empty. Each line is `{ parts: [{ text, tone, bold? }], selected?,
- * action? }`; `action` (`open` / `dismiss` / `undo`) is what a click does.
+ * The Fleet section of the session sidebar (Option C of the sidebar redesign), prepended above
+ * OpenCode's own sections: a "Fleet" title with the working/stuck counts, then one line per
+ * entry: launches, then blocked (with the ask on a second line), then finished. The current
+ * session reads `this session` behind a blue `▌`. At most `max` session rows, then `+N more`.
+ *
+ * Returns entries `{ key, action?, current?, lines: parts[][] }`; a part is `{ text, tone, bold?,
+ * action? }`. An entry's `action` is what clicking it does (`open`, `undo`, `page`,
+ * `launch-failed`); a part's `action` is a separate click target (`dismiss`, `page`).
  */
-export function sidebarLines({ live, status, baseURL, now, currentID, lastHandled, answer = () => undefined, hints = [], cols = SIDEBAR_COLS }) {
+export function sidebarLines({ live, status, baseURL, now, currentID, lastHandled, pageKey, cols = SIDEBAR_COLS, max = SIDEBAR_ROWS }) {
   const label = statusLabel(status, live);
-  const header = { parts: spread([{ text: 'Fleet', tone: 'base', bold: true }], !live || label.text === 'live' ? '' : label.text, cols, label.tone) };
+  const title = { text: 'Fleet', tone: 'base', bold: true };
   if (!live) {
-    return [header, { parts: [] },
-      { parts: [{ text: status === 'unreachable' ? 'Fleet unreachable' : 'Connecting to Fleet…', tone: 'muted' }] },
-      { parts: [{ text: fit(baseURL, cols), tone: 'muted' }] }];
-  }
-  const lines = [header];
-  if (lastHandled && now - lastHandled.at < UNDO_WINDOW) {
-    lines.push({ action: { type: 'undo' }, parts: [
-      { text: '✓ ', tone: 'success' }, { text: fit(`handled ${lastHandled.title}`, cols - 9), tone: 'muted' }, { text: ' · undo', tone: 'info' },
-    ] });
-  }
-  if (live.launches.length) {
-    lines.push({ parts: [] }, { parts: [{ text: `LAUNCHES  ${live.launches.length}`, tone: 'info', bold: true }] });
-    for (const launch of live.launches) {
-      const open = launch.status === 'ready' && launch.sessionID ? { type: 'open', sessionID: launch.sessionID } : undefined;
-      const elapsed = elapsedText((launchRunning(launch) ? Math.max(now, launch.updatedAt) : launch.updatedAt) - launch.startedAt);
-      const mark = LAUNCH_MARKER[launch.status];
-      const failed = launch.status === 'failed';
-      lines.push({ action: open, parts: spread([{ text: `${mark.text} `, tone: mark.tone }, { text: `${launch.branch} · ${launch.repoName}`, tone: 'base' }], elapsed, cols) });
-      lines.push({ action: open, parts: [{ text: fit(`  ${failed ? `failed: ${launch.error ?? 'unknown error'}` : launchStatusText(launch)}`, cols), tone: failed ? 'error' : open ? 'success' : 'muted' }] });
-      if (launchRunning(launch)) lines.push({ parts: [{ text: fit(`  ${launch.task}`, cols), tone: 'muted' }] });
-      else {
-        if (failed && launch.preserved) lines.push({ parts: [{ text: fit(`  kept: ${launch.preserved}`, cols), tone: 'muted' }] });
-        lines.push({ action: { type: 'dismiss', launchID: launch.id }, parts: [{ text: '  × dismiss', tone: 'muted' }] });
-      }
-    }
+    const host = baseURL.replace(/^https?:\/\//, '');
+    return [
+      { key: 'header', lines: [spread([title], [label], cols)] },
+      { key: 'status', lines: [[{ text: fit(status === 'unreachable' ? `${host} · retrying…` : host, cols), tone: 'muted' }]] },
+    ];
   }
   const board = buildBoard(live, now);
-  for (const [name, rows, tone] of [['BLOCKED', board.blocked, 'warning'], ['FINISHED', board.finished, 'base']]) {
-    if (!rows.length) continue;
-    lines.push({ parts: [] }, { parts: [{ text: `${name}  ${rows.length}`, tone, bold: true }] });
-    for (const row of rows) {
-      const selected = row.id === currentID, action = { type: 'open', sessionID: row.id }, mark = marker(row);
-      lines.push({ selected, action, parts: spread([{ text: `${mark.text} `, tone: mark.tone }, { text: placeLabel(live, row), tone: 'muted' }], relativeTime(row.activeAt, now), cols) });
-      lines.push({ selected, action, parts: [{ text: fit(`  ${titleOf(row)}`, cols), tone: 'base', bold: selected }] });
-      const reason = rowReason(row, now, answer(row));
-      if (reason) lines.push({ selected, action, parts: [{ text: fit(`  ${reason.text}`, cols), tone: reason.tone }] });
-    }
+  const healthy = status === 'live' && live.connection === 'connected';
+  const page = { type: 'page' };
+  const entries = [{ key: 'header', lines: [spread([title], healthy ? countParts(board.counts, page) : [label], cols)] }];
+  const body = [];
+  if (lastHandled && now - lastHandled.at < UNDO_WINDOW) {
+    body.push({ key: 'undo', action: { type: 'undo' }, lines: [spread([
+      gutter(false), { text: '✓ Handled ', tone: 'muted' }, { text: lastHandled.title, tone: 'muted', cut: true },
+      { text: ' · ', tone: 'muted' }, { text: 'undo', tone: 'base' },
+    ], [], cols)] });
   }
-  lines.push({ parts: [] });
-  if (!board.needsMe.length) lines.push({ parts: [{ text: 'Nothing needs you', tone: 'base' }] });
-  lines.push({ parts: [{ text: countsText(board.counts), tone: board.counts.stuck ? 'error' : 'muted' }] });
-  if (hints.length) lines.push({ parts: [] }, ...hints.map((hint) => ({ parts: [{ text: fit(hint, cols), tone: 'muted' }] })));
-  return lines;
+  for (const launch of live.launches) body.push(launchEntry(launch, now, cols));
+  const rows = capRows(board.needsMe, currentID, max);
+  for (const row of rows) body.push(sessionEntry(live, row, now, row.id === currentID, cols));
+  const more = board.needsMe.length - rows.length;
+  if (more > 0) body.push({ key: 'more', action: page, lines: [[gutter(false), { text: fit(`+${more} more${pageKey ? ` · ${pageKey}` : ''}`, cols - 1), tone: 'muted' }]] });
+  if (!board.needsMe.length) body.push({ key: 'empty', lines: [[{ text: 'Nothing needs you', tone: 'muted' }]] });
+  // Unreachable, or Fleet lost OpenCode: the list is kept but may be stale.
+  const stale = status === 'unreachable' || live.connection !== 'connected';
+  return [...entries, ...(stale ? body.map(dimmed) : body)];
 }
 
 /**
@@ -129,15 +196,15 @@ export function pageLines({ live, status, baseURL, now, cols, selectedID, answer
     const detail = [reason?.text, r.state === 'working' ? undefined : relativeTime(r.activeAt, now)].filter(Boolean).join(' · ');
     const selected = r.id === selectedID, mark = marker(r);
     lines.push({ id: r.id, selected, parts: [
-      { text: selected ? '› ' : '  ', tone: 'info' },
-      ...spread([{ text: `${mark.text} `, tone: mark.tone }, { text: rowLabel(live, r), tone: 'base' }], fit(detail, Math.floor((cols - 2) / 2)), cols - 2,
-        reason?.tone === 'error' ? 'error' : 'muted'),
+      { text: selected ? '› ' : '  ', tone: 'current' },
+      ...spread([{ text: `${mark.text} `, tone: mark.tone }, { text: rowLabel(live, r), tone: 'base' }],
+        [{ text: fit(detail, Math.floor((cols - 2) / 2)), tone: reason?.tone === 'error' ? 'error' : 'muted' }], cols - 2),
     ] });
   };
-  for (const [title, rows, tone] of [['BLOCKED', board.blocked, 'warning'], ['FINISHED', board.finished, 'base'], ['WORKING', board.working, 'info']]) {
+  for (const [title, rows] of [['Blocked', board.blocked], ['Finished', board.finished], ['Working', board.working]]) {
     if (!rows.length) continue;
     if (lines.length) lines.push({ parts: [] });
-    lines.push({ parts: [{ text: `${title}  ${rows.length}`, tone, bold: true }] });
+    lines.push({ parts: [{ text: `${title} ${rows.length}`, tone: 'base', bold: true }] });
     for (const r of rows) row(r);
   }
   if (!lines.length) lines.push({ parts: [{ text: 'Nothing needs you; no session is working.', tone: 'muted' }] });
@@ -262,6 +329,9 @@ export function setupFleet(ctx, runtime, deps = {}) {
   const [tick, setTick] = runtime.createSignal(0);
   const [clockTick, setClockTick] = runtime.createSignal(0);
   const [selected, setSelected] = runtime.createSignal(undefined);
+  // The sidebar entry under the mouse (one band at a time), and the click target under it.
+  const [hovered, setHovered] = runtime.createSignal(undefined);
+  const [hoveredTarget, setHoveredTarget] = runtime.createSignal(undefined);
   const bump = () => setVersion((v) => v + 1);
   const overrides = new Map(), busy = new Set();
   let previousRoute = { type: 'home' }, top = 0, lastLive, lastHandled, launchClock;
@@ -313,7 +383,7 @@ export function setupFleet(ctx, runtime, deps = {}) {
   };
   const unavailable = () => {
     if (source.live && source.status !== 'unreachable') return false;
-    toast('warning', `Fleet unavailable (${baseURL})`);
+    toast('error', `Fleet unavailable (${baseURL})`);
     return true;
   };
   const undoHint = () => { const s = shortcut('fleet.undo', keys.undo); return s ? ` · ${s} to undo` : ''; };
@@ -393,13 +463,13 @@ export function setupFleet(ctx, runtime, deps = {}) {
   };
 
   const theme = () => ctx.theme;
-  const tone = (name) => {
-    const t = theme();
-    return {
-      base: t.text.base, muted: t.text.muted, info: t.text.feedback.info.base,
-      warning: t.text.feedback.warning.base, error: t.text.feedback.error.base, success: t.text.feedback.success.base,
-    }[name] ?? t.text.base;
+  // Green is Fleet's "needs you", red a failure, blue where you are or what is running; never
+  // OpenCode's warning/accent (orange in most themes).
+  const TONES = {
+    base: (t) => t.text.base, muted: (t) => t.text.muted, error: (t) => t.text.feedback.error.base,
+    attention: (t) => t.text.feedback.success.base, current: (t) => t.text.formfield.selected, running: (t) => t.hue.interactive[200],
   };
+  const tone = (name) => (TONES[name] ?? TONES.base)(theme());
   const span = (part, muted) => h('span', { style: { fg: tone(muted ? 'muted' : part.tone), ...(part.bold ? { bold: true } : {}) } }, part.text);
   const textLine = (parts, muted = false) => h('text', { wrapMode: 'none', selectable: false }, ...parts.map((p) => span(p, muted)));
 
@@ -407,10 +477,10 @@ export function setupFleet(ctx, runtime, deps = {}) {
     version(); tick();
     const view = badgeView(source.status, live(), clock());
     if (!view.visible) return null;
-    const parts = [{ text: `${BADGE_MARK} `, tone: view.parts[0].kind === 'need' ? 'warning' : 'muted' }];
+    const parts = [{ text: `${BADGE_MARK} `, tone: view.parts[0].kind === 'need' ? 'attention' : 'muted' }];
     view.parts.forEach((p, i) => {
       if (i) parts.push({ text: ' · ', tone: 'muted' });
-      parts.push({ text: p.text, tone: { need: 'warning', working: 'base', stuck: 'error' }[p.kind] });
+      parts.push({ text: p.text, tone: BADGE_TONES[p.kind] });
     });
     return h('box', { flexShrink: 0, onMouseUp: openPage }, textLine(parts, view.subtle));
   };
@@ -419,25 +489,54 @@ export function setupFleet(ctx, runtime, deps = {}) {
     if (action.type === 'open') openSession(action.sessionID);
     else if (action.type === 'dismiss') void dismiss(action.launchID);
     else if (action.type === 'undo') void undo();
+    else if (action.type === 'page') openPage();
+    else if (action.type === 'launch-failed') {
+      const { launch } = action;
+      toast('error', `Launch of ${launch.branch} failed: ${launch.error ?? 'unknown error'}${launch.preserved ? ` (kept: ${launch.preserved})` : ''}`);
+    }
   };
-  const hints = () => [
-    [['fleet.next', keys.next, 'next'], ['fleet.handled', keys.handled, 'handled']],
-    [['fleet.undo', keys.undo, 'undo'], ['fleet.launcher', keys.launcher, 'new']],
-  ].map((pair) => pair.flatMap(([id, key, label]) => { const s = shortcut(id, key); return s ? [`${s} ${label}`] : []; }).join(' · ')).filter(Boolean);
 
-  /** `sidebar.content` replacement; OpenCode's sidebar keeps its title and footer around it. */
+  /** Consecutive parts sharing one click target (or none) render as one text. */
+  const segments = (parts) => parts.reduce((all, part) => {
+    const last = all.at(-1);
+    if (last && last.action === part.action) last.parts.push(part);
+    else all.push({ action: part.action, parts: [part] });
+    return all;
+  }, []);
+  /** A separate click target inside an entry (`✕`, the counts): muted turns base on hover. */
+  const target = (key, segment) => h('text', {
+    wrapMode: 'none', selectable: false, flexShrink: 0,
+    onMouseOver: () => setHoveredTarget(key),
+    onMouseOut: () => setHoveredTarget((k) => (k === key ? undefined : k)),
+    onMouseUp: (event) => { event?.stopPropagation?.(); runAction(segment.action); },
+  }, () => segment.parts.map((p) => span(hoveredTarget() === key && p.tone === 'muted' ? { ...p, tone: 'base' } : p)));
+  const lineBox = (entryKey) => (parts, row) => h('box', { flexDirection: 'row', height: 1, flexShrink: 0 },
+    ...segments(parts).map((segment, i) => (segment.action
+      ? target(`${entryKey}:${row}:${i}`, segment)
+      : h('text', { wrapMode: 'none', selectable: false, flexShrink: 0 }, ...segment.parts.map((p) => span(p))))));
+  /** One box per entry, so the hover band covers every line of it. */
+  const entryBox = (entry) => h('box', {
+    flexDirection: 'column', flexShrink: 0,
+    ...(entry.action ? {
+      backgroundColor: () => (hovered() === entry.key ? theme().background.raised.high : undefined),
+      onMouseOver: () => setHovered(entry.key),
+      onMouseOut: () => setHovered((k) => (k === entry.key ? undefined : k)),
+      onMouseUp: () => runAction(entry.action),
+    } : {}),
+  }, ...entry.lines.map(lineBox(entry.key)));
+
+  /**
+   * The Fleet section, prepended inside `sidebar.content`: OpenCode's own sections (Context, MCP,
+   * LSP, todos) stay below it, and the slot's `gap={1}` puts one blank row between them.
+   */
   function FleetSidebar(input) {
     return h('box', { flexDirection: 'column', flexShrink: 0 }, () => {
       version(); tick(); clockTick();
       const current = input.sessionID ? ctx.data.session.root(input.sessionID) : undefined;
-      const lines = sidebarLines({
+      return sidebarLines({
         live: live(), status: source.status, baseURL, now: clock(), currentID: current, lastHandled,
-        answer: answers.get, hints: hints(),
-      });
-      return lines.map((line) => h('box', {
-        height: 1, flexShrink: 0, ...(line.selected ? { backgroundColor: theme().background.raised.high } : {}),
-        ...(line.action ? { onMouseUp: () => runAction(line.action) } : {}),
-      }, textLine(line.parts)));
+        pageKey: shortcut('fleet.open', keys.open),
+      }).map(entryBox);
     });
   }
 
@@ -474,7 +573,7 @@ export function setupFleet(ctx, runtime, deps = {}) {
     const header = () => {
       version();
       const status = statusLabel(source.status, source.live);
-      return textLine(spread([{ text: 'Fleet', tone: 'base', bold: true }], status.text, cols(), status.tone));
+      return textLine(spread([{ text: 'Fleet', tone: 'base', bold: true }], [status], cols()));
     };
     const body = () => {
       const all = lines();
@@ -511,7 +610,8 @@ export function setupFleet(ctx, runtime, deps = {}) {
   const cleanups = [
     ctx.ui.router.register({ name: ROUTE, render: () => runtime.createComponent(FleetPage, {}) }),
     ctx.ui.slot({ append: 'app', render: () => runtime.createComponent(Commands, {}) }),
-    ctx.ui.slot({ replace: 'sidebar.content', render: (input) => runtime.createComponent(FleetSidebar, input) }),
+    // Prepend, not replace: OpenCode's Context/MCP/LSP/todos (all `append` claims) stay below.
+    ctx.ui.slot({ prepend: 'sidebar.content', render: (input) => runtime.createComponent(FleetSidebar, input) }),
     ctx.ui.slot({ append: 'home.footer.status', render: () => badge }),
     // The home route has a prompt too; its footer badge would repeat the home footer's.
     ctx.ui.slot({ append: 'prompt.footer.status', render: (input) => () => (input.sessionID ? badge() : null) }),

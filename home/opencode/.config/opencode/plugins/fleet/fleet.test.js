@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_KEYS, QUIET_AFTER, applyChange, askText, badgeText, badgeView, buildBoard, countRows, isStuck, launcherOptions,
+  DEFAULT_KEYS, QUIET_AFTER, applyChange, askKind, askText, badgeText, badgeView, buildBoard, countRows, isStuck, launcherOptions,
   nextNeedsMe, notification, notifyMode, parseChange, parseLauncher, parseRow, parseSnapshot, relativeTime, resolveBaseURL,
   resolveKeys, rowLabel, rowReason, transitions, withOverrides,
 } from './fleet.js';
@@ -79,6 +79,13 @@ test('reasons: request summary (own, then subagent, +more), how the run ended, a
   const two = parseRow(wireRow('b', 'blocked', { pending: { permissions: 2, forms: 1 }, permissions: [{ id: 'p', sessionID: 'b', action: 'edit', resources: [] }] }));
   assert.equal(askText(two), 'edit (+2)');
   assert.equal(askText(parseRow(wireRow('c', 'blocked', { pending: { permissions: 0, forms: 2 } }))), '2 questions');
+  // The sidebar marker follows the request shown: `!` a permission, `?` a question (own or a subagent's).
+  assert.deepEqual(['ses_wait_old', 'ses_wait_new', 'ses_wait_sub'].map((id) => askKind(live.rows.get(id))), ['permission', 'question', 'question']);
+  assert.equal(askKind(two), 'permission');
+  assert.deepEqual([{ permissions: 1, forms: 0 }, { permissions: 0, forms: 1 }].map((pending) => askKind(parseRow(wireRow('d', 'blocked', { pending })))), ['permission', 'question']);
+  // Reason tones: base for asks and stops, red for failures and stuck; never the warning colour.
+  assert.deepEqual(['ses_wait_old', 'ses_done_old', 'ses_done_stop', 'ses_retry', 'ses_busy'].map((id) => rowReason(live.rows.get(id), NOW).tone),
+    ['base', 'error', 'base', 'error', 'muted']);
   assert.deepEqual([relativeTime(NOW - 30_000, NOW), relativeTime(NOW - 5 * minute, NOW), relativeTime(NOW - 3 * 3_600_000, NOW), relativeTime(NOW - 2 * 86_400_000, NOW)], ['now', '5m', '3h', '2d']);
 });
 

@@ -298,6 +298,18 @@ export function askText(row) {
   return pendingText(row) || 'needs you';
 }
 
+/**
+ * What the request `askText` shows is: `permission`, or `question` (own or a subagent's form). With
+ * only pending counts, a permission when any is pending.
+ */
+export function askKind(row) {
+  for (const session of [row, ...row.children]) {
+    if (session.permissions.length) return 'permission';
+    if (session.forms.length) return 'question';
+  }
+  return row.pending.permissions > 0 ? 'permission' : 'question';
+}
+
 /** How the latest run ended when it needs saying: failed, stopped by OpenCode, interrupted. */
 export function endText(row) {
   if (row.outcome === 'failed') return 'run failed';
@@ -327,10 +339,10 @@ export const answerExcerpt = (answer) => clean(string(answer) ? answer.split('\n
  * answer excerpt when known, else nothing; working → stuck label, else live activity.
  */
 export function rowReason(row, now, answer) {
-  if (row.state === 'blocked') return { text: askText(row), tone: 'warning' };
+  if (row.state === 'blocked') return { text: askText(row), tone: 'base' };
   if (row.state === 'finished') {
     const end = endText(row);
-    if (end) return { text: end, tone: row.outcome === 'failed' ? 'error' : 'warning' };
+    if (end) return { text: end, tone: row.outcome === 'failed' ? 'error' : 'base' };
     const excerpt = answerExcerpt(answer);
     return excerpt ? { text: excerpt, tone: 'muted' } : undefined;
   }
