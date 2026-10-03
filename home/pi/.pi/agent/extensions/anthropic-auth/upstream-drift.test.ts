@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { shapeAnthropicOAuthPayload } from "./request.ts";
+import { shapeAnthropicOAuthPayload, shapePiToolDescription } from "./request.ts";
 import { SUMMARIZATION_PROMPT_ANCHOR } from "./summarization.ts";
 
 // Test-only access to Pi internals: catch serializer/prompt changes on SDK bumps.
@@ -37,4 +37,15 @@ test("shapes the installed Pi's summarization prompt and serialized transcript",
 		'[Assistant tool calls]: read(path="parser.ts")',
 		"[Tool result]: File contents.",
 	].join("\n\n")}\n</conversation>`);
+});
+
+test("strips the installed Pi's codemode docs pointer", async () => {
+	const { createCodemodeDescription } = await import(
+		new URL("./extensions/codemode/tool.js", entrypoint).href
+	);
+	const description: string = createCodemodeDescription([], { models: true });
+	assert.match(description, /pi-coding-agent\/docs\/codemode\.md/);
+	const shaped = shapePiToolDescription(description);
+	assert.doesNotMatch(shaped, /pi-coding-agent/);
+	assert.match(shaped, /`models`: classifiers and image generation\.$/m);
 });

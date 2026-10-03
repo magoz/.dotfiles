@@ -68,6 +68,23 @@ test("gateway content: leaves non-Pi systems and absent systems untouched", () =
 	assert.equal(shapeAnthropicContentPayload(malformed), malformed);
 });
 
+test("gateway content: drops Pi docs pointers from tool descriptions only", () => {
+	const codemode = {
+		name: "codemode",
+		description: "Globals:\n- `models`: classifiers. Read /usr/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md first.\n- `text(value)` adds output.",
+		input_schema: { type: "object" },
+	};
+	const other = { name: "read", description: "Read a file.", input_schema: { type: "object" } };
+	const input = { ...payload([], [{ role: "user", content: "Hi" }]), tools: [codemode, other] };
+	const original = structuredClone(input);
+	const output = shapeAnthropicContentPayload(input) as typeof input;
+
+	assert.equal(output.tools[0].description, "Globals:\n- `models`: classifiers.\n- `text(value)` adds output.");
+	assert.equal(output.tools[1], other);
+	assert.deepEqual(input, original);
+	assert.deepEqual(shapeAnthropicContentPayload(output), output);
+});
+
 test("gateway content: strips summarization thinking and splits invalid ordering", () => {
 	const input = payload(
 		[{ type: "text", text: summarySystem }],

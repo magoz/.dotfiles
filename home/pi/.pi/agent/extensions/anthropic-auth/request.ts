@@ -21,6 +21,9 @@ const REMOVED_PARAGRAPH_ANCHORS = [
 	"In addition to the tools above",
 	"Pi documentation (read only when the user asks about pi itself",
 ];
+// Pi 1.0's codemode description links its install-path docs
+// (".../@earendil-works/pi-coding-agent/docs/codemode.md"), a Pi fingerprint.
+const PI_DOCS_POINTER = / ?Read \S*\/pi-coding-agent\/docs\/\S+ first\./g;
 const ENVIRONMENT_FINGERPRINT =
 	"Here is some useful information about the environment you are running in:";
 
@@ -136,6 +139,16 @@ function sanitizeSystemBlock(block: unknown): unknown {
 }
 
 /** Sanitize Pi prompt fingerprints while preserving the system field's shape. */
+export function shapePiToolDescription(text: string): string {
+	return text.replace(PI_DOCS_POINTER, "");
+}
+
+function sanitizeTool(tool: unknown): unknown {
+	if (!isRecord(tool) || typeof tool.description !== "string") return tool;
+	const description = shapePiToolDescription(tool.description);
+	return description === tool.description ? tool : { ...tool, description };
+}
+
 function sanitizeSystem(system: unknown): unknown {
 	if (typeof system === "string") {
 		return system.includes(PI_PROMPT_PREFIX) ? shapePiSystemPrompt(system) : system;
@@ -221,9 +234,12 @@ export function shapeAnthropicContentPayload(payload: unknown): unknown {
 		? payload.messages.map(stripThinkingFromUserMessage)
 		: payload.messages;
 	const messages = transcriptMessages.flatMap(splitInvalidAssistantMessage);
-	return "system" in payload
-		? { ...payload, messages, system: sanitizeSystem(payload.system) }
+	const shaped = Array.isArray(payload.tools)
+		? { ...payload, messages, tools: payload.tools.map(sanitizeTool) }
 		: { ...payload, messages };
+	return "system" in payload
+		? { ...shaped, system: sanitizeSystem(payload.system) }
+		: shaped;
 }
 
 /** Direct OAuth: content fixes plus Claude Code billing metadata. */

@@ -8,7 +8,7 @@ Local Pi extension for Claude Pro/Max OAuth compatibility, directly (`anthropic`
 - `anthropic`: activates request shaping only for `sk-ant-oat` OAuth credentials; API-key requests are untouched
 - gateway providers (`ANTHROPIC_GATEWAY_PROVIDERS` in `index.ts`, currently `subs-claude`): always apply content fixes only (see below), gated by provider, not token
 - `anthropic` OAuth only: injects Claude Code billing metadata and keeps billing and HTTP user-agent versions aligned
-- both modes: removes Pi-specific prompt fingerprints while preserving tools/project context
+- both modes: removes Pi-specific prompt fingerprints while preserving tools/project context, including the install-path docs pointer Pi 1.0 puts in the `codemode` tool description
 - repairs invalid assistant text/tool ordering
 - strips transcribed `[Assistant thinking]` segments from Pi-generated compaction, turn-prefix, and branch-summary requests before computing billing metadata; ordinary chat and native thinking blocks are unchanged
 - `anthropic`: delegates auth headers, beta flags, Claude identity, and tool-name casing to Pi; `subs-claude`: delegates all of that plus billing to the gateway
@@ -56,15 +56,17 @@ pi --offline --no-extensions -e ./home/pi/.pi/agent/extensions/anthropic-auth/in
 
 Live wire check (2026-09-28, CLIProxyAPI 7.3.20, Pi 0.87.1): with a local gate between Pi and the gateway that blocks any summary request containing `[Assistant thinking]`, an RPC session on `subs-claude/claude-opus-5-5` (thinking high, tool use, `keepRecentTokens: 50`, then `compact`) sent no Pi prompt fingerprints and compacted successfully through Anthropic with zero transcribed-thinking markers in both summary requests. The same run with `--no-extensions` leaked the Pi prompt on every turn and had its summary request blocked (2 markers). Repeat this with a gate rather than live traffic: a leaked summary is a ToS block on the account.
 
-`gateway.test.ts` covers gateway mode and `anthropic` regressions; `index.test.ts` covers registration. The overlay relies on Pi's provider composer (`dist/core/provider-composer.js`, verified in installed CLI `0.87.1`) using an extension's `streamSimple` when `model.api` matches its `api`.
+Re-checked 2026-10-03 on Pi 1.0.0 with a stricter gate that blocked any request containing `operating inside pi`, `coding agent harness`, `Pi documentation`, `pi-coding-agent`, or `[Assistant thinking]`, and with `+codemode` enabled. The first run was blocked on `pi-coding-agent`: the new `codemode` tool description links `.../@earendil-works/pi-coding-agent/docs/codemode.md`. After adding tool-description sanitization, tool use, a codemode script, and `compact` all passed the gate, and both summary requests had no transcribed thinking although the conversation contained a native thinking block.
+
+`gateway.test.ts` covers gateway mode and `anthropic` regressions; `index.test.ts` covers registration. The overlay relies on Pi's provider composer (`dist/core/provider-composer.js`, verified in installed CLI `1.0.0`) using an extension's `streamSimple` when `model.api` matches its `api`.
 
 ## Provenance
 
 - local OpenCode implementation: `home/opencode/.config/opencode/plugins/opencode-anthropic-auth/index.mjs`
 - Pi architecture/reference: `gotgenes/pi-anthropic-auth` commit `22883511d16d3fe381b140fb1de10b428c2c8a89`
 - summarization fix ported from `gotgenes/pi-anthropic-auth` `v2.0.9` (`d2fdab837549e500ec30e634ab87e61b7c2f3881`); local prompt-preservation fallback already matches the newer approach
-- Pi workspace SDK: `@earendil-works/pi-coding-agent` `0.85.1`; also verified against installed CLI `0.87.1`
+- Pi workspace SDK: `@earendil-works/pi-coding-agent` `1.0.0`; also verified against installed CLI `1.0.0`
 
-`upstream-drift.test.ts` verifies the summarization anchor and transcript markers against the workspace SDK. Set `PI_TEST_CODING_AGENT_ENTRYPOINT` to a `file://` URL for another installation's `dist/index.js` to check that host too. It deliberately reads Pi internals only in tests, never at extension startup.
+`upstream-drift.test.ts` verifies the summarization anchor, transcript markers, and codemode docs pointer against the workspace SDK. Set `PI_TEST_CODING_AGENT_ENTRYPOINT` to a `file://` URL for another installation's `dist/index.js` to check that host too. It deliberately reads Pi internals only in tests, never at extension startup.
 
 See `THIRD_PARTY_NOTICES.md`.
