@@ -14,9 +14,9 @@ const Worktrees = Schema.Struct({ result: Schema.Struct({
   type: Schema.Literal("worktree_list"),
   source: Schema.Struct({ repo_root: Path, source_checkout_path: Path }),
   worktrees: Schema.Array(Schema.Struct({
-    path: Path, branch: Schema.NullOr(Text), is_detached: Schema.Boolean,
+    path: Path, branch: Schema.optional(Schema.NullOr(Text)), is_detached: Schema.Boolean,
     is_linked_worktree: Schema.Boolean, is_prunable: Schema.Boolean,
-    open_workspace_id: Schema.optional(ID)
+    open_workspace_id: Schema.optional(Schema.NullOr(ID))
   }))
 }) })
 const Workspaces = Schema.Struct({ result: Schema.Struct({
@@ -136,7 +136,7 @@ export class WorktreeManager {
         }
       } catch { signal?.throwIfAborted() }
       const workspace = ws.result.workspaces.find((w) => w.workspace_id === entry.open_workspace_id)
-      worktrees.push({ path: entry.path, branch: entry.branch,
+      worktrees.push({ path: entry.path, branch: entry.branch ?? null,
         workspace: workspace?.workspace_id ?? null,
         linked: entry.is_linked_worktree && !entry.is_detached && !entry.is_prunable,
         current: within(current, entry.path), git,

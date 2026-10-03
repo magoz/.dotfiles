@@ -67,6 +67,20 @@ test("inventory includes Pi AND OpenCode, git state, recorded leases; no env/URL
   expect(JSON.stringify(inventory)).not.toContain("SECRET")
   expect(f.calls[0]).toEqual(["herdr", "worktree", "list", "--cwd", f.source])
 })
+test("inventory accepts Herdr's null workspace id and detached entries without a branch", async () => {
+  const f = await fixture()
+  const real = f.runner
+  const manager = new WorktreeManager(async (command, args) => {
+    if (command === "herdr" && args[0] === "worktree" && args[1] === "list") return { code: 0, stdout: JSON.stringify({ result: { type: "worktree_list",
+      source: { repo_root: f.source, source_checkout_path: f.source }, worktrees: [
+        { path: f.source, branch: "main", is_detached: false, is_linked_worktree: false, is_prunable: false, open_workspace_id: "source-ws" },
+        { path: f.target, is_detached: true, is_linked_worktree: true, is_prunable: false, open_workspace_id: null }
+      ] } }) }
+    return real(command, args)
+  }, f.receipts)
+  const inventory = await manager.list(f.source)
+  expect(inventory.worktrees[1]).toMatchObject({ path: f.target, branch: null, workspace: null, linked: false })
+})
 for (const kind of ["pi", "opencode"]) for (const status of ["working", "blocked", "unknown"]) {
   test(`retirement rejects ${kind} ${status}`, async () => {
     const f = await fixture(); const agent = f.agents.find((a) => a.agent === kind)
