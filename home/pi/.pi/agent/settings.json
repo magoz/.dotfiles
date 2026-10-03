@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.87.1",
+  "lastChangelogVersion": "1.0.0",
   "theme": "tokyonight-moon",
   "defaultProvider": "subs-claude",
   "defaultModel": "claude-opus-5-5",
@@ -12,7 +12,6 @@
     },
     "npm:@juanibiapina/pi-tokyonight@1.1.0",
     "npm:@plannotator/pi-extension",
-    "npm:pi-mcp-adapter",
     "npm:pi-context-budget@0.1.2",
     "git:github.com/joelhooks/pi-until@56f644ef0f888349a1d32e55270f5aabd468b836"
   ],

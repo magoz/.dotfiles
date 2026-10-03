@@ -1,14 +1,12 @@
 {
   "mcpServers": {
-    "shhh": {
-      "url": "https://shhh.shhhlabs.com/api/mcp",
-      "auth": "bearer",
-      "bearerTokenStore": true
-    },
     "executor": {
       "url": "https://executor.magoz.is/mcp",
-      "auth": "oauth",
-      "lifecycle": "lazy"
+      "description": "Run TypeScript against the user's connected integrations (read skills({ name: \"execute\" }) first) and manage saved UI artifacts.",
+      "toolExposure": {
+        "execute-action": "hidden",
+        "execute-action-resume": "hidden"
+      }
     }
   }
 }
