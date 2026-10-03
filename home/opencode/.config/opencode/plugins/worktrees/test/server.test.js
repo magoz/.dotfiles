@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import plugin, { STRATEGY_ID, createStrategy, parseWorktreeList, setupServer } from '../server.js';
+import plugin, { MARKER_FILE, STRATEGY_ID, createStrategy, markedBranch, parseWorktreeList, setupServer } from '../server.js';
 
 // The worktree and worktree-manage CLIs are fakes on PATH that record argv/env.
 // Git is real (temp repos). No Herdr, provisioning, databases or OpenCode server.
@@ -58,6 +58,13 @@ function fixture(mode = 'ok') {
   return { root, repo, env, calls, strategy: createStrategy({ env }) };
 }
 const context = () => ({ signal: new AbortController().signal });
+// What `worktree checkout` does: plain `git worktree add`, then the ownership marker.
+const markedWorktree = (repo, branch, directory) => {
+  git(repo, 'worktree', 'add', '-q', '-b', branch, directory);
+  const gitDir = git(directory, 'rev-parse', '--absolute-git-dir');
+  writeFileSync(path.join(gitDir, MARKER_FILE), JSON.stringify({ strategy: 'dotfiles', branch, createdAt: new Date().toISOString() }));
+  return directory;
+};
 
 // Fixtures are independent temp repos; run concurrently (each CLI call waits runProcess's grace).
 describe('dotfiles worktree strategy', { concurrency: true }, () => {
@@ -132,7 +139,7 @@ describe('dotfiles worktree strategy', { concurrency: true }, () => {
   test('remove refuses force and runs Herdr-free plan then retire with the exact token', async () => {
     const f = fixture();
     const linked = path.join(f.root, 'repo-feat-x');
-    git(f.repo, 'worktree', 'add', '-b', 'feat/x', linked);
+    markedWorktree(f.repo, 'feat/x', linked);
     await assert.rejects(f.strategy.remove({ directory: linked, force: true }, context()), /never force-removes/);
     assert.deepEqual(f.calls(), []);
     await f.strategy.remove({ directory: linked, force: false }, context());
@@ -147,13 +154,13 @@ describe('dotfiles worktree strategy', { concurrency: true }, () => {
   test('remove surfaces only sanitized worktree-manage refusals', async () => {
     const refused = fixture('plan-refused');
     const linked = path.join(refused.root, 'repo-feat-x');
-    git(refused.repo, 'worktree', 'add', '-b', 'feat/x', linked);
+    markedWorktree(refused.repo, 'feat/x', linked);
     await assert.rejects(refused.strategy.remove({ directory: linked, force: false }, context()), /Retirement refused .*: Checkout dirty or unavailable\. Checkout preserved\./);
     assert.equal(refused.calls().length, 1);
 
     const noisy = fixture('retire-noisy');
     const other = path.join(noisy.root, 'repo-feat-x');
-    git(noisy.repo, 'worktree', 'add', '-b', 'feat/x', other);
+    markedWorktree(noisy.repo, 'feat/x', other);
     await assert.rejects(noisy.strategy.remove({ directory: other, force: false }, context()), (error) => {
       assert.match(error.message, /Retirement stopped .*: unknown refusal\. Inspect/);
       assert.doesNotMatch(error.message, /SECRET|https/);
@@ -161,18 +168,36 @@ describe('dotfiles worktree strategy', { concurrency: true }, () => {
     });
   });
 
-  test('list maps git worktrees to root/worktree entries, skipping prunable ones', async () => {
+  test('list owns only marked worktrees on their recorded branch; others are unowned roots', async () => {
     const f = fixture();
-    const linked = path.join(f.root, 'repo-feat-x'), gone = path.join(f.root, 'repo-gone');
-    git(f.repo, 'worktree', 'add', '-b', 'feat/x', linked);
-    git(f.repo, 'worktree', 'add', '-b', 'gone', gone);
+    const linked = markedWorktree(f.repo, 'feat/x', path.join(f.root, 'repo-feat-x'));
+    const plain = path.join(f.root, 'repo-herdr'), gone = path.join(f.root, 'repo-gone'), moved = path.join(f.root, 'repo-moved');
+    git(f.repo, 'worktree', 'add', '-q', '-b', 'herdr', plain); // Herdr/Pi-style: no marker
+    markedWorktree(f.repo, 'gone', gone);
     rmSync(gone, { recursive: true, force: true });
+    markedWorktree(f.repo, 'feat/moved', moved);
+    git(moved, 'switch', '-q', '-c', 'elsewhere'); // marker names another branch
     assert.deepEqual(await f.strategy.list(f.repo, context()), [
       { directory: f.repo, type: 'root' },
       { directory: linked, type: 'worktree' },
+      { directory: plain, type: 'root' },
+      { directory: moved, type: 'root' },
     ]);
     // From a linked checkout the primary stays the root.
     assert.deepEqual((await f.strategy.list(linked, context()))[0], { directory: f.repo, type: 'root' });
     assert.throws(() => parseWorktreeList('HEAD abc\0\0'), /Unexpected/);
+    assert.equal(markedBranch(linked), 'feat/x');
+    assert.equal(markedBranch(plain), undefined);
+    assert.equal(markedBranch(f.repo), undefined); // primary: .git is a directory
+  });
+
+  test('remove refuses an unmarked worktree without running worktree-manage', async () => {
+    const f = fixture();
+    const plain = path.join(f.root, 'repo-plain');
+    git(f.repo, 'worktree', 'add', '-q', '-b', 'plain', plain);
+    await assert.rejects(f.strategy.remove({ directory: plain, force: false }, context()), /not a dotfiles worktree \(no ownership marker\)/);
+    await assert.rejects(f.strategy.remove({ directory: f.repo, force: false }, context()), /no ownership marker/);
+    assert.deepEqual(f.calls(), []);
+    assert.ok(existsSync(plain));
   });
 });

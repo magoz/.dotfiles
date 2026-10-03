@@ -27,8 +27,8 @@ SIGKILL on cancel/timeout (`runProcess`, reused from `../dotfiles-tools/process.
 | Strategy call | Command | Bound |
 | --- | --- | --- |
 | `create` | `worktree checkout --json --repo <sourceDirectory> --branch <decoded> [--base <input.branch>]` | 30 min, 3 s grace |
-| `remove` | `git rev-parse --git-common-dir`, then `worktree-manage plan-checkout`, then `retire-checkout --expect-plan <token>` | 5 + 15 min |
-| `list` | `git -C <sourceDirectory> worktree list --porcelain -z` | 30 s |
+| `remove` | ownership-marker check, `git rev-parse --git-common-dir`, then `worktree-manage plan-checkout`, then `retire-checkout --expect-plan <token>` | 5 + 15 min |
+| `list` | `git -C <sourceDirectory> worktree list --porcelain -z` + ownership markers (file reads) | 30 s |
 
 After `create` returns, OpenCode records the worktree with strategy `dotfiles` and
 runs the project's `commands.start` (`bash -lc`, with `OPENCODE_WORKTREE_BASE` /
@@ -84,8 +84,22 @@ starting/ending with `-`). Never send `/` in `name`. Never rely on rules 2–3 f
 exact branch. The branch must not already exist (the CLI refuses before allocating);
 if core suffixes a colliding `name` (`feat--x-2`), the suffix becomes part of the branch.
 
+## Ownership marker
+
+`worktree checkout` writes `dotfiles-worktree` into the new checkout's **private git
+dir** (`git rev-parse --absolute-git-dir`, i.e. `<repo>/.git/worktrees/<id>/dotfiles-worktree`)
+right after `git worktree add`, before provisioning — so a checkout whose provisioning
+failed is still owned and retirable. Content: `{"strategy":"dotfiles","branch":"feat/x","createdAt":"<ISO>"}`.
+It is never in the working tree and `git worktree remove` deletes it with the git dir.
+Only a checkout whose marker names its current branch is owned. Herdr/Pi worktrees and
+plain `git worktree add` checkouts have none. The plugin finds it through the
+checkout's `.git` file (`gitdir: …`); `worktree-manage` checks it authoritatively via Git.
+
 ## `remove`
 
+- A directory without the ownership marker is **refused** before anything runs
+  (`… is not a dotfiles worktree (no ownership marker)`); `worktree-manage
+  plan-checkout`/`retire-checkout` refuse it too, so the CLI is safe on its own.
 - `force: true` is **refused** (no `forceRequired` signal, so the TUI shows an error).
 - The primary checkout is derived from the target's Git common directory, then
   `worktree-manage plan-checkout` → `retire-checkout --confirm <dir> --expect-plan <token>`:
@@ -96,13 +110,22 @@ if core suffixes a colliding `name` (`feat--x-2`), the suffix becomes part of th
 - **No agent checks.** OpenCode/Fleet must not delete a worktree that still has working
   sessions; that is the caller's responsibility.
 
-## `list` and discovery caveat
+## `list` and discovery
 
-`git worktree list` of the source repository: first record `root`, others `worktree`;
-bare/prunable records skipped. OpenCode's `refresh` therefore adopts **every** linked
-checkout of the repository as `dotfiles`, including Herdr-created ones. Do not delete
-Herdr/Pi worktrees from OpenCode UIs; retire them with `worktree-manage` (Herdr path)
-or `/worktrees`. The Herdr-free path still refuses dirty checkouts, but cannot see agents.
+`git worktree list` of the source repository (bare/prunable records skipped). Only
+linked checkouts carrying the marker for their current branch are `worktree` (owned by
+`dotfiles`). Everything else — the primary, Herdr/Pi worktrees, plain `git worktree add`
+checkouts — is reported as `root`.
+
+Why not just omit unmarked worktrees: OpenCode's `refresh` asks **every** strategy, and
+the built-in `git` strategy would claim anything we skip (its delete runs `git worktree
+remove` and offers `--force` on dirty checkouts; no lease release, no plan token).
+Reporting them as `root` makes core store them **unowned** (our strategy is consulted
+first, so `git` never claims them): they still appear as checkouts in OpenCode, but
+`worktree.remove` refuses them (no stored strategy) and nothing changes on disk. Retire
+them through Herdr (`worktree-manage plan`/`retire --workspace`, `/worktrees`).
+Discovery never replaces existing ownership, so rows OpenCode already stored as `git`
+stay `git` (see go-live notes).
 
 ## Enabling live
 
@@ -112,6 +135,15 @@ stow links are directory symlinks, so no restow is needed), then
 `systemctl --user restart opencode.service` (interrupts running sessions; the service
 may also pick up the config change on its own config reload). Not enabled live by
 this change.
+
+Go-live notes:
+
+- Checkouts created before this plugin have no marker and are never owned by `dotfiles`.
+- The live DB already stores exactly one row as `git`-owned:
+  `/home/magoz/dev/repos/duck-feat-project-sidebar-prototype` (project `48753e06…`).
+  Discovery won't change it: it stays `git`-owned until it is retired by hand through
+  `worktree-manage` (Herdr path) or the row is cleared. Until then, **do not delete it
+  from OpenCode's UI** (that would run the built-in `git` strategy's removal).
 
 ## Validation
 

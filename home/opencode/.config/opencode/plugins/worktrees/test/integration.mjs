@@ -113,12 +113,31 @@ try {
   assert.equal(git(destination, 'branch', '--show-current'), 'feat/integration');
   assert.equal(git(destination, 'rev-parse', 'HEAD'), fresh);
   assert.deepEqual(readFileSync(log, 'utf8').trim().split('\n'), [`--repo ${destination} --skip-vercel --non-interactive`]);
+  const marker = JSON.parse(readFileSync(path.join(git(destination, 'rev-parse', '--absolute-git-dir'), 'dotfiles-worktree'), 'utf8'));
+  assert.equal(marker.strategy, 'dotfiles'); assert.equal(marker.branch, 'feat/integration');
   step(`worktree.create -> ${destination} on feat/integration at fresh origin tip, install-only provisioning (${Math.round((Date.now() - started) / 1000)}s)`);
 
   const listed = await request('GET', `/api/worktree?projectID=${encodeURIComponent(projectID)}`);
   assert.equal(listed.status, 200);
   assert.deepEqual(listed.body.find((entry) => entry.directory === destination), { directory: destination, strategy: 'dotfiles' });
   step('worktree.list records strategy dotfiles');
+
+  // 1b. An unmarked sibling (Herdr/Pi-style plain `git worktree add`) is stored
+  // unowned (not by `dotfiles`, not by the built-in `git` strategy) and can't be removed.
+  const plain = path.join(dirs.repos, 'app-plain');
+  git(repo, 'worktree', 'add', '-q', '-b', 'plain', plain);
+  const plainHead = git(plain, 'rev-parse', 'HEAD');
+  const refreshed = await request('POST', '/api/worktree/refresh', { projectID });
+  assert.equal(refreshed.status, 204, JSON.stringify(refreshed.body));
+  const afterRefresh = await request('GET', `/api/worktree?projectID=${encodeURIComponent(projectID)}`);
+  assert.deepEqual(afterRefresh.body.find((entry) => entry.directory === plain), { directory: plain }, JSON.stringify(afterRefresh.body));
+  assert.ok(afterRefresh.body.some((entry) => entry.directory === destination && entry.strategy === 'dotfiles'));
+  const plainRemoved = await request('DELETE', '/api/worktree', { projectID, directory: plain, force: false });
+  assert.notEqual(plainRemoved.status, 204);
+  assert.ok(existsSync(plain));
+  assert.equal(git(plain, 'rev-parse', 'HEAD'), plainHead);
+  assert.match(git(repo, 'worktree', 'list'), /app-plain/);
+  step(`unmarked sibling stored unowned (no strategy) after refresh; worktree.remove refused (${plainRemoved.status}), checkout unchanged`);
 
   // 2. Web-style create: random-ish name, `branch` is a starting ref (explicit base, no fetch).
   const fromRef = await request('POST', '/api/worktree', { projectID, name: 'brave-cabin', branch: 'main' });

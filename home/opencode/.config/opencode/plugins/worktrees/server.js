@@ -1,3 +1,4 @@
+import { lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { runProcess, withoutPaneEnv } from '../dotfiles-tools/process.js';
 import { branchFromName } from './naming.js';
@@ -67,9 +68,32 @@ function parseCommonDirectory(stdout) {
   return path.dirname(common);
 }
 
+// Ownership marker written by `worktree checkout` into the linked worktree's PRIVATE
+// git dir (`<common>/worktrees/<id>/dotfiles-worktree`); format and rules:
+// home/scripts/.local/share/worktree/src/marker.ts. Found through the checkout's
+// `.git` file (`gitdir: <path>`) so listing needs no subprocess per worktree.
+export const MARKER_FILE = 'dotfiles-worktree';
+
+/** The branch recorded in a checkout's ownership marker, or undefined if not owned. */
+export function markedBranch(directory) {
+  try {
+    const link = path.join(directory, '.git');
+    if (!lstatSync(link).isFile()) return undefined;
+    const match = /^gitdir: (.+)$/.exec(readFileSync(link, 'utf8').trim());
+    if (!match) return undefined;
+    const gitDir = path.resolve(directory, match[1]);
+    if (path.basename(path.dirname(gitDir)) !== 'worktrees') return undefined;
+    const marker = JSON.parse(readFileSync(path.join(gitDir, MARKER_FILE), 'utf8'));
+    return isRecord(marker) && marker.strategy === 'dotfiles' && isBranch(marker.branch) && typeof marker.createdAt === 'string'
+      ? marker.branch : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
- * Parse `git worktree list --porcelain -z` into OpenCode list entries. The first
- * record is the primary checkout (root); bare and prunable records are skipped.
+ * Parse `git worktree list --porcelain -z`. The first record is the primary
+ * checkout (root); bare and prunable records are skipped.
  */
 export function parseWorktreeList(stdout) {
   const entries = [];
@@ -80,7 +104,8 @@ export function parseWorktreeList(stdout) {
     const directory = fields[0].startsWith('worktree ') ? fields[0].slice('worktree '.length) : undefined;
     if (!isPath(directory)) throw new Error('Unexpected git worktree list output');
     const skip = fields.some((item) => item === 'bare' || item === 'prunable' || item.startsWith('prunable '));
-    if (!skip) entries.push({ directory, type: index === 0 ? 'root' : 'worktree' });
+    const branch = fields.find((item) => item.startsWith('branch refs/heads/'))?.slice('branch refs/heads/'.length) ?? null;
+    if (!skip) entries.push({ directory, type: index === 0 ? 'root' : 'worktree', branch });
     index += 1;
     fields = [];
   }
@@ -125,6 +150,9 @@ export function createStrategy({ run = runProcess, env = process.env } = {}) {
         throw new Error('The dotfiles worktree strategy never force-removes. Commit, stash or clean the checkout, then delete it again.');
       }
       const directory = input.directory;
+      if (markedBranch(directory) === undefined) {
+        throw new Error(`${directory} is not a dotfiles worktree (no ownership marker); refusing to remove it. Retire Herdr/Pi worktrees with worktree-manage or /worktrees.`);
+      }
       const common = await exec('git', ['-C', directory, 'rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: directory, signal, timeoutMs: GIT_TIMEOUT_MS });
       if (common.code !== 0) throw new Error(`Not a Git checkout: ${directory}`);
       const primary = parseCommonDirectory(common.stdout);
@@ -153,7 +181,14 @@ export function createStrategy({ run = runProcess, env = process.env } = {}) {
       if (!isPath(sourceDirectory)) throw new Error('Invalid source directory');
       const listed = await exec('git', ['-C', sourceDirectory, 'worktree', 'list', '--porcelain', '-z'], { cwd: sourceDirectory, signal, timeoutMs: GIT_TIMEOUT_MS });
       if (listed.code !== 0) throw new Error(`git worktree list failed for ${sourceDirectory}`);
-      return parseWorktreeList(listed.stdout);
+      // Only marked checkouts on their recorded branch are `worktree` (owned by this
+      // strategy). Everything else (primary, Herdr/Pi, plain `git worktree add`) is
+      // reported as `root`: core stores it UNOWNED, so worktree.remove refuses it, and
+      // since this strategy is consulted first the built-in `git` strategy never claims it.
+      return parseWorktreeList(listed.stdout).map(({ directory, type, branch }) => ({
+        directory,
+        type: type === 'worktree' && branch !== null && markedBranch(directory) === branch ? 'worktree' : 'root',
+      }));
     },
   };
 }
