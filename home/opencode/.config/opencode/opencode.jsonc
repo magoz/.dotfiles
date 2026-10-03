@@ -8,6 +8,59 @@
     "build": { "model": "openai/gpt-6-astra#high" },
     "plan": { "model": "openai/gpt-6-astra#high" }
   },
+  // Same local CLIProxyAPI gateway as Pi's subs-codex (~/.pi/agent/models.json).
+  // The key is a saved OpenCode account, never this file:
+  //   opencode auth login subs-codex --method key   (paste the gateway key)
+  "providers": {
+    "subs-codex": {
+      "name": "Subs Codex",
+      "package": "@opencode/ai/providers/openai/responses",
+      "settings": { "baseURL": "http://127.0.0.1:8317/v1" },
+      // Mirrors the built-in openai catalog entries (capabilities, limits, variants).
+      "models": {
+        "gpt-6-astra": {
+          "name": "GPT-6 Astra (Subs Codex Pool)",
+          "family": "gpt-astra",
+          "capabilities": { "tools": true, "input": ["text", "image", "pdf"], "output": ["text"] },
+          "limit": { "context": 400000, "input": 272000, "output": 128000 },
+          "variants": [
+            { "id": "low", "settings": { "reasoningEffort": "low", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "medium", "settings": { "reasoningEffort": "medium", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "high", "settings": { "reasoningEffort": "high", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "xhigh", "settings": { "reasoningEffort": "xhigh", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "max", "settings": { "reasoningEffort": "max", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } }
+          ]
+        },
+        "gpt-6.1-sol": {
+          "name": "GPT-6.1 Sol (Subs Codex Pool)",
+          "family": "gpt-sol",
+          "capabilities": { "tools": true, "input": ["text", "image", "pdf"], "output": ["text"] },
+          "limit": { "context": 400000, "input": 272000, "output": 128000 },
+          "variants": [
+            { "id": "low", "settings": { "reasoningEffort": "low", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "medium", "settings": { "reasoningEffort": "medium", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "high", "settings": { "reasoningEffort": "high", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "xhigh", "settings": { "reasoningEffort": "xhigh", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "max", "settings": { "reasoningEffort": "max", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } }
+          ]
+        },
+        "gpt-5.6-sol": {
+          "name": "GPT-5.6 Sol (Subs Codex Pool)",
+          "family": "gpt-sol",
+          "capabilities": { "tools": true, "input": ["text", "image", "pdf"], "output": ["text"] },
+          "limit": { "context": 400000, "input": 272000, "output": 128000 },
+          "variants": [
+            { "id": "none", "settings": { "reasoningEffort": "none", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "low", "settings": { "reasoningEffort": "low", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "medium", "settings": { "reasoningEffort": "medium", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "high", "settings": { "reasoningEffort": "high", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "xhigh", "settings": { "reasoningEffort": "xhigh", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } },
+            { "id": "max", "settings": { "reasoningEffort": "max", "reasoningSummary": "auto", "include": ["reasoning.encrypted_content"] } }
+          ]
+        }
+      }
+    }
+  },
   "plugins": [
     "./plugins/opencode-anthropic-auth",
     "./plugins/dotfiles-tools",
