@@ -2,8 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createFleetSource, createSseParser } from './source.js';
 import { reconnectDelay } from './fleet.js';
-import { NOW, change, fakeFetch, fakeTimers, flush, wireRow, wireSnapshot } from './fixtures.js';
-
+import { NOW, change, fakeFetch, fakeTimers, flush, wireLaunch, wireRow, wireSnapshot } from './fixtures.js';
 
 test('SSE parser: split chunks, CRLF, comments, multi-line data, default event', () => {
   const events = [];
@@ -22,14 +21,16 @@ test('snapshot on start, refetch on initial, apply changes, no credentials sent'
   assert.ok(f.calls.every((c) => c.options.credentials === 'omit' && !('authorization' in c.options.headers)));
   assert.equal(source.status, 'connecting');
   assert.equal(source.live.rows.get('w').state, 'working');
-  f.setSnapshot(wireSnapshot([wireRow('w', 'working'), wireRow('n', 'needs-you')]));
+  f.setSnapshot(wireSnapshot([wireRow('w', 'working'), wireRow('n', 'blocked')]));
   f.streams[0].send(change({ initial: true })); await flush();
   assert.equal(f.calls.length, 3);
   assert.equal(source.status, 'live');
   assert.equal(source.live.rows.size, 2);
-  f.streams[0].send(change({ initial: false, rows: [wireRow('w', 'done', { updated: NOW })], removed: ['n'] })); await flush();
-  assert.deepEqual([...source.live.rows.values()].map((r) => r.state), ['done']);
-  assert.deepEqual(updates.map((u) => u.reason), ['snapshot', 'snapshot', 'status', 'change']);
+  f.streams[0].send(change({ initial: false, rows: [wireRow('w', 'finished', { activeAt: NOW })], removed: ['n'] })); await flush();
+  assert.deepEqual([...source.live.rows.values()].map((r) => r.state), ['finished']);
+  f.streams[0].send(change({ initial: false, launches: [wireLaunch({ status: 'ready', sessionID: 'w' })] })); await flush();
+  assert.deepEqual(source.live.launches.map((l) => [l.status, l.sessionID]), [['ready', 'w']]);
+  assert.deepEqual(updates.map((u) => u.reason), ['snapshot', 'snapshot', 'status', 'change', 'change']);
   source.stop();
 });
 
