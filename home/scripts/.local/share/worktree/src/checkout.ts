@@ -9,6 +9,7 @@ import {
   type ProcessError,
   WorktreeError
 } from "./domain"
+import { markerPath, writeMarker } from "./marker"
 import { Process } from "./process"
 import { resolveBranchBase, resolveSource, runInstallOnly, runProvisioning, runSetupCommands } from "./steps"
 
@@ -138,6 +139,13 @@ export const checkoutEnvironment = (options: CheckoutOptions) =>
         message: `checkout at ${destination} is not on branch ${branch}; preserved for inspection`
       }))
     }
+    // Ownership marker before provisioning: a checkout whose provisioning fails
+    // stays owned (listed by OpenCode) and retirable through retire-checkout.
+    const gitDir = yield* gitOutput(destination, ["rev-parse", "--absolute-git-dir"]).pipe(created)
+    yield* Effect.try({
+      try: () => writeMarker(gitDir, branch),
+      catch: (error) => new WorktreeError({ message: `cannot write ownership marker ${markerPath(gitDir)}: ${error}` })
+    }).pipe(fail(branch, { stage: "create", path: destination }, `checkout ${destination} exists on branch ${branch} but is not marked as dotfiles-owned`))
 
     const preserved = (stage: "provision" | "setup") =>
       fail(branch, { stage, path: destination, base }, `${stage} failed; preserved checkout ${destination} on branch ${branch}`)

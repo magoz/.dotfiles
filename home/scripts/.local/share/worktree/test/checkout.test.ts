@@ -5,6 +5,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { NO_LOCKFILE_WARNING, NO_VERCEL_WARNING, planProvisioning } from "../src/checkout"
 import { CheckoutError, checkoutFailureReport } from "../src/domain"
+import { MARKER_FILE, readMarker } from "../src/marker"
 
 // Real Git against a local bare "origin"; provision-env is a fake on PATH that
 // records argv. No Herdr, Vercel, sandbox-db or network is reachable.
@@ -81,6 +82,13 @@ test("no-Vercel repo without a lockfile: fresh origin tip, sibling path, warning
   })
   expect(git(path, "branch", "--show-current")).toBe("feat/x")
   expect(git(path, "rev-parse", "HEAD")).toBe(f.fresh)
+  // Ownership marker in the private git dir, never in the working tree.
+  const gitDir = git(path, "rev-parse", "--absolute-git-dir")
+  expect(gitDir.startsWith(join(f.repo, ".git", "worktrees") + "/")).toBe(true)
+  const marker = JSON.parse(readFileSync(join(gitDir, MARKER_FILE), "utf8"))
+  expect(marker).toEqual({ strategy: "dotfiles", branch: "feat/x", createdAt: expect.any(String) })
+  expect(Number.isNaN(Date.parse(marker.createdAt))).toBe(false)
+  expect(git(path, "status", "--porcelain", "--untracked-files=all")).toBe("")
   // Local main and remote-tracking refs are untouched by the fresh-tip fetch.
   expect(git(f.repo, "rev-parse", "main")).toBe(f.old)
   expect(result.provisions).toEqual([])
@@ -135,6 +143,8 @@ for (const stage of ["provision", "setup"] as const) {
     })
     expect(result.stderr).toContain(`${stage} failed; preserved checkout ${path} on branch feat/broken`)
     expect(git(path, "branch", "--show-current")).toBe("feat/broken")
+    // Marked before provisioning, so the preserved checkout stays owned and retirable.
+    expect(readMarker(git(path, "rev-parse", "--absolute-git-dir"))?.branch).toBe("feat/broken")
   })
 }
 

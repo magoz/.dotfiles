@@ -4,6 +4,7 @@ import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { tmpdir } from "node:os"
 import { WorktreeManager, parseWorktreePorcelain, type ManagerRunner } from "../src/manager"
+import { MARKER_FILE, writeMarker } from "../src/marker"
 
 // Herdr-free retirement of `worktree checkout` checkouts: real Git, fake sandbox-db.
 const directories: string[] = []
@@ -14,7 +15,9 @@ const git = async (args: ReadonlyArray<string>) => {
   return { code: await child.exited, stdout: await new Response(child.stdout).text() }
 }
 
-async function fixture(leaseState: ReadonlyArray<readonly [string, "live" | "missing"]> = [["test", "live"], ["default", "live"]]) {
+const gitDir = async (checkout: string) => (await git(["-C", checkout, "rev-parse", "--absolute-git-dir"])).stdout.trim()
+
+async function fixture(leaseState: ReadonlyArray<readonly [string, "live" | "missing"]> = [["test", "live"], ["default", "live"]], marked = true) {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "checkout-manager-"))); directories.push(dir)
   const source = join(dir, "repo"), target = join(dir, "repo-feat-x"), receipts = join(dir, "receipts")
   await mkdir(source)
@@ -23,6 +26,8 @@ async function fixture(leaseState: ReadonlyArray<readonly [string, "live" | "mis
   await git(["-C", source, "add", "-A"])
   await git(["-C", source, "commit", "-m", "init"])
   await git(["-C", source, "worktree", "add", "-b", "feat/x", target])
+  // What `worktree checkout` writes; `marked = false` is a plain `git worktree add` (Herdr/Pi-like).
+  if (marked) writeMarker(await gitDir(target), "feat/x")
   const calls: string[][] = []
   const leases = new Map<string, "live" | "missing">(leaseState)
   const runner: ManagerRunner = async (command, args) => {
@@ -170,4 +175,38 @@ test("worktree-manage CLI: Herdr-free commands need no HERDR_ENV and refuse Herd
   expect(JSON.parse(retired.stdout)).toMatchObject({ status: "retired", path: f.target, released: [], branch: "kept" })
   expect(existsSync(f.target)).toBe(false)
   expect((await readdir(join(home, ".local", "state", "worktree-manager")))[0]).toContain(".complete.jsonl")
+})
+
+test("unmarked worktrees (plain git worktree add, Herdr/Pi) are refused before any mutation", async () => {
+  const f = await fixture([["default", "live"]], false)
+  await expect(f.manager.planCheckout(f.source, f.target)).rejects.toThrow("ownership marker")
+  // A marker for another branch, or a malformed one, does not grant ownership either.
+  writeMarker(await gitDir(f.target), "feat/other")
+  await expect(f.manager.planCheckout(f.source, f.target)).rejects.toThrow("ownership marker")
+  await writeFile(join(await gitDir(f.target), MARKER_FILE), "{not json")
+  await expect(f.manager.planCheckout(f.source, f.target)).rejects.toThrow("ownership marker")
+  expect(mutations(f.calls)).toHaveLength(0)
+  expect(existsSync(f.target)).toBe(true)
+})
+
+test("a marker removed after planning stops retirement before any release", async () => {
+  const f = await fixture()
+  const plan = await f.manager.planCheckout(f.source, f.target)
+  await rm(join(await gitDir(f.target), MARKER_FILE))
+  await expect(f.manager.retireCheckout(f.source, f.target, f.target, plan.token)).rejects.toThrow("ownership marker")
+  expect(mutations(f.calls)).toHaveLength(0)
+})
+
+test("worktree-manage CLI plan-checkout refuses an unmarked worktree", async () => {
+  const f = await fixture([], false)
+  const bin = join(f.dir, "bin"); await mkdir(bin)
+  await writeFile(join(bin, "sandbox-db"), `#!/bin/sh\ncase "$1" in list) echo '[]';; *) exit 2;; esac\n`)
+  await chmod(join(bin, "sandbox-db"), 0o755)
+  const child = Bun.spawn([process.execPath, resolve(import.meta.dir, "../src/manage-main.ts"), "plan-checkout", "--cwd", f.source, "--path", f.target], {
+    env: { PATH: `${bin}:${process.env.PATH}`, HOME: f.dir }, stdout: "pipe", stderr: "pipe"
+  })
+  const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
+  expect(code).toBe(2)
+  expect(stdout).toBe("")
+  expect(stderr).toContain("worktree-manage: Not a worktree checkout (no dotfiles-worktree ownership marker)")
 })

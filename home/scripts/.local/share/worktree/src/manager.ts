@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto"
 import { lstat, mkdir, open, realpath, rename } from "node:fs/promises"
 import { homedir } from "node:os"
 import { isAbsolute, join, resolve, sep } from "node:path"
+import { readMarker } from "./marker"
 
 // Deliberately independent of the Pi-only dashboard inventory. Never inspect env files.
 const Text = Schema.String.pipe(Schema.filter((s) => s.length > 0 && s.length < 4096 && !/[\x00-\x1f\x7f]/.test(s) && !s.includes("://")))
@@ -198,6 +199,14 @@ export class WorktreeManager {
     if (await canonical(top) !== target.path || await canonical(common) !== await canonical(sourceCommon) || !gitFile.isFile()) refuse("Git linked checkout identity mismatch")
     const head = (await this.command('git', ['-C', target.path, 'rev-parse', 'HEAD'], signal)).stdout.trim()
     if (!/^[a-f0-9]{40,64}$/.test(head)) refuse('Git head identity unavailable')
+    if (scope.kind === "checkout") {
+      // Herdr-free retirement only for checkouts `worktree checkout` created and marked
+      // in their private git dir; Herdr/Pi/plain `git worktree add` checkouts are refused.
+      const gitDir = await canonical((await this.command("git", ["-C", target.path, "rev-parse", "--absolute-git-dir"], signal)).stdout.trim())
+      const marker = readMarker(gitDir)
+      if (!within(gitDir, join(await canonical(common), "worktrees")) || gitDir === join(await canonical(common), "worktrees") ||
+          !marker || marker.branch !== selected.branch) refuse("Not a worktree checkout (no dotfiles-worktree ownership marker); use the Herdr retirement path or retire it manually")
+    }
     return { inventory, selected, head }
   }
 

@@ -277,7 +277,8 @@ pane. In order, it:
    unique temporary ref, fail closed; explicit `--base` used without fetching),
    resolves the sibling path `<primary>-<branch-slug>` (or `--path`), refuses an
    existing destination, and decides the provisioning plan — all before allocating;
-2. runs `git -C <primary> worktree add -b <branch> -- <path> <base>`;
+2. runs `git -C <primary> worktree add -b <branch> -- <path> <base>`, then writes the
+   ownership marker (below) before provisioning;
 3. provisions (rule below);
 4. runs every `--setup` command through `$SHELL -lc` in the checkout.
 
@@ -288,7 +289,7 @@ free text, stating what exists; the diagnostic goes to stderr:
 | `stage` | `checkout` | Meaning |
 | --- | --- | --- |
 | `preflight` | `none` | nothing allocated (existing branch, invalid name, stale/missing base, occupied path) |
-| `create` | `unknown` | `git worktree add` failed; inspect `path` and the branch |
+| `create` | `unknown` | `git worktree add` or the ownership marker failed; inspect `path` and the branch |
 | `provision` / `setup` | `preserved` | checkout and branch exist at `path`; nothing rolled back |
 
 Progress, warnings, and provisioning/setup output go to stderr. `worktree create`
@@ -316,6 +317,23 @@ Decided from local evidence only (no network, no env-file reads):
 `--check-vercel-link` is deliberately not used for this decision: it fails (exit 2,
 not 3) in repos whose `.vercel`/env paths are not ignored, such as `~/dev/repos/fleet`.
 
+### Ownership marker
+
+Right after `git worktree add` succeeds, `checkout` creates (exclusively, never
+overwriting) `dotfiles-worktree` in the new checkout's **private git dir**
+(`git rev-parse --absolute-git-dir`, i.e. `<repo>/.git/worktrees/<id>/dotfiles-worktree`):
+
+```json
+{"strategy":"dotfiles","branch":"feat/x","createdAt":"2026-10-03T12:00:00.000Z"}
+```
+
+It is written before provisioning, so a checkout whose provisioning or setup failed is
+still owned and retirable. It is never in the working tree, never tracked, and is
+deleted with the git dir by `git worktree remove`. A checkout is owned only when the
+marker parses and names its current branch (`src/marker.ts`). Herdr/Pi worktrees and
+plain `git worktree add` checkouts have no marker: `retire-checkout` and OpenCode's
+`dotfiles` strategy never touch them.
+
 ### Herdr-free retirement
 
 ```sh
@@ -324,7 +342,10 @@ worktree-manage retire-checkout --cwd /canonical/source --path /canonical/target
   --confirm /canonical/target --expect-plan TOKEN_FROM_PLAN [--delete-branch]
 ```
 
-For checkouts created by `worktree checkout` (no Herdr workspace). Needs no
+Only for checkouts created by `worktree checkout`: a target without the ownership
+marker for its current branch, or whose git dir is not under `<common>/worktrees/`, is
+refused (`Not a worktree checkout (no dotfiles-worktree ownership marker)`) by
+`plan-checkout` and by every re-check in `retire-checkout`. Needs no
 `HERDR_ENV` and never calls Herdr; `--cwd` is required. Inventory comes from
 `git worktree list --porcelain -z` plus `sandbox-db` leases. Same guarantees as the Herdr
 path: canonical exact target, primary/current/detached/locked/prunable/dirty refused,
@@ -336,8 +357,8 @@ and before removal, private receipts. It then runs `git worktree remove` **witho
 only `git branch -d`.
 
 **No agent checks.** Herdr is not consulted, so the caller (OpenCode, Fleet) must not
-retire a checkout that still has working sessions. Never use these commands on
-Herdr-created worktrees; use `plan`/`retire` with `--workspace` instead.
+retire a checkout that still has working sessions. Herdr-created worktrees carry no
+marker and are refused; retire them with `plan`/`retire` and `--workspace`.
 
 ## Mixed-agent management (additive)
 
