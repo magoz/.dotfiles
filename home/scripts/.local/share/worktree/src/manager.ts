@@ -64,6 +64,33 @@ export interface ManagedCheckout {
 export interface Inventory { readonly source: string; readonly root: string; readonly worktrees: ReadonlyArray<ManagedCheckout> }
 export interface Target { readonly path: string; readonly workspace: string }
 export interface Plan extends Target { readonly releases: ReadonlyArray<string>; readonly token: string }
+export interface CheckoutPlan { readonly path: string; readonly releases: ReadonlyArray<string>; readonly token: string }
+/**
+ * herdr: a Herdr workspace owns the checkout; agents are checked; Herdr removes it.
+ * checkout: Herdr-free (`worktree checkout`); inventory from Git only, no agent
+ * checks (the caller guarantees no working sessions); `git worktree remove`.
+ */
+type Scope =
+  | { readonly kind: "herdr"; readonly target: Target }
+  | { readonly kind: "checkout"; readonly path: string }
+const scopePath = (scope: Scope) => scope.kind === "herdr" ? scope.target.path : scope.path
+
+/** Parse `git worktree list --porcelain -z`: NUL-terminated fields, records end with an empty field. */
+export function parseWorktreePorcelain(output: string) {
+  const records: Array<{ path: string; branch: string | null; detached: boolean; bare: boolean; locked: boolean; prunable: boolean }> = []
+  let fields: Array<string> = []
+  for (const field of output.split("\0")) {
+    if (field !== "") { fields.push(field); continue }
+    if (fields.length === 0) continue
+    const path = fields[0]?.startsWith("worktree ") ? fields[0].slice("worktree ".length) : refuse("Invalid authoritative response; no automatic retry")
+    const branch = fields.find((f) => f.startsWith("branch refs/heads/"))?.slice("branch refs/heads/".length) ?? null
+    const flag = (name: string) => fields.some((f) => f === name || f.startsWith(`${name} `))
+    records.push({ path, branch, detached: flag("detached"), bare: flag("bare"), locked: flag("locked"), prunable: flag("prunable") })
+    fields = []
+  }
+  if (fields.length > 0) refuse("Invalid authoritative response; no automatic retry")
+  return records
+}
 const fingerprint = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
 export class WorktreeManager {
@@ -122,12 +149,44 @@ export class WorktreeManager {
     return { source, root, worktrees }
   }
 
-  private async target(cwd: string, target: Target, signal?: AbortSignal) {
-    Schema.decodeUnknownSync(Schema.Struct({ path: Path, workspace: ID }))(target)
+  /** Herdr-free inventory: Git's worktree list and sandbox-db leases only. No workspaces or agents. */
+  private async checkouts(cwd: string, signal?: AbortSignal): Promise<Inventory> {
+    const current = await canonical(cwd)
+    const listed = parseWorktreePorcelain((await this.command("git", ["-C", current, "worktree", "list", "--porcelain", "-z"], signal)).stdout)
+    const leases = await this.json(Leases, "sandbox-db", ["list", "--json"], signal)
+    unique(leases.map((l) => JSON.stringify([l.worktree, l.leaseName])))
+    const primary = listed[0]
+    if (!primary || primary.bare) refuse("Primary checkout unavailable")
+    const root = await canonical(primary.path)
+    const source = await canonical((await this.command("git", ["-C", current, "rev-parse", "--show-toplevel"], signal)).stdout.trim())
+    const worktrees: ManagedCheckout[] = []
+    for (const [index, entry] of listed.entries()) {
+      Schema.decodeUnknownSync(Path)(entry.path)
+      let git: ManagedCheckout["git"] = "unavailable"
+      let path = entry.path
+      try {
+        path = await canonical(entry.path)
+        const status = await this.command("git", ["-C", path, "status", "--porcelain=v1", "--untracked-files=all"], signal)
+        git = status.stdout.length === 0 ? "clean" : "dirty"
+      } catch { signal?.throwIfAborted() }
+      worktrees.push({ path, branch: entry.branch, workspace: null,
+        linked: index > 0 && !entry.detached && !entry.bare && !entry.locked && !entry.prunable,
+        current: within(current, path), git, agents: [],
+        leases: leases.filter((l) => l.worktree === path).map((l) => ({ name: l.leaseName, id: l.branchId }))
+      })
+    }
+    unique(worktrees.map((w) => w.path))
+    return { source, root, worktrees }
+  }
+
+  private async target(cwd: string, scope: Scope, signal?: AbortSignal) {
+    if (scope.kind === "herdr") Schema.decodeUnknownSync(Schema.Struct({ path: Path, workspace: ID }))(scope.target)
+    else Schema.decodeUnknownSync(Path)(scope.path)
+    const target = { path: scopePath(scope) }
     if (await canonical(target.path) !== target.path || resolve(target.path) !== target.path) refuse("Use the canonical exact checkout path")
-    const inventory = await this.list(cwd, signal)
+    const inventory = scope.kind === "herdr" ? await this.list(cwd, signal) : await this.checkouts(cwd, signal)
     const selected = inventory.worktrees.find((w) => w.path === target.path)
-    if (!selected || selected.workspace !== target.workspace) refuse("Exact checkout/workspace identity not found")
+    if (!selected || (scope.kind === "herdr" && selected.workspace !== scope.target.workspace)) refuse("Exact checkout/workspace identity not found")
     if (!selected.linked || selected.path === inventory.root) refuse("Not a linked checkout; primary/detached/prunable refused")
     // Independently bind Herdr's path to Git's linked checkout and common repository.
     const top = (await this.command("git", ["-C", target.path, "rev-parse", "--show-toplevel"], signal)).stdout.trim()
@@ -159,8 +218,8 @@ export class WorktreeManager {
     return statuses
   }
 
-  private async retirement(cwd: string, target: Target, signal?: AbortSignal) {
-    const state = await this.target(cwd, target, signal)
+  private async retirement(cwd: string, scope: Scope, signal?: AbortSignal) {
+    const state = await this.target(cwd, scope, signal)
     const w = state.selected
     if (w.current) refuse("Cannot retire current checkout or its parent")
     if (w.git !== "clean") refuse("Checkout dirty or unavailable")
@@ -168,13 +227,27 @@ export class WorktreeManager {
     return { ...state, statuses: await this.statuses(w, signal) }
   }
 
+  // Distinct token domains: a Herdr plan can never authorize a checkout retirement, or vice versa.
+  private token(scope: Scope, state: Awaited<ReturnType<WorktreeManager["retirement"]>>) {
+    const identity = [state.inventory.root, state.selected.branch, state.head, state.statuses]
+    return fingerprint(scope.kind === "herdr" ? [scope.target, ...identity] : ["checkout", scope.path, ...identity])
+  }
+
   async plan(cwd: string, target: Target, signal?: AbortSignal): Promise<Plan> {
-    const state = await this.retirement(cwd, target, signal)
-    return { ...target, releases: state.statuses.filter((s) => s.status !== "none").map((s) => s.name), token: fingerprint([target, state.inventory.root, state.selected.branch, state.head, state.statuses]) }
+    const scope: Scope = { kind: "herdr", target }
+    const state = await this.retirement(cwd, scope, signal)
+    return { ...target, releases: state.statuses.filter((s) => s.status !== "none").map((s) => s.name), token: this.token(scope, state) }
+  }
+
+  /** Herdr-free plan for a `worktree checkout` checkout. No agent checks: callers own session safety. */
+  async planCheckout(cwd: string, path: string, signal?: AbortSignal): Promise<CheckoutPlan> {
+    const scope: Scope = { kind: "checkout", path }
+    const state = await this.retirement(cwd, scope, signal)
+    return { path, releases: state.statuses.filter((s) => s.status !== "none").map((s) => s.name), token: this.token(scope, state) }
   }
 
   // Exclusive, append-only, fsync'd journal: a stale/incomplete attempt blocks reuse.
-  private async receipt(target: Target, operation: string) {
+  private async receipt(target: { readonly path: string; readonly workspace: string | null }, operation: string) {
     await mkdir(this.receiptDir, { recursive: true, mode: 0o700 })
     const dir = await lstat(this.receiptDir)
     if (!dir.isDirectory() || dir.isSymbolicLink() || (dir.mode & 0o077) !== 0) refuse("Receipt directory must be private")
@@ -203,7 +276,7 @@ export class WorktreeManager {
 
   async renew(cwd: string, target: Target, ttl: string, signal?: AbortSignal) {
     if (!/^[1-9][0-9]{0,3}[mhd]$/.test(ttl)) refuse("TTL must be a positive duration such as 7d")
-    const { selected } = await this.target(cwd, target, signal)
+    const { selected } = await this.target(cwd, { kind: "herdr", target }, signal)
     const statuses = await this.statuses(selected, signal)
     if (statuses.some((s) => s.status !== "live")) refuse("All recorded/default/test leases must be live before renewal")
     const receipt = await this.receipt(target, "renew")
@@ -219,21 +292,37 @@ export class WorktreeManager {
   }
 
   async retire(cwd: string, target: Target, confirm: string, deleteBranch = false, signal?: AbortSignal, expectedReleases?: ReadonlyArray<string>, expectedPlan?: string) {
+    return this.retireScope(cwd, { kind: "herdr", target }, confirm, deleteBranch, signal, expectedReleases, expectedPlan)
+  }
+
+  /**
+   * Herdr-free retirement of a `worktree checkout` checkout: same plan token,
+   * clean/primary/current refusals, lease releases and receipts as the Herdr
+   * path, then `git worktree remove` (never --force). The plan token is required.
+   * No agent checks: the caller must not retire a checkout with working sessions.
+   */
+  async retireCheckout(cwd: string, path: string, confirm: string, expectedPlan: string, deleteBranch = false, signal?: AbortSignal) {
+    if (!/^[a-f0-9]{64}$/.test(expectedPlan)) refuse("Run plan first and provide its exact --expect-plan token")
+    return this.retireScope(cwd, { kind: "checkout", path }, confirm, deleteBranch, signal, undefined, expectedPlan)
+  }
+
+  private async retireScope(cwd: string, scope: Scope, confirm: string, deleteBranch: boolean, signal?: AbortSignal, expectedReleases?: ReadonlyArray<string>, expectedPlan?: string) {
+    const target = { path: scopePath(scope), workspace: scope.kind === "herdr" ? scope.target.workspace : null }
     if (confirm !== target.path) refuse("Explicit confirmation must equal the canonical target path")
-    const initial = await this.retirement(cwd, target, signal)
+    const initial = await this.retirement(cwd, scope, signal)
     if (expectedReleases && JSON.stringify([...expectedReleases].sort()) !== JSON.stringify(initial.statuses.filter((s) => s.status !== "none").map((s) => s.name).sort())) refuse("Confirmed release plan changed")
-    if (expectedPlan && expectedPlan !== fingerprint([target, initial.inventory.root, initial.selected.branch, initial.head, initial.statuses])) refuse('Confirmed identity plan changed')
+    if (expectedPlan && expectedPlan !== this.token(scope, initial)) refuse('Confirmed identity plan changed')
     const snapshot = (state: typeof initial) => JSON.stringify([state.selected.branch, state.head, state.selected.leases, state.statuses])
     const receipt = await this.receipt(target, "retire")
     const released: string[] = []
     try {
       await receipt.append('repository', [initial.inventory.root, initial.selected.branch ?? '', initial.head])
       await receipt.append("release-plan", initial.statuses.filter((s) => s.status !== "none").map((s) => `${s.name}:${s.id}`))
-      const fresh = await this.retirement(cwd, target, signal)
+      const fresh = await this.retirement(cwd, scope, signal)
       if (snapshot(fresh) !== snapshot(initial)) refuse("Target/leases changed; inspect receipt")
       for (const lease of fresh.statuses.filter((s) => s.status !== "none")) {
         // Full fresh identity, Git, ALL-agent and remaining-lease checks before each deletion.
-        const before = await this.retirement(cwd, target, signal)
+        const before = await this.retirement(cwd, scope, signal)
         const expectedRemaining = fresh.selected.leases.filter((l) => !released.includes(l.name))
         if (before.head !== initial.head || before.selected.branch !== initial.selected.branch || JSON.stringify(before.selected.leases) !== JSON.stringify(expectedRemaining)) refuse("Lease/branch identity changed; inspect receipt")
         await receipt.append("pending-release", [lease.name, lease.id ?? 'unknown'])
@@ -243,10 +332,16 @@ export class WorktreeManager {
         await receipt.append("released", [lease.name, lease.id ?? 'unknown'])
       }
       await receipt.append("pending-remove")
-      const final = await this.retirement(cwd, target, signal)
+      const final = await this.retirement(cwd, scope, signal)
       if (final.head !== initial.head || final.selected.branch !== initial.selected.branch || final.selected.leases.length || final.statuses.some((s) => s.status !== "none")) refuse("Target changed or leases remain; preserve checkout")
-      await this.command("herdr", ["worktree", "remove", "--workspace", target.workspace], signal)
-      await receipt.append("removed-worktree-and-workspace")
+      if (scope.kind === "herdr") {
+        await this.command("herdr", ["worktree", "remove", "--workspace", scope.target.workspace], signal)
+        await receipt.append("removed-worktree-and-workspace")
+      } else {
+        // Never --force: Git itself refuses modified/untracked or locked checkouts.
+        await this.command("git", ["-C", initial.inventory.root, "worktree", "remove", target.path], signal)
+        await receipt.append("removed-worktree")
+      }
       let branch = "kept"
       if (deleteBranch && initial.selected.branch) {
         await receipt.append("pending-branch-delete", [initial.selected.branch, initial.head])

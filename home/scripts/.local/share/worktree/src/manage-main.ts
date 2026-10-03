@@ -26,9 +26,19 @@ try {
   })
   const command = positionals[0]
   if (values.help) {
-    console.log("worktree-manage list --cwd SOURCE\nworktree-manage plan|renew|retire --cwd SOURCE --path CANONICAL_TARGET --workspace ID\nrenew: --ttl 7d; retire: --confirm CANONICAL_TARGET --expect-plan TOKEN_FROM_PLAN [--delete-branch]\nJSON output only. No automatic retries; inspect ~/.local/state/worktree-manager receipts.")
+    console.log("worktree-manage list --cwd SOURCE\nworktree-manage plan|renew|retire --cwd SOURCE --path CANONICAL_TARGET --workspace ID\nrenew: --ttl 7d; retire: --confirm CANONICAL_TARGET --expect-plan TOKEN_FROM_PLAN [--delete-branch]\nHerdr-free (worktree checkout): worktree-manage plan-checkout --cwd SOURCE --path CANONICAL_TARGET\n  worktree-manage retire-checkout --cwd SOURCE --path CANONICAL_TARGET --confirm CANONICAL_TARGET --expect-plan TOKEN_FROM_PLAN [--delete-branch]\n  No agent checks: the caller must not retire a checkout with working sessions.\nJSON output only. No automatic retries; inspect ~/.local/state/worktree-manager receipts.")
+  } else if (command === "plan-checkout" || command === "retire-checkout") {
+    // Herdr-free: never consults Herdr or HERDR_* identity; explicit source required.
+    if (positionals.length !== 1) throw new ManagerError("Expected exactly one command")
+    if (values.workspace !== undefined || values.ttl !== undefined || values["expect-releases"] !== undefined) throw new ManagerError("Checkout commands take no --workspace, --ttl or --expect-releases")
+    if (!values.cwd || !values.path) throw new ManagerError("Explicit --cwd and exact --path required")
+    if (command === "retire-checkout" && !/^[a-f0-9]{64}$/.test(values["expect-plan"] ?? "")) throw new ManagerError("Run plan-checkout first and provide its exact --expect-plan token")
+    const manager = new WorktreeManager(runner)
+    const result = command === "plan-checkout" ? await manager.planCheckout(values.cwd, values.path, lifetime.signal)
+      : await manager.retireCheckout(values.cwd, values.path, values.confirm ?? "", values["expect-plan"] ?? "", values["delete-branch"] ?? false, lifetime.signal)
+    console.log(JSON.stringify(result))
   } else {
-    if (positionals.length !== 1 || !["list", "plan", "renew", "retire"].includes(command ?? "")) throw new ManagerError("Expected list, plan, renew, or retire")
+    if (positionals.length !== 1 || !["list", "plan", "renew", "retire"].includes(command ?? "")) throw new ManagerError("Expected list, plan, renew, retire, plan-checkout, or retire-checkout")
     if (process.env.HERDR_ENV !== '1') throw new ManagerError('Run inside the intended Herdr pane')
     if (command === 'retire' && !/^[a-f0-9]{64}$/.test(values['expect-plan'] ?? '')) throw new ManagerError('Run plan first and provide its exact --expect-plan token')
     const manager = new WorktreeManager(runner)
