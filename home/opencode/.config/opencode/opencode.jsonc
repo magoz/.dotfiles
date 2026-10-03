@@ -76,6 +76,8 @@
           "family": "claude-opus",
           "capabilities": { "tools": true, "input": ["text", "image", "pdf"], "output": ["text"] },
           "limit": { "context": 1000000, "output": 128000 },
+          // High reasoning by default (root `model` cannot carry a #variant); variants override.
+          "settings": { "thinking": { "type": "adaptive", "display": "summarized" }, "effort": "high" },
           "variants": [
             { "id": "low", "settings": { "thinking": { "type": "adaptive", "display": "summarized" }, "effort": "low" } },
             { "id": "medium", "settings": { "thinking": { "type": "adaptive", "display": "summarized" }, "effort": "medium" } },
