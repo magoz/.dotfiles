@@ -8,14 +8,14 @@
     "build": { "model": "subs-claude/claude-opus-5-5#high" },
     "plan": { "model": "subs-claude/claude-opus-5-5#high" }
   },
-  // Same local CLIProxyAPI gateway as Pi's subs-codex (~/.pi/agent/models.json).
+  // Same CLIProxyAPI gateway (https://subs.oox.sh) as Pi's subs-codex (~/.pi/agent/models.json).
   // The key is a saved OpenCode account, never this file:
   //   opencode auth login subs-codex --method key   (paste the gateway key)
   "providers": {
     "subs-codex": {
       "name": "Subs Codex",
       "package": "@opencode/ai/providers/openai/responses",
-      "settings": { "baseURL": "http://127.0.0.1:8317/v1" },
+      "settings": { "baseURL": "https://subs.oox.sh/v1" },
       // Mirrors the built-in openai catalog entries (capabilities, limits, variants).
       "models": {
         "gpt-6-astra": {
@@ -60,11 +60,11 @@
         }
       }
     },
-    // Same local CLIProxyAPI Claude pool as Pi's subs-claude. Key is a saved account:
+    // Same CLIProxyAPI Claude pool as Pi's subs-claude. Key is a saved account:
     //   opencode auth login subs-claude --method key   (paste the gateway key)
     // Fail closed: baseURL is an unreachable sentinel. The gateway plugin
     // (plugins/opencode-anthropic-auth/gateway) shapes each request, then re-targets it
-    // to http://127.0.0.1:8317/v1; without the plugin requests fail, never go unshaped.
+    // to https://subs.oox.sh/v1; without the plugin requests fail, never go unshaped.
     "subs-claude": {
       "name": "Subs Claude",
       "package": "@opencode/ai/providers/anthropic",

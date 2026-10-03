@@ -1,6 +1,7 @@
 # subs-claude gateway plugin
 
-Content-only shaping for `subs-claude` (local CLIProxyAPI Claude pool), OpenCode
+Content-only shaping for `subs-claude` (CLIProxyAPI Claude pool at
+`https://subs.oox.sh`), OpenCode
 port of Pi's `extensions/anthropic-auth` gateway mode. The gateway adds Claude
 Code identity, billing, betas, user-agent, system relocation and tool aliases;
 this plugin adds none of them.
@@ -33,8 +34,9 @@ would silently drop gateway shaping.
 (nothing listens). Shaping errors throw and leave that URL, so the request fails.
 Without the plugin requests fail with a transport error after OpenCode's retries
 (~80 s, "socket connection was closed unexpectedly"): check the plugin loaded.
-`OPENCODE_SUBS_CLAUDE_GATEWAY_ORIGIN` overrides the origin (loopback only; default
-`http://127.0.0.1:8317`) for isolated tests.
+The default origin is `https://subs.oox.sh`. `OPENCODE_SUBS_CLAUDE_GATEWAY_ORIGIN`
+overrides it for isolated tests; it must be a bare loopback origin or exactly
+`https://subs.oox.sh` (exact-origin allowlist, no subdomains/ports/paths).
 
 ## Not removable here
 

@@ -1,5 +1,5 @@
 // Gateway (`subs-claude`) mode: content-only request shaping for Anthropic
-// Messages requests routed through the local CLIProxyAPI Claude pool.
+// Messages requests routed through the CLIProxyAPI Claude pool (Subs gateway).
 // OpenCode port of Pi's `home/pi/.pi/agent/extensions/anthropic-auth`
 // (`shapeAnthropicContentPayload`). The gateway owns Claude Code identity,
 // billing, betas, user-agent, system relocation and tool aliases, so nothing
@@ -15,8 +15,11 @@ export const ANTHROPIC_GATEWAY_PROVIDERS = Object.freeze(["subs-claude"]);
 // never send an unshaped body.
 export const SENTINEL_ORIGIN = "http://127.0.0.1:9";
 export const SENTINEL_PREFIX = "/subs-claude-unshaped";
-export const DEFAULT_GATEWAY_ORIGIN = "http://127.0.0.1:8317";
+export const DEFAULT_GATEWAY_ORIGIN = "https://subs.oox.sh";
 const LOOPBACK_HOSTS = Object.freeze(["127.0.0.1", "localhost", "[::1]"]);
+// Exact non-loopback gateway origins (compared against the normalized
+// `URL.origin`, so scheme, host and port must all match; no suffix matching).
+export const ALLOWED_GATEWAY_ORIGINS = Object.freeze(["https://subs.oox.sh"]);
 
 // Each anchor is OpenCode-authored text; project/user content is never
 // rewritten by generic brand replacement (Pi parity: preserve project context).
@@ -279,7 +282,12 @@ export function stripHarnessHeaders(headers) {
   return headers;
 }
 
-/** Validate the real gateway origin: loopback http(s) only, no path. */
+/**
+ * Validate the real gateway origin. It must be a bare origin (no path,
+ * search, hash or userinfo) that is either a loopback http(s) origin (tests and
+ * `OPENCODE_SUBS_CLAUDE_GATEWAY_ORIGIN` overrides) or exactly one of
+ * ALLOWED_GATEWAY_ORIGINS (`https://subs.oox.sh`, default port only).
+ */
 export function parseGatewayOrigin(value = DEFAULT_GATEWAY_ORIGIN) {
   let url;
   try {
@@ -287,15 +295,16 @@ export function parseGatewayOrigin(value = DEFAULT_GATEWAY_ORIGIN) {
   } catch {
     throw new GatewayShapingError(`invalid gateway origin ${JSON.stringify(value)}`);
   }
-  if (
-    (url.protocol !== "http:" && url.protocol !== "https:") ||
-    !LOOPBACK_HOSTS.includes(url.hostname) ||
-    url.pathname !== "/" ||
-    url.search ||
-    url.username ||
-    url.password
-  ) {
-    throw new GatewayShapingError(`gateway origin must be a bare loopback origin, got ${value}`);
+  const bare =
+    url.pathname === "/" && !url.search && !url.hash && !url.username && !url.password;
+  const loopback =
+    (url.protocol === "http:" || url.protocol === "https:") &&
+    LOOPBACK_HOSTS.includes(url.hostname);
+  const allowlisted = ALLOWED_GATEWAY_ORIGINS.includes(url.origin);
+  if (!bare || !(loopback || allowlisted)) {
+    throw new GatewayShapingError(
+      `gateway origin must be a bare loopback origin or one of ${ALLOWED_GATEWAY_ORIGINS.join(", ")}, got ${value}`,
+    );
   }
   return url.origin;
 }

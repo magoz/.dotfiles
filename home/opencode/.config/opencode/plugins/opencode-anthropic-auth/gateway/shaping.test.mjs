@@ -245,12 +245,34 @@ test("fails closed on unparseable or non-Messages bodies", () => {
 });
 
 test("gateway origin is validated and sentinel URLs map to it", () => {
-  assert.equal(parseGatewayOrigin(), DEFAULT_GATEWAY_ORIGIN);
+  assert.equal(DEFAULT_GATEWAY_ORIGIN, "https://subs.oox.sh");
+  assert.equal(parseGatewayOrigin(), "https://subs.oox.sh");
+  assert.equal(parseGatewayOrigin("https://subs.oox.sh"), "https://subs.oox.sh");
+  assert.equal(parseGatewayOrigin("https://subs.oox.sh/"), "https://subs.oox.sh");
   assert.equal(parseGatewayOrigin("http://localhost:18555"), "http://localhost:18555");
-  for (const bad of ["https://api.anthropic.com", "http://example.com", "http://127.0.0.1:8317/v1", "nope"]) {
+  assert.equal(parseGatewayOrigin("http://127.0.0.1:8317"), "http://127.0.0.1:8317");
+  for (const bad of [
+    "https://api.anthropic.com",
+    "http://example.com",
+    "http://127.0.0.1:8317/v1",
+    "nope",
+    "http://subs.oox.sh",
+    "https://subs.oox.sh:444",
+    "https://subs.oox.sh:8317",
+    "https://evil.subs.oox.sh",
+    "https://subs.oox.sh.evil.com",
+    "https://subs.oox.sh.",
+    "https://oox.sh",
+    "https://subs.oox.sh/v1",
+    "https://subs.oox.sh/?x=1",
+    "https://subs.oox.sh/#frag",
+    "https://user:pass@subs.oox.sh",
+    "https://user@subs.oox.sh",
+    "wss://subs.oox.sh",
+  ]) {
     assert.throws(() => parseGatewayOrigin(bad), GatewayShapingError, bad);
   }
-  assert.equal(gatewayURL(SENTINEL_URL, DEFAULT_GATEWAY_ORIGIN), "http://127.0.0.1:8317/v1/messages");
+  assert.equal(gatewayURL(SENTINEL_URL, DEFAULT_GATEWAY_ORIGIN), "https://subs.oox.sh/v1/messages");
   assert.equal(
     gatewayURL("http://127.0.0.1:9/subs-claude-unshaped/v1/messages?beta=true", "http://127.0.0.1:18555"),
     "http://127.0.0.1:18555/v1/messages?beta=true",
@@ -310,7 +332,7 @@ test("http hook: every kind is shaped", async () => {
   for (const kind of ["primary", "compaction", "title", "generate"]) {
     const event = httpEvent({ kind });
     await shapeGatewayHttpRequest(event);
-    assert.equal(event.request.url, "http://127.0.0.1:8317/v1/messages");
+    assert.equal(event.request.url, "https://subs.oox.sh/v1/messages");
     assert.doesNotMatch(await event.request.text(), /running in OpenCode/);
   }
 });
@@ -336,6 +358,11 @@ test("http hook: fails closed and leaves the sentinel request in place", async (
   const badOrigin = httpEvent();
   await assert.rejects(shapeGatewayHttpRequest(badOrigin, { gatewayOrigin: "https://api.anthropic.com" }), GatewayShapingError);
   assert.equal(badOrigin.request.url, SENTINEL_URL);
+  for (const gatewayOrigin of ["http://subs.oox.sh", "https://evil.subs.oox.sh", "https://subs.oox.sh.evil.com"]) {
+    const event = httpEvent();
+    await assert.rejects(shapeGatewayHttpRequest(event, { gatewayOrigin }), GatewayShapingError, gatewayOrigin);
+    assert.equal(event.request.url, SENTINEL_URL);
+  }
   await assert.rejects(
     shapeGatewayHttpRequest({ model: { providerID: "subs-claude" }, request: {} }),
     GatewayShapingError,
@@ -348,7 +375,7 @@ test("http hook: bodyless requests are re-targeted without a body", async () => 
     request: new Request("http://127.0.0.1:9/subs-claude-unshaped/v1/models", { headers: { "x-opencode-client": "cli" } }),
   };
   await shapeGatewayHttpRequest(event);
-  assert.equal(event.request.url, "http://127.0.0.1:8317/v1/models");
+  assert.equal(event.request.url, "https://subs.oox.sh/v1/models");
   assert.equal(event.request.body, null);
   assert.equal(event.request.headers.has("x-opencode-client"), false);
 });
