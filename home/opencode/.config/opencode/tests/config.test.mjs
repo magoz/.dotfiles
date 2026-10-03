@@ -27,6 +27,8 @@ test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', asy
     await access(new URL(`${entry.package}/tui.js`, root));
   }
   assert.ok(cli.plugins.includes('-ocv-plugin'));
+  // Fleet replaces the session sidebar's content; 'auto' shows it when the terminal is wide enough.
+  assert.equal(cli.session.sidebar, 'auto');
   // Fleet is auto-discovered from plugins/fleet; its entry imports only host-provided modules.
   const fleet = await read('plugins/fleet/tui.js');
   assert.deepEqual([...fleet.matchAll(/from '([^']+)'/g)].map((m) => m[1]), ['@opentui/solid', 'solid-js', './view.js']);
