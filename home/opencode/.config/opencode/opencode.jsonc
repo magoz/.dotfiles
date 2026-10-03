@@ -3,10 +3,10 @@
   "update": "disable",
   // Assessment baseline: native provider limits, native compaction, no Pi changes.
   "compaction": { "auto": true },
-  "model": "openai/gpt-6-astra",
+  "model": "subs-claude/claude-opus-5-5",
   "agents": {
-    "build": { "model": "openai/gpt-6-astra#high" },
-    "plan": { "model": "openai/gpt-6-astra#high" }
+    "build": { "model": "subs-claude/claude-opus-5-5#high" },
+    "plan": { "model": "subs-claude/claude-opus-5-5#high" }
   },
   // Same local CLIProxyAPI gateway as Pi's subs-codex (~/.pi/agent/models.json).
   // The key is a saved OpenCode account, never this file:

@@ -7,8 +7,8 @@ const read = (path) => readFile(new URL(path, root), 'utf8');
 const config = JSON.parse((await read('opencode.jsonc')).replace(/^\s*\/\/.*$/gm, ''));
 test('OpenCode assessment uses native compaction/models and explicit shared skill precedence', () => {
   assert.equal(config.compaction.auto, true);
-  assert.equal(config.model, 'openai/gpt-6-astra');
-  assert.equal(config.agents.build.model, 'openai/gpt-6-astra#high');
+  assert.equal(config.model, 'subs-claude/claude-opus-5-5');
+  assert.equal(config.agents.build.model, 'subs-claude/claude-opus-5-5#high');
   assert.equal(config.agents.build.system, undefined);
   assert.equal(config.skills[0], '~/.config/opencode/shared-skills');
   assert.ok(!JSON.stringify(config).includes('/Users/'));

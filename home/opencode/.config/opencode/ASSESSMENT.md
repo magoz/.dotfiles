@@ -23,7 +23,8 @@ No Pi credentials/sessions are imported and no Pi extension is required by OpenC
 | Compaction/search/questions/MCP | Native V2; executor MCP uses native Code Mode |
 | Claude pool (`subs-claude`) | CLIProxyAPI gateway; `opencode-anthropic-auth/gateway` shapes requests (Pi parity), fails closed via sentinel baseURL |
 
-Astra variants: build/plan/general/reviewer high, explore low, web research medium.
+Default model: `subs-claude/claude-opus-5-5` (build/plan `#high`). Child roles stay on Astra:
+general/reviewer high, explore low, web research medium.
 Read-only children deny all actions except their explicit read/search allowlists;
 children cannot delegate. Pi acceptance/intercom/fork parameters are not emulated.
 Parent owns verification, frozen evidence, mutation ownership and synthesis.
