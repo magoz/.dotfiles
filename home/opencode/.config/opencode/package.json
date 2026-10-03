@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test:native": "python3 tests/native-smoke.py",
-    "test": "node --test tests/*.test.mjs plugins/opencode-anthropic-auth/index.test.mjs plugins/opencode-anthropic-auth/gateway/*.test.mjs plugins/dotfiles-tools/test/*.test.js plugins/skill-adapters/*.test.js plugins/subscription-usage/*.test.js plugins/fleet/*.test.js && bun test plugins/worktree-manager/tui.test.js"
+    "test:worktrees-integration": "node plugins/worktrees/test/integration.mjs",
+    "test": "node --test tests/*.test.mjs plugins/opencode-anthropic-auth/index.test.mjs plugins/opencode-anthropic-auth/gateway/*.test.mjs plugins/dotfiles-tools/test/*.test.js plugins/skill-adapters/*.test.js plugins/subscription-usage/*.test.js plugins/fleet/*.test.js plugins/worktrees/test/*.test.js && bun test plugins/worktree-manager/tui.test.js"
   },
   "dependencies": {
     "@effect/platform": "^0.96.0",

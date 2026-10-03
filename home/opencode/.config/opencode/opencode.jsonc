@@ -96,7 +96,10 @@
     "./plugins/dotfiles-tools",
     "./plugins/herdr-opencode",
     "./plugins/skill-adapters",
-    "./plugins/subscription-usage"
+    "./plugins/subscription-usage",
+    // Native worktree strategy `dotfiles`: provisioned sibling checkouts (worktree checkout),
+    // Herdr-free retirement (worktree-manage). See plugins/worktrees/README.md.
+    "./plugins/worktrees"
   ],
   // Explicit shared source comes after old OpenCode skill copies. Runtime
   // adapters below change only OpenCode's view, never the shared files.
