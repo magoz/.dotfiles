@@ -129,7 +129,7 @@ if [[ -f /etc/arch-release && $EUID -ne 0 ]]; then
   [[ $(git config --global credential.helper) == keep-existing-helper ]]
   [[ $(git config --global core.excludesFile) == "$REPO_ROOT/home/git/.config/git/ignore" ]]
   [[ $(git config --global pull.ff) == only ]]
-  grep -Fq 'npm install --global --ignore-scripts @earendil-works/pi-coding-agent' "$ARCH_TEST_LOG"
+  grep -Fqx 'npm install --global --ignore-scripts @earendil-works/pi-coding-agent@1.0.0' "$ARCH_TEST_LOG"
   grep -Fq 'npm uninstall --global --ignore-scripts @opencode-ai/cli' "$ARCH_TEST_LOG"
   grep -Fq 'npm install --global --allow-scripts=@opencode/cli @opencode/cli' "$ARCH_TEST_LOG"
   uninstall_line=$(grep -nFx 'npm uninstall --global --ignore-scripts @opencode-ai/cli' "$ARCH_TEST_LOG" | cut -d: -f1)

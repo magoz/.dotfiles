@@ -168,7 +168,7 @@ leaves the previously working identity intact.
   If this extension is explicitly included, lifecycle/command/prompt handlers ignore
   pi-subagents' leading `<active_agent name="…"/>` system-prompt tag. Copied/forked
   selection entries cannot activate a primary identity there.
-- These integration assumptions were checked against pi-subagents **0.68.0**.
+- These integration assumptions were checked against pi-subagents **0.75.0**.
   Recheck its child-launch contract when upgrading; arbitrary third-party runners
   are outside this extension's scope. Do not add primary-agent to worker extensions.
 - The entrypoint only registers handlers. One cached import loads the small runtime

@@ -1,9 +1,9 @@
 import type {
 	Api,
 	AssistantMessageEventStream,
-	Context,
 	Model,
 	SimpleStreamOptions,
+	TranscriptContext,
 } from "@earendil-works/pi-ai";
 import {
 	getClaudeCodeVersion,
@@ -13,7 +13,7 @@ import {
 
 export type AnthropicStream = (
 	model: Model<Api>,
-	context: Context,
+	context: TranscriptContext,
 	options?: SimpleStreamOptions,
 ) => AssistantMessageEventStream;
 

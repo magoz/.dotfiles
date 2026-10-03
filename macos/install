@@ -169,7 +169,8 @@ export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
 
 # Install Pi before stowing its configuration.
 echo "🥧 Installing Pi"
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+# Pin Pi: pi-subagents and local extensions must be verified before each upgrade.
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.0.0
 
 # Borders
 brew tap FelixKratz/formulae

@@ -3,7 +3,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 type Runtime = ReturnType<typeof import("./src/runtime.ts").createRuntime>;
 
 // Background runners mark their process. Foreground SDK children instead carry
-// pi-subagents' active_agent tag in their custom system prompt (0.68.x).
+// pi-subagents' active_agent tag in their custom system prompt (0.75.x).
 function isChild(ctx: ExtensionContext): boolean {
   return ctx.getSystemPrompt().trimStart().startsWith("<active_agent ");
 }

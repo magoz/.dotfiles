@@ -334,19 +334,20 @@ test("real SDK loader and command dispatch preserve identity/model independence 
     const runner = session.extensionRunner;
     assert.ok(runner.getCommand("agent"));
     const original = { id: session.sessionId, model: session.model, thinking: session.thinkingLevel, tools: session.getActiveToolNames(), messages: session.messages };
-    const render = () => runner.emitBeforeAgentStart("test without a model call", undefined, session.systemPrompt, { cwd: f.dir });
+    // Pi 1.0 reports a handler-returned systemPrompt as forceSystemPrompt.
+    const render = async () => (await runner.emitBeforeAgentStart("test without a model call", undefined, { cwd: f.dir, customPrompt: session.systemPrompt })).systemPromptOptions.forceSystemPrompt;
     if (child) {
       const entries = manager.getEntries().length;
       await session.prompt("/agent coding");
       assert.equal(await render(), undefined);
       assert.equal(manager.getEntries().length, entries);
     } else {
-      assert.match((await render())!.systemPrompt!, /name="coding"/);
+      assert.match((await render())!, /name="coding"/);
       await session.prompt("/agent other");
-      assert.match((await render())!.systemPrompt!, /name="other"/);
+      assert.match((await render())!, /name="other"/);
       const differentModel = modelRuntime.getModel("openai", "gpt-5-mini")!;
       await session.setModel(differentModel);
-      assert.match((await render())!.systemPrompt!, /name="other"/, "manual model selection keeps identity");
+      assert.match((await render())!, /name="other"/, "manual model selection keeps identity");
       await session.prompt("/agent clear");
       assert.equal(session.model, differentModel, "clear does not restore a captured model");
       assert.equal(await render(), undefined);

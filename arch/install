@@ -54,7 +54,8 @@ if [[ $(npm --version) != 11.16.0 ]]; then
   hash -r
 fi
 [[ $(npm --version) == 11.16.0 ]] || { printf 'error: npm 11.16.0 is required\n' >&2; exit 1; }
-npm install --global --ignore-scripts @earendil-works/pi-coding-agent
+# Pin Pi: pi-subagents and local extensions must be verified before each upgrade.
+npm install --global --ignore-scripts @earendil-works/pi-coding-agent@1.0.0
 # Stable V2 owns both opencode and opencode2; remove the old preview first.
 npm uninstall --global --ignore-scripts @opencode-ai/cli
 npm install --global --allow-scripts=@opencode/cli @opencode/cli

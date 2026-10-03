@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { SimpleStreamOptions } from "@earendil-works/pi-ai";
+import { normalizeContext, type SimpleStreamOptions } from "@earendil-works/pi-ai";
 import {
 	getClaudeCodeVersion,
 	shapeAnthropicContentPayload,
@@ -13,6 +13,7 @@ import {
 	createAnthropicOAuthStream,
 } from "./transport.ts";
 
+const emptyContext = normalizeContext({ messages: [] });
 const piPrompt = `You are an expert coding assistant operating inside pi, a coding agent harness. You help users.
 
 Available tools:
@@ -107,7 +108,7 @@ const model = { id: "claude-opus-5-5", api: "anthropic-messages", provider: "sub
 test("gateway stream: no header changes, content fixes on payload", async () => {
 	const { calls, delegate } = recordingDelegate();
 	const headers = { "user-agent": "pi/1", "x-custom": "1" };
-	createAnthropicGatewayStream(delegate)(model, { messages: [] }, { apiKey: "gateway-key", headers });
+	createAnthropicGatewayStream(delegate)(model, emptyContext, { apiKey: "gateway-key", headers });
 
 	const [options] = calls;
 	assert.equal(options.headers, headers);
@@ -124,7 +125,7 @@ test("gateway stream: no header changes, content fixes on payload", async () => 
 test("gateway stream: applies regardless of credential shape", async () => {
 	for (const apiKey of ["sk-ant-oat-looks-like-oauth", "sk-ant-api-key", undefined]) {
 		const { calls, delegate } = recordingDelegate();
-		createAnthropicGatewayStream(delegate)(model, { messages: [] }, { apiKey });
+		createAnthropicGatewayStream(delegate)(model, emptyContext, { apiKey });
 		assert.equal(calls[0].headers, undefined);
 		const input = payload(piPrompt, []);
 		assert.deepEqual(await calls[0].onPayload?.(input, model), shapeAnthropicContentPayload(input));
@@ -135,7 +136,7 @@ test("gateway stream: honors the caller onPayload hook", async () => {
 	const { calls, delegate } = recordingDelegate();
 	const seen: unknown[] = [];
 	const replacement = payload(piPrompt, [{ role: "user", content: "Replaced" }]);
-	createAnthropicGatewayStream(delegate)(model, { messages: [] }, {
+	createAnthropicGatewayStream(delegate)(model, emptyContext, {
 		onPayload: async (received, receivedModel) => {
 			seen.push(received, receivedModel);
 			return replacement;
@@ -147,7 +148,7 @@ test("gateway stream: honors the caller onPayload hook", async () => {
 	assert.deepEqual(output, shapeAnthropicContentPayload(replacement));
 
 	const passthrough = recordingDelegate();
-	createAnthropicGatewayStream(passthrough.delegate)(model, { messages: [] }, {
+	createAnthropicGatewayStream(passthrough.delegate)(model, emptyContext, {
 		onPayload: () => undefined,
 	});
 	const piInput = payload(piPrompt, []);
@@ -159,7 +160,7 @@ test("gateway stream: honors the caller onPayload hook", async () => {
 
 test("anthropic stream: OAuth overrides user-agent, API key leaves request untouched", async () => {
 	const oauth = recordingDelegate();
-	createAnthropicOAuthStream(oauth.delegate)(model, { messages: [] }, {
+	createAnthropicOAuthStream(oauth.delegate)(model, emptyContext, {
 		apiKey: "sk-ant-oat-test",
 		headers: { "User-Agent": "pi/1", "x-custom": "1" },
 	});
@@ -167,7 +168,7 @@ test("anthropic stream: OAuth overrides user-agent, API key leaves request untou
 
 	const apiKey = recordingDelegate();
 	const headers = { "user-agent": "pi/1" };
-	createAnthropicOAuthStream(apiKey.delegate)(model, { messages: [] }, { apiKey: "sk-ant-api-test", headers });
+	createAnthropicOAuthStream(apiKey.delegate)(model, emptyContext, { apiKey: "sk-ant-api-test", headers });
 	assert.equal(apiKey.calls[0].headers, headers);
 	const input = payload(piPrompt, [invalidAssistant]);
 	assert.equal(await apiKey.calls[0].onPayload?.(input, model), input);
