@@ -4,6 +4,25 @@ vim.opt.mouse = "a" -- allow the mouse to be used in neovim
 vim.opt.termguicolors = true -- set term gui colors (most terminals support this)
 vim.opt.clipboard = "unnamedplus" -- allows neovim to access the system clipboard
 
+-- Headless hosts (e.g. the Box over SSH/Herdr) have no native clipboard tool,
+-- so copy through OSC 52 to the local terminal. Herdr ignores OSC 52 reads,
+-- so paste from Neovim's own register; use the terminal's paste for outside text.
+local has_native_clipboard = vim.fn.has("mac") == 1
+  or vim.fn.executable("wl-copy") == 1
+  or vim.fn.executable("xclip") == 1
+  or vim.fn.executable("xsel") == 1
+if not has_native_clipboard then
+  local osc52 = require("vim.ui.clipboard.osc52")
+  local function paste()
+    return { vim.fn.split(vim.fn.getreg(""), "\n"), vim.fn.getregtype("") }
+  end
+  vim.g.clipboard = {
+    name = "OSC 52",
+    copy = { ["+"] = osc52.copy("+"), ["*"] = osc52.copy("*") },
+    paste = { ["+"] = paste, ["*"] = paste },
+  }
+end
+
 -- Navigation
 vim.opt.scrolloff = 8 -- start scrolling before the cursor goes to the edge
 vim.opt.sidescrolloff = 8 -- horizontal scroll
