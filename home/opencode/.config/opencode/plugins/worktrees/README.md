@@ -19,10 +19,15 @@ Contract checked against `~/dev/repos/opencode` (v2): `packages/plugin/src/workt
 
 Everything runs **inside `opencode.service` on Box** (user unit, `zsh -lc 'exec opencode
 serve --service'`, cwd `$HOME`), not in a pane. Child processes get the plugin process's
-own environment with every `HERDR_*` variable removed (`dotfiles-tools/process.js`
-`withoutPaneEnv`): the server's Herdr identity is never trusted. Subprocesses are argv
-only (no shell), detached process groups, SIGTERM then a referenced grace and group
-SIGKILL on cancel/timeout (`runProcess`, reused from `../dotfiles-tools/process.js`).
+own environment with every `HERDR_*` variable removed (`withoutPaneEnv`): the server's
+Herdr identity is never trusted. Subprocesses are argv only (no shell), detached process
+groups, SIGTERM then a grace and group SIGKILL on interruption/timeout (`runProcess` in
+`../shared/process.ts`).
+
+The plugin is an OpenCode Effect plugin (`server.ts`; shared deps in `../package.json`): the
+strategy's `create`/`remove`/`list` are Effects, so cancelling an OpenCode worktree operation
+interrupts the CLI and reaps its process group. CLI output is decoded with Effect Schema;
+only sanitized, reported values reach errors.
 
 | Strategy call | Command | Bound |
 | --- | --- | --- |
@@ -78,7 +83,7 @@ Names must match `^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$`; `--` segments must be non
 and must not start or end with `-`. The CLI then checks `git check-ref-format --branch`.
 
 **Fleet must send `name = branch.replaceAll('/', '--')`** — for branch `feat/x`, send
-`name: "feat--x"`. Reference implementation: `branchToName` in `naming.js`, which throws
+`name: "feat--x"`. Reference implementation: `branchToName` in `naming.ts`, which throws
 for branches with no exact encoding (no `/`, a segment containing `--`, or a segment
 starting/ending with `-`). Never send `/` in `name`. Never rely on rules 2–3 for an
 exact branch. The branch must not already exist (the CLI refuses before allocating);

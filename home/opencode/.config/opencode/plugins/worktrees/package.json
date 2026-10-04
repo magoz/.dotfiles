@@ -1,12 +1,10 @@
 {
   "name": "worktrees",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./server.js",
-    "./server": "./server.js"
-  },
-  "scripts": { "test": "node --test test/*.test.js" },
-  "engines": { "node": ">=22" }
+    ".": "./server.ts",
+    "./server": "./server.ts"
+  }
 }

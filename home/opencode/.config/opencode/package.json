@@ -5,7 +5,7 @@
     "sync:agents": "node scripts/sync-agents.mjs",
     "test:native": "python3 tests/native-smoke.py",
     "test:worktrees-integration": "node plugins/worktrees/test/integration.mjs",
-    "test": "npm run typecheck --prefix plugins && node --test tests/*.test.mjs plugins/opencode-anthropic-auth/index.test.mjs plugins/opencode-anthropic-auth/gateway/*.test.mjs plugins/dotfiles-tools/test/*.test.js plugins/until/test/*.test.ts plugins/until/test/*.test.js plugins/skill-commands/*.test.ts plugins/subscription-usage/*.test.ts plugins/subscription-usage/*.test.js plugins/fleet/*.test.js plugins/worktrees/test/*.test.js && bun test plugins/worktree-manager/tui.test.js"
+    "test": "npm run typecheck --prefix plugins && node --test tests/*.test.mjs plugins/opencode-anthropic-auth/index.test.mjs plugins/opencode-anthropic-auth/gateway/*.test.mjs plugins/dotfiles-tools/test/*.test.js plugins/until/test/*.test.ts plugins/until/test/*.test.js plugins/skill-commands/*.test.ts plugins/subscription-usage/*.test.ts plugins/subscription-usage/*.test.js plugins/fleet/*.test.js plugins/worktrees/test/*.test.ts plugins/shared/*.test.ts && bun test plugins/worktree-manager/tui.test.js"
   },
   "dependencies": {
     "@effect/platform": "^0.96.0",

@@ -25,6 +25,8 @@
     "skill-commands/*.ts",
     "subscription-usage/*.ts",
     "until/*.ts",
-    "until/test/*.ts"
+    "until/test/*.ts",
+    "worktrees/*.ts",
+    "worktrees/test/*.ts"
   ]
 }

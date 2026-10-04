@@ -12,7 +12,7 @@ Local OpenCode runtime plugins.
 - `until`: Effect plugin (TS, own `effect` pinned to the host's; host-validated schemas must be `portable()`), pi-until parity (same tool contract): durable session watches/recurring wakes in plugin storage; no consent prompt, gated by `shell`; subagent watches belong to and wake the family root; composer dock + `/until*`.
 - `herdr-opencode`: unchanged vendored V12; preserve provenance.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.
-- `worktrees`: server worktree strategy `dotfiles` (Herdr-free `worktree checkout` + `retire-checkout`); `name` `feat--x` → branch `feat/x`; owns only checkouts with the private-git-dir `dotfiles-worktree` marker.
+- `worktrees`: Effect server worktree strategy `dotfiles` (Herdr-free `worktree checkout` + `retire-checkout`); `name` `feat--x` → branch `feat/x`; owns only checkouts with the private-git-dir `dotfiles-worktree` marker.
 - `skill-commands`: Effect plugin; registers `/<id>` for shared skills with `metadata.opencode/slash: "true"`; runs as a skill-attached prompt.
 - `subscription-usage`: Effect server (credential resolution, bounded cached fetch), sanitized on-demand TUI output.
 - `fleet`: auto-discovered TUI-only Fleet client of `fleet.oox.sh` (sidebar, launcher, handled/undo via Fleet's JSON routes with `Origin`).

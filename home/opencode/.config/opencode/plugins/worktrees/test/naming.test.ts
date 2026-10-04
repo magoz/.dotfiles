@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { branchFromName, branchToName } from '../naming.js';
+import { branchFromName, branchToName } from '../naming.ts';
 
 test('`--` is the exact, reversible branch separator Fleet uses', () => {
-  for (const [name, branch] of [
+  const pairs: ReadonlyArray<readonly [string, string]> = [
     ['feat--x', 'feat/x'],
     ['fix--api--retry-2', 'fix/api/retry-2'],
     ['magoz--spike', 'magoz/spike'],
     ['feat--v1.2_x', 'feat/v1.2_x'],
-  ]) {
+  ];
+  for (const [name, branch] of pairs) {
     assert.equal(branchFromName(name), branch);
     assert.equal(branchToName(branch), name);
   }
@@ -25,10 +26,10 @@ test('names without `--`: conventional type prefix, otherwise feat/', () => {
 });
 
 test('invalid names and branches without an exact encoding are refused', () => {
-  for (const name of ['', '-x', 'feat---x', 'feat--', '--x', 'a/b', 'a b', 'ü', 'x'.repeat(121), undefined]) {
+  for (const name of ['', '-x', 'feat---x', 'feat--', '--x', 'a/b', 'a b', 'ü', 'x'.repeat(121)]) {
     assert.throws(() => branchFromName(name), /Invalid worktree name/);
   }
-  for (const branch of ['feat', 'feat-x', 'feat//x', 'feat/a--b', 'feat/-x', '', undefined]) {
+  for (const branch of ['feat', 'feat-x', 'feat//x', 'feat/a--b', 'feat/-x', '']) {
     assert.throws(() => branchToName(branch), /no exact worktree name encoding/);
   }
 });
