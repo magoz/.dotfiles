@@ -19,10 +19,10 @@ home/nvim/.config/nvim/plugin/packer_compiled.lua
 home/zsh/.config/zsh/.zcompcache
 
 # opencode
-home/opencode/.config/opencode/node_modules/
+home/opencode/.config/opencode/node_modules
 home/opencode/.config/opencode/bin/
-home/opencode/.config/opencode/plugins/node_modules/
-home/opencode/.config/opencode/plugins/*/node_modules/
+home/opencode/.config/opencode/plugins/node_modules
+home/opencode/.config/opencode/plugins/*/node_modules
 home/opencode/.config/opencode/service.json
 home/opencode/.config/opencode/service-*.json
 
@@ -36,13 +36,13 @@ home/pi/.pi/agent/npm/
 home/pi/.pi/agent/sessions/
 home/pi/.pi/agent/trust.json
 home/pi/.pi/agent/*.log
-home/pi/.pi/node_modules/
-home/pi/.pi/agent/extensions/**/node_modules/
+home/pi/.pi/node_modules
+home/pi/.pi/agent/extensions/**/node_modules
 
 
 # local Effect CLIs (deps are installed locally, not vendored)
-home/scripts/.local/share/sandbox-db/node_modules/
-home/scripts/.local/share/worktree/node_modules/
+home/scripts/.local/share/sandbox-db/node_modules
+home/scripts/.local/share/worktree/node_modules
 
 # vim temp files
 *.swp

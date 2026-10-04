@@ -50,13 +50,15 @@ test("zai normalizer parses live CREDIT_LIMIT and legacy TOKENS_LIMIT windows on
   assert.deepEqual(windows("zai", { data: { limits: [{ type: "CREDIT_LIMIT", unit: 6, percentage: -20 }] } }, 0), [{ label: "7d", left: 100, reset: undefined }])
 })
 
-test("only supported official origins or the explicit local Claude adapter", () => {
-  assert.equal(allowedOrigin("openai", { settings: { baseURL: "https://evil.invalid" } }, {}), false)
-  assert.equal(allowedOrigin("openai", { settings: { baseURL: "https://user:secret@api.openai.com" } }, {}), false)
-  assert.equal(allowedOrigin("anthropic", { settings: { baseURL: "http://127.0.0.1:123/random/v1" } }, { methodID: "claude-pro-max" }), true)
-  assert.equal(allowedOrigin("zai", { settings: { baseURL: "https://proxy.example" } }, {}), false)
-  assert.equal(allowedOrigin("zai", { settings: { baseURL: "https://api.z.ai/api/coding/paas/v4" } }, {}), true)
-  assert.equal(allowedOrigin("subs-claude", undefined, {}), false)
+test("only supported official origins", () => {
+  assert.equal(allowedOrigin("openai", { settings: { baseURL: "https://evil.invalid" } }), false)
+  assert.equal(allowedOrigin("openai", { settings: { baseURL: "https://user:secret@api.openai.com" } }), false)
+  // The removed direct-login plugin's loopback adapter is no longer an allowed origin.
+  assert.equal(allowedOrigin("anthropic", { settings: { baseURL: "http://127.0.0.1:123/random/v1" } }), false)
+  assert.equal(allowedOrigin("anthropic", { settings: { baseURL: "https://api.anthropic.com/v1" } }), true)
+  assert.equal(allowedOrigin("zai", { settings: { baseURL: "https://proxy.example" } }), false)
+  assert.equal(allowedOrigin("zai", { settings: { baseURL: "https://api.z.ai/api/coding/paas/v4" } }), true)
+  assert.equal(allowedOrigin("subs-claude", undefined), false)
 })
 
 interface Fake extends Lookups<Connection> {

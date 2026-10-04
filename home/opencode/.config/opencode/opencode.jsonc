@@ -63,7 +63,7 @@
     // Same CLIProxyAPI Claude pool as Pi's subs-claude. Key is a saved account:
     //   opencode auth login subs-claude --method key   (paste the gateway key)
     // Fail closed: baseURL is an unreachable sentinel. The gateway plugin
-    // (plugins/opencode-anthropic-auth/gateway) shapes each request, then re-targets it
+    // (plugins/subs-claude-gateway) shapes each request, then re-targets it
     // to https://subs.oox.sh/v1; without the plugin requests fail, never go unshaped.
     "subs-claude": {
       "name": "Subs Claude",
@@ -90,9 +90,8 @@
     }
   },
   "plugins": [
-    // Gateway entry first and separate: direct-mode failures cannot disable shaping.
-    "./plugins/opencode-anthropic-auth/gateway",
-    "./plugins/opencode-anthropic-auth",
+    // subs-claude request shaping; without it subs-claude requests fail closed (sentinel baseURL).
+    "./plugins/subs-claude-gateway",
     "./plugins/dotfiles-tools",
     // Background shell-condition watches and recurring wakes (pi-until parity). See plugins/until/README.md.
     "./plugins/until",

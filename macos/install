@@ -193,7 +193,6 @@ bun install --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 echo "📦 Installing OpenCode dependencies"
 bun install --ignore-scripts --cwd "$HOME_PACKAGES/opencode/.config/opencode"
 
-npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-anthropic-auth"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-vim-compat"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins"
 

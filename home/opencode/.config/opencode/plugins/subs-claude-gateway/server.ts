@@ -1,6 +1,4 @@
-// `subs-claude` gateway plugin (OpenCode V2 Effect API). Separate plugin directory so the
-// direct-mode plugin (`../index.mjs`) can never take gateway shaping down with it: OpenCode only
-// warns when a plugin fails to load.
+// `subs-claude` gateway plugin (OpenCode V2 Effect API).
 //
 // Hooks are registered in the plugin scope, so unloading removes them. A shaping failure is a
 // defect: the host fails the request, and the sentinel URL (opencode.jsonc) stays in place as the

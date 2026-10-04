@@ -24,11 +24,8 @@ test('OpenCode agents are generated from the shared ~/.agents/agents definitions
 });
 test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', async () => {
   for (const target of config.plugins) {
-    // Effect plugins (plugins/until) are TypeScript; OpenCode loads `server.ts` directly.
-    await access(new URL(`${target}/server.js`, root)).catch(() => access(new URL(`${target}/server.ts`, root))).catch(async () => {
-      assert.equal(target, './plugins/opencode-anthropic-auth', 'only the legacy direct-mode plugin has no server.js/server.ts');
-      await access(new URL(`${target}/index.mjs`, root));
-    });
+    // Effect plugins are TypeScript; OpenCode loads `server.ts` directly.
+    await access(new URL(`${target}/server.js`, root)).catch(() => access(new URL(`${target}/server.ts`, root)));
   }
   const cli = JSON.parse(await read('cli.json'));
   // String entries starting with "-" disable an auto-discovered plugin by id.
@@ -45,16 +42,15 @@ test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', asy
   assert.match(await read('plugins/herdr-opencode/tui.js'), /HERDR_INTEGRATION_VERSION=12/);
   assert.match(await read('plugins/herdr-opencode/server.js'), /setup\(\) \{\}/);
 });
-test('subs-claude fails closed: sentinel baseURL, gateway plugin before direct mode, no key', async () => {
+test('subs-claude fails closed: sentinel baseURL, gateway plugin configured, no key', async () => {
   const { SENTINEL_ORIGIN, SENTINEL_PREFIX } = await import(
-    new URL('plugins/opencode-anthropic-auth/gateway/shaping.ts', root).href
+    new URL('plugins/subs-claude-gateway/shaping.ts', root).href
   );
   const provider = config.providers['subs-claude'];
   assert.equal(provider.package, '@opencode/ai/providers/anthropic');
   assert.deepEqual(provider.settings, { baseURL: `${SENTINEL_ORIGIN}${SENTINEL_PREFIX}/v1` });
   assert.deepEqual(Object.keys(provider.models), ['claude-opus-5-5']);
-  const gateway = config.plugins.indexOf('./plugins/opencode-anthropic-auth/gateway');
-  assert.ok(gateway !== -1 && gateway < config.plugins.indexOf('./plugins/opencode-anthropic-auth'));
+  assert.ok(config.plugins.includes('./plugins/subs-claude-gateway'));
 });
 test('child agents deny by default, never delegate, and only writers may edit or run shell', async () => {
   const writers = new Set(['general', 'aha']);

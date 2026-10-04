@@ -105,8 +105,8 @@ export interface Endpoint {
   readonly settings?: Readonly<Record<string, unknown>> | undefined
 }
 
-/** Only supported official origins, or the explicit local Claude Pro/Max adapter. */
-export function allowedOrigin(provider: string, definition: Endpoint | undefined, credential: { readonly methodID?: string | undefined }): boolean {
+/** Only supported official origins. */
+export function allowedOrigin(provider: string, definition: Endpoint | undefined): boolean {
   if (!isProvider(provider)) return false
   const url = definition?.settings?.["baseURL"]
   if (url === undefined) return true
@@ -114,10 +114,7 @@ export function allowedOrigin(provider: string, definition: Endpoint | undefined
   try {
     const parsed = new URL(url)
     if (parsed.username || parsed.password) return false
-    return (
-      providers[provider].origins.includes(parsed.origin) ||
-      (provider === "anthropic" && credential.methodID === "claude-pro-max" && parsed.protocol === "http:" && parsed.hostname === "127.0.0.1")
-    )
+    return providers[provider].origins.includes(parsed.origin)
   } catch {
     return false
   }
@@ -176,7 +173,7 @@ interface ModelLike extends Endpoint {
   readonly providerID: string
 }
 export type Credential =
-  | { readonly type: "oauth"; readonly access: string; readonly methodID?: string | undefined; readonly metadata?: Readonly<Record<string, unknown>> | undefined }
+  | { readonly type: "oauth"; readonly access: string; readonly metadata?: Readonly<Record<string, unknown>> | undefined }
   | { readonly type: "key"; readonly key: string; readonly metadata?: Readonly<Record<string, unknown>> | undefined }
 export interface Connection {
   readonly type: string
@@ -284,10 +281,9 @@ export const makeUsage = <C extends Connection>(host: Lookups<C>, options: { rea
             ? credential.type === "key" ? credential.key : undefined
             : credential.type === "oauth" ? credential.access : undefined
         if (!token) return yield* new Unavailable()
-        const methodID = credential.type === "oauth" ? credential.methodID : undefined
-        yield* need(allowedOrigin(providerID, provider, { methodID }))
+        yield* need(allowedOrigin(providerID, provider))
         const model = (yield* lookup(host.models())).find((m) => m.providerID === providerID && m.id === modelID)
-        yield* need(model !== undefined && allowedOrigin(providerID, model, { methodID }))
+        yield* need(model !== undefined && allowedOrigin(providerID, model))
         const account = credential.metadata?.["accountID"]
         const accountID = typeof account === "string" && /^[A-Za-z0-9_-]{1,256}$/.test(account) ? account : undefined
         if (account !== undefined && !accountID) return yield* new Unavailable()

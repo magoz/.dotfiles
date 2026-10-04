@@ -1,8 +1,0 @@
-{
-  "name": "opencode-anthropic-auth-local",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node --test index.test.mjs gateway/*.test.mjs"
-  }
-}

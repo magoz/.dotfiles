@@ -6,14 +6,11 @@ port of Pi's `extensions/anthropic-auth` gateway mode. The gateway adds Claude
 Code identity, billing, betas, user-agent, system relocation and tool aliases;
 this plugin adds none of them.
 
-Separate plugin entry (`./plugins/opencode-anthropic-auth/gateway`, listed first):
-the direct-mode plugin (`../index.mjs`) currently fails to load on 2.0.20
-(`ctx.catalog` no longer exists) and OpenCode only warns, so sharing its setup
-would silently drop gateway shaping.
+Plugin entry `./plugins/subs-claude-gateway` in `opencode.jsonc`.
 
 ## Implementation
 
-An OpenCode **Effect** plugin (`server.ts`; shared deps in `../../package.json`):
+An OpenCode **Effect** plugin (`server.ts`; shared deps in `../package.json`):
 - `shaping.ts`: the pure transforms over parsed JSON, plus the `http.request` body as an
   Effect failing with `GatewayShapingError`. Shaping output is byte-identical to the previous
   `shaping.mjs` on every captured OpenCode 2.0.20 request (checked when migrating).
@@ -78,7 +75,7 @@ were the functional and user-context ones listed above.
 
 ```sh
 npm test   # from home/opencode/.config/opencode
-OPENCODE_TEST_BINARY=$(readlink -f "$(command -v opencode)") node --test plugins/opencode-anthropic-auth/gateway/upstream-drift.test.mjs
+OPENCODE_TEST_BINARY=$(readlink -f "$(command -v opencode)") node --test plugins/subs-claude-gateway/upstream-drift.test.mjs
 ```
 
 End-to-end checks use only the fake server in `fixtures/` (see its README); never

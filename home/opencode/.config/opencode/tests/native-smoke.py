@@ -65,13 +65,15 @@ try:
     if "v2.0.20" not in version:
         raise RuntimeError("This smoke targets OpenCode 2.0.20")
     plugins = json.loads(call(["api", "POST", "/api/plugin/check", "--data", "{}"], "plugins.json"))["data"]
-    # The direct OAuth plugin still uses the removed ctx.catalog API (plugins/AGENTS.md).
     broken = {p["id"] for p in plugins if p["state"]["status"] != "active"}
-    assert broken <= {"opencode-anthropic-auth"}, broken
+    assert not broken, broken
     # plugin/check covers package plugins only; the plugin list proves local plugins loaded.
     effect_plugins = {"dotfiles-until", "dotfiles-skill-commands", "dotfiles-subscription-usage", "dotfiles-tools", "worktrees", "magoz.subs-claude-gateway"}
-    poll("/api/plugin", "plugin-list.json",
-         lambda data: effect_plugins <= {p["id"] for p in data if p["state"]["status"] == "active"})
+    listed = poll("/api/plugin", "plugin-list.json",
+                  lambda data: effect_plugins <= {p["id"] for p in data if p["state"]["status"] == "active"})
+    # Every configured local plugin loads; failed entries carry no id, so report their path.
+    failed = [p.get("id", p["source"].get("path")) for p in listed if p["state"]["status"] == "failed"]
+    assert not failed, failed
     # Effect plugin RPC round trip through the host's schema validation (no credentials here).
     session = json.loads(call(["api", "POST", "/api/session", "--data", "{}"], "session.json"))["data"]
     quota = json.loads(call(["api", "POST", "/api/rpc/dotfiles-subscription-usage/get",

@@ -62,7 +62,7 @@ Re-checked 2026-10-03 on Pi 1.0.0 with a stricter gate that blocked any request 
 
 ## Provenance
 
-- local OpenCode implementation: `home/opencode/.config/opencode/plugins/opencode-anthropic-auth/index.mjs`
+- OpenCode counterpart (gateway mode only): `home/opencode/.config/opencode/plugins/subs-claude-gateway`
 - Pi architecture/reference: `gotgenes/pi-anthropic-auth` commit `22883511d16d3fe381b140fb1de10b428c2c8a89`
 - summarization fix ported from `gotgenes/pi-anthropic-auth` `v2.0.9` (`d2fdab837549e500ec30e634ab87e61b7c2f3881`); local prompt-preservation fallback already matches the newer approach
 - Pi workspace SDK: `@earendil-works/pi-coding-agent` `1.0.0`; also verified against installed CLI `1.0.0`
