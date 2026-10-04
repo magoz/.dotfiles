@@ -21,6 +21,23 @@ sharing `plugins/package.json` (one `npm ci`, `effect` pinned to the host's vers
 `plugins/tsconfig.json` (strict; add each new plugin to `include`). Hand the host only
 `shared/portable.ts` schemas: host-side checks of this copy's Effect schemas reject valid values.
 
+Effect plugin pitfalls (each one has broken a plugin):
+
+- One `effect` copy per plugin graph. Never give a plugin its own `node_modules` or deps:
+  `shared/*.ts` resolves from `plugins/node_modules`, so a second copy mixes two Effect runtimes
+  (seen as `TypeError: Cannot convert a Symbol value to a number` in `effect/dist/Order.js`).
+- The config root's `node_modules` holds `effect` **3.x** (for `scripts/`). A plugin that resolves
+  `effect` there fails with errors like `Schema.isMaxLength is not a function` or
+  `Export named 'SchemaGetter' not found`; the tell is `.../opencode/node_modules/effect/dist/esm`
+  in the error path (4.x has no `dist/esm`). Keep plugins under `plugins/`.
+- The running service caches entrypoints and module resolution. After renaming or deleting a
+  plugin's entry file (`server.js` -> `server.ts`) or changing plugin dependencies, restart it
+  (`systemctl --user restart opencode.service`); a hot reload keeps failing (`ENOENT reading
+  .../server.js`, or the wrong `effect` copy) even though a fresh service loads fine.
+- `subs-claude-gateway` carries the agent's own model calls (`subs-claude`). Never edit it in
+  place: work in a git worktree, verify there (tests, `npm run test:native`), then
+  `git merge --ff-only <branch> && systemctl --user restart opencode.service` in one command.
+
 CLI plugins must call `ctx.keymap.layer` inside a rendered slot/route (e.g. `append: 'app'`),
 not directly in `setup`: V2 setup has no Keymap provider ("Keymap.Provider is missing").
 

@@ -27,8 +27,7 @@ const MAX_OUTPUT = 65_536
 export class WorktreeError extends Data.TaggedError("WorktreeError")<{ readonly message: string }> {}
 const fail = (message: string) => Effect.fail(new WorktreeError({ message }))
 
-// Reported values are echoed in errors: absolute, single-line, bounded, no URLs. Composed from
-// built-in filters only (`Schema.makeFilter` is types-only in this Effect RC, undefined at runtime).
+// Reported values are echoed in errors: absolute, single-line, bounded, no URLs.
 const AbsolutePath = Schema.String.check(
   Schema.isMaxLength(4095),
   Schema.isPattern(/^\//),
