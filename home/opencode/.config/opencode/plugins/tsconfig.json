@@ -25,6 +25,7 @@
     "dotfiles-tools/*.ts",
     "dotfiles-tools/test/*.ts",
     "skill-commands/*.ts",
+    "opencode-anthropic-auth/gateway/*.ts",
     "subscription-usage/*.ts",
     "until/*.ts",
     "until/test/*.ts",
