@@ -22,7 +22,7 @@ Record the upstream version and commit when updating.
    - `AGENTS.md` — this maintainer guide
    - `skills/figma-import-image/` — local legacy fallback, not an upstream skill
 5. Reapply `disable-model-invocation: true` to every `skills/figma-*` leaf `SKILL.md`. The nested leaves are private implementation material. Pi stops discovery at the root router; OpenCode may still index nested leaves.
-6. Keep the OpenCode skill permissions configured so `figma-*` is denied and `figma` is allowed.
+6. Keep the OpenCode skill permission denying `figma-*`. OpenCode indexes nested leaves and loads them by id despite `disable-model-invocation`.
 7. Check whether the local relative-link fix is still needed in:
    `skills/figma-use/references/working-with-design-systems/wwds-variables.md`.
    The link to `figma-generate-library/references/token-creation.md` must use `../../../` from that file.

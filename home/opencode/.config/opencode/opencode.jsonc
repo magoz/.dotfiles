@@ -109,18 +109,18 @@
       "executor": { "type": "remote", "url": "https://executor.magoz.is/mcp" }
     }
   },
+  // YOLO like Pi: allow everything; later rules (last match wins) still deny secrets.
+  // MCP tools (`<server>_<tool>`) are allowed here too; Executor's own server-side
+  // policies (approve / require_approval / block) remain the gate via MCP elicitation.
   "permissions": [
-    { "action": "read", "resource": "*", "effect": "allow" },
+    { "action": "*", "resource": "*", "effect": "allow" },
     { "action": "read", "resource": "*.env", "effect": "deny" },
     { "action": "read", "resource": "*.env.*", "effect": "deny" },
     { "action": "read", "resource": ".env.example", "effect": "allow" },
     { "action": "read", "resource": "*.envrc", "effect": "deny" },
     { "action": "read", "resource": "secrets/*", "effect": "deny" },
-    { "action": "skill", "resource": "*", "effect": "allow" },
-    { "action": "skill", "resource": "figma-*", "effect": "deny" },
-    { "action": "skill", "resource": "figma", "effect": "allow" },
-    { "action": "external_directory", "resource": "~/.agents/*", "effect": "allow" },
-    { "action": "external_directory", "resource": "~/.dotfiles/home/agents/*", "effect": "allow" },
-    { "action": "external_directory", "resource": "~/.dotfiles/home/opencode/*", "effect": "allow" }
+    // Nested figma/skills/figma-* leaves are indexed by OpenCode's **/SKILL.md scan and
+    // loadable by id despite disable-model-invocation; only the `figma` router may load them.
+    { "action": "skill", "resource": "figma-*", "effect": "deny" }
   ]
 }
