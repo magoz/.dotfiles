@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { OPENCODE_ANCHORS, shapeGatewayPayload } from "./shaping.mjs";
+import { OPENCODE_ANCHORS, shapeGatewayPayload } from "./shaping.ts";
 
 // Pinned OpenCode 2.0.20 captures (see fixtures/README.md for refreshing).
 const fixture = JSON.parse(

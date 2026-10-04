@@ -69,7 +69,7 @@ try:
     broken = {p["id"] for p in plugins if p["state"]["status"] != "active"}
     assert broken <= {"opencode-anthropic-auth"}, broken
     # plugin/check covers package plugins only; the plugin list proves local plugins loaded.
-    effect_plugins = {"dotfiles-until", "dotfiles-skill-commands", "dotfiles-subscription-usage", "dotfiles-tools", "worktrees"}
+    effect_plugins = {"dotfiles-until", "dotfiles-skill-commands", "dotfiles-subscription-usage", "dotfiles-tools", "worktrees", "magoz.subs-claude-gateway"}
     poll("/api/plugin", "plugin-list.json",
          lambda data: effect_plugins <= {p["id"] for p in data if p["state"]["status"] == "active"})
     # Effect plugin RPC round trip through the host's schema validation (no credentials here).

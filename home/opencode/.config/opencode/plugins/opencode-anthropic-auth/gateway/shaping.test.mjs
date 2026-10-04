@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Effect } from "effect";
 import {
   ANTHROPIC_GATEWAY_PROVIDERS,
   DEFAULT_GATEWAY_ORIGIN,
@@ -8,12 +9,15 @@ import {
   gatewayURL,
   parseGatewayOrigin,
   shapeGatewayBody,
-  shapeGatewayHttpRequest,
+  shapeGatewayHttpRequest as shapeGatewayHttpRequestEffect,
   shapeGatewayPayload,
   shapeOpenCodeText,
   stripCheckpointReasoning,
   stripReasoningSegments,
-} from "./shaping.mjs";
+} from "./shaping.ts";
+
+// The hook body is an Effect now; run it like the host does. Failures reject with the error itself.
+const shapeGatewayHttpRequest = (event, options) => Effect.runPromise(shapeGatewayHttpRequestEffect(event, options));
 
 const SENTINEL_URL = "http://127.0.0.1:9/subs-claude-unshaped/v1/messages";
 const opencodePrompt = [

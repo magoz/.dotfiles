@@ -92,12 +92,8 @@ export const OPENCODE_ANCHORS: readonly string[] = Object.freeze([
   REASONING_MARKER,
 ]);
 
-export class GatewayShapingError extends Data.TaggedError("GatewayShapingError")<{ readonly detail: string }> {
-  override get message() {
-    return `subs-claude gateway shaping failed: ${this.detail}`;
-  }
-}
-const shapingError = (detail: string) => new GatewayShapingError({ detail });
+export class GatewayShapingError extends Data.TaggedError("GatewayShapingError")<{ readonly message: string }> {}
+const shapingError = (detail: string) => new GatewayShapingError({ message: `subs-claude gateway shaping failed: ${detail}` });
 
 type JsonRecord = Readonly<Record<string, unknown>>;
 function isRecord(value: unknown): value is JsonRecord {
@@ -339,7 +335,7 @@ export function gatewayURL(requestURL: string, gatewayOrigin: string): string {
 export interface HttpRequestEvent {
   readonly kind?: string | undefined;
   readonly model: { readonly providerID: string };
-  request: Request;
+  request: unknown;
 }
 
 /**
@@ -352,7 +348,8 @@ export const shapeGatewayHttpRequest = (
   { gatewayOrigin = DEFAULT_GATEWAY_ORIGIN }: { readonly gatewayOrigin?: string | undefined } = {},
 ): Effect.Effect<void, GatewayShapingError> =>
   Effect.gen(function* () {
-    if (!isGatewayProvider(event.model.providerID)) return;
+    // Defensive like the original: anything that is not a gateway request is left untouched.
+    if (!isRecord(event) || !isRecord(event.model) || !isGatewayProvider(event.model["providerID"])) return;
     const request = event.request;
     if (!(request instanceof Request)) return yield* shapingError("http.request event has no Request");
 
@@ -396,7 +393,7 @@ export interface SemanticEvent {
  * thinking is kept.
  */
 export function dropUnreplayableReasoning(event: SemanticEvent): void {
-  if (!isGatewayProvider(event.model.providerID)) return;
+  if (!isRecord(event) || !isRecord(event.model) || !isGatewayProvider(event.model["providerID"])) return;
   if (!Array.isArray(event.messages)) return;
 
   for (let index = event.messages.length - 1; index >= 0; index--) {

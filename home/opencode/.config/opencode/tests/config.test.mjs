@@ -26,7 +26,7 @@ test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', asy
   for (const target of config.plugins) {
     // Effect plugins (plugins/until) are TypeScript; OpenCode loads `server.ts` directly.
     await access(new URL(`${target}/server.js`, root)).catch(() => access(new URL(`${target}/server.ts`, root))).catch(async () => {
-      assert.ok(['./plugins/opencode-anthropic-auth', './plugins/opencode-anthropic-auth/gateway'].includes(target), target);
+      assert.equal(target, './plugins/opencode-anthropic-auth', 'only the legacy direct-mode plugin has no server.js/server.ts');
       await access(new URL(`${target}/index.mjs`, root));
     });
   }
@@ -47,7 +47,7 @@ test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', asy
 });
 test('subs-claude fails closed: sentinel baseURL, gateway plugin before direct mode, no key', async () => {
   const { SENTINEL_ORIGIN, SENTINEL_PREFIX } = await import(
-    new URL('plugins/opencode-anthropic-auth/gateway/shaping.mjs', root).href
+    new URL('plugins/opencode-anthropic-auth/gateway/shaping.ts', root).href
   );
   const provider = config.providers['subs-claude'];
   assert.equal(provider.package, '@opencode/ai/providers/anthropic');

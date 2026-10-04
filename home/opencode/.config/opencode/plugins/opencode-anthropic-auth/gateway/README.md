@@ -11,6 +11,17 @@ the direct-mode plugin (`../index.mjs`) currently fails to load on 2.0.20
 (`ctx.catalog` no longer exists) and OpenCode only warns, so sharing its setup
 would silently drop gateway shaping.
 
+## Implementation
+
+An OpenCode **Effect** plugin (`server.ts`; shared deps in `../../package.json`):
+- `shaping.ts`: the pure transforms over parsed JSON, plus the `http.request` body as an
+  Effect failing with `GatewayShapingError`. Shaping output is byte-identical to the previous
+  `shaping.mjs` on every captured OpenCode 2.0.20 request (checked when migrating).
+- `server.ts`: registers the hooks in the plugin scope (unload removes them). A shaping failure
+  becomes a defect via `Effect.orDie`, so the host fails the request: the same semantics as the
+  previous Promise plugin, whose thrown errors the host's Promise adapter also turned into
+  defects. The sentinel URL stays as the second fail-closed layer.
+
 ## Behavior
 
 - `http.request` hook, `providerID: subs-claude`, every kind (`primary`,
