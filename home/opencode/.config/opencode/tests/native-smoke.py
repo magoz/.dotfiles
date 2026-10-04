@@ -79,9 +79,6 @@ try:
     quota = json.loads(call(["api", "POST", "/api/rpc/dotfiles-subscription-usage/get",
                              "--data", json.dumps({"input": {"sessionID": session["id"]}})], "quota.json"))
     assert quota["output"]["status"] == "unavailable", quota
-    pulse = json.loads(call(["api", "POST", "/api/rpc/dotfiles-tools/pulse",
-                             "--data", json.dumps({"input": {"clientID": "smoke", "rootID": session["id"]}})], "pulse.json"))
-    assert pulse["output"] == {"request": None, "active": []}, pulse
     shared = {d.name for d in (agents_home / "skills").iterdir() if (d / "SKILL.md").is_file()}
     # Compatibility skills, then skill commands, load asynchronously after boot.
     skills = poll("/api/skill", "skills.json", lambda data: shared <= {s["id"] for s in data})
@@ -92,7 +89,8 @@ try:
     roles = {p.stem for p in (agents_home / "agents").glob("*.md")}
     assert roles <= {a["id"] for a in agents}, roles - {a["id"] for a in agents}
     want = {d.name for d in (agents_home / "skills").iterdir() if (d / "SKILL.md").is_file() and flagged(d)}
-    poll("/api/command", "commands.json", lambda data: want <= {c["name"] for c in data})
+    # dotfiles-tools' server-side `/worktree` works in every client, not only the TUI.
+    poll("/api/command", "commands.json", lambda data: want | {"worktree"} <= {c["name"] for c in data})
     # Native effective global+agent arrays; tests/permissions.mjs mirrors last-match-wins.
     permission_check = """
 import assert from 'node:assert/strict';

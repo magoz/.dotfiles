@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { runProcess, withoutPaneEnv } from '../process.js';
+import { runProcess, withoutPaneEnv } from './process.js';
 
 const base = { cwd: process.cwd(), env: { PATH: '/bin:/usr/bin' }, timeoutMs: 3000 };
 

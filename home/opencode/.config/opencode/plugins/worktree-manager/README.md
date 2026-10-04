@@ -8,7 +8,7 @@ Git branch always retained by this UI. Current source remains open. No server
 plugin, RPC, model call, broadcast, focus change or automatic retry.
 
 Loaded through `cli.json`. Install the scripts package
-with `worktree-manage` on PATH. Uses the sibling dotfiles-tools `process.js` runner,
+with `worktree-manage` on PATH. Uses the shared `../shared/process.js` runner,
 with the TUI's own `process.env`, never the shared server environment.
 
 Native `keymap.layer`, `ui.dialog.select/confirm` contracts checked against

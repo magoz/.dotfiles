@@ -13,7 +13,7 @@ No Pi credentials/sessions are imported and no Pi extension is required by OpenC
 | --- | --- |
 | Editing/navigation | Existing native Vim compatibility in `cli.json` |
 | Herdr presence | Unmodified vendored official V12 TUI bridge |
-| Provisioned handoff | Pane-local `create_worktree`; shared CLI `--agent opencode` |
+| Provisioned handoff | `create_worktree` / `/worktree`: native worktree (`worktrees` strategy) + fresh session; any client |
 | Mixed-agent inventory/cleanup | Pane-local `/worktrees`; shared `worktree-manage` |
 | Delegation | Native `general`, `explore`, `pr-reviewer`, `web-researcher` |
 | Delivery/research skills | Shared `~/.agents/skills`, harness-neutral text; `/<id>` via `skill-commands` |
@@ -54,15 +54,16 @@ worktree create --agent opencode --branch feat/example
 worktree-manage list --cwd "$PWD"
 ```
 
-The model tool executes through the exact live TUI, never the shared server's
-inherited Herdr environment. It requires a root session, unique binding, idle
-children, and confirmation of exact setup operations. Ambiguity/cancellation
-revokes the request before subprocess launch. Vercel linkage is checked before
-allocation and produces `vercel_link_required` for safe, verified agent recovery.
+The model tool `create_worktree` (and `/worktree`) runs on the server with no TUI
+and no Herdr, so it works the same from the web app, Fleet and the TUI. It requires a
+root session and the user's explicit request; there is no confirmation prompt.
+Vercel linkage is checked before allocation and produces `vercel_link_required` for
+safe, verified agent recovery. It then calls native `worktree.create` (the `worktrees`
+strategy) and starts a fresh session there with the task. See
+`plugins/dotfiles-tools/README.md`.
 
-Successful handoff **does not exit the source TUI**. Destination owns implementation;
-stop source work and exit only that source manually. Never broadcast exit or stop
-the shared server. Failures preserve resources: inspect before retrying.
+The source session stays open and the destination owns the implementation. Failures
+preserve resources: inspect before retrying.
 
 `/worktrees` inventories all harnesses, checks both test/default and recorded leases,
 then confirms a fingerprint of repository/branch/HEAD/lease IDs before retirement.

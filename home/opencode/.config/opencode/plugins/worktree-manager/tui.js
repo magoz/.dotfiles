@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { runProcess } from '../dotfiles-tools/process.js';
+import { runProcess } from '../shared/process.js';
 
 const object = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 const text = (v) => typeof v === 'string' && v.length > 0 && v.length < 4096 && !/[\x00-\x1f\x7f]/.test(v) && !v.includes('://');

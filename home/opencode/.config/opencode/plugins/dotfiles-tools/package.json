@@ -1,11 +1,10 @@
 {
   "name": "dotfiles-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./server.ts",
-    "./server": "./server.ts",
-    "./tui": "./tui.js"
+    "./server": "./server.ts"
   }
 }

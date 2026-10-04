@@ -1,21 +1,25 @@
-// `create_worktree` server side (OpenCode V2 Effect API). The server never allocates and never
-// reads its inherited Herdr pane identity: it queues the request for the one live TUI bound to
-// the root session (see bridge.ts), which confirms and runs the CLI in its own pane.
+// `create_worktree` and `/worktree` (OpenCode V2 Effect API). Same path as Fleet's launcher: a
+// provisioned checkout through OpenCode's native worktree API (the dotfiles `worktrees` strategy),
+// then a fresh session there that receives the task. No Herdr, no TUI: works from the web app,
+// Fleet and the TUI alike.
 import path from "node:path"
+import type { SessionCreateInput, SessionPromptInput, WorktreeCreateInput } from "@opencode/client/effect/api"
+import type { CommandDefinition, CommandInvocation } from "@opencode/plugin/effect/command"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
-import type { RpcHandlers, RpcRegistration } from "@opencode/plugin/effect/rpc"
+import type { Project } from "@opencode/schema/project"
+import type { AbsolutePath } from "@opencode/schema/schema"
 import { Session } from "@opencode/schema/session"
 import { Tool } from "@opencode/schema/tool"
-import { Data, Effect, Option, Schema, type Scope, Stream } from "effect"
+import { Data, Effect, Option, type Scope } from "effect"
+import { runProcess, withoutPaneEnv } from "../shared/process.ts"
 import { portable } from "../shared/portable.ts"
-import { makeBridge } from "./bridge.ts"
-import { WorktreeInput, WorktreeOutput, bridgeDefinition, type WorktreeOutput as Output } from "./contract.ts"
+import { branchToName } from "../worktrees/naming.ts"
+import { WorktreeInput, WorktreeOutput, decodeLink, type Link, type WorktreeOutput as Output } from "./contract.ts"
 import { BASE_GUIDANCE, LINK_GUIDANCE, resolveInput } from "./worktree.ts"
 
-const REQUEST_TIMEOUT = "32 minutes"
-const DESCRIPTION = `Only when the user explicitly asks: create/provision a Herdr worktree and fresh OpenCode destination. Requires root session and a unique pane-local TUI confirmation. Source remains open. ${BASE_GUIDANCE} ${LINK_GUIDANCE}`
-const READY_NOTE =
-  "Destination owns the task. Do not continue implementation in the source. Source retained explicitly: review destination, then manually exit only this source TUI. Do not retry a successful allocation."
+const PREFLIGHT_TIMEOUT = "30 seconds"
+const DESCRIPTION = `Only when the user explicitly asks: create a provisioned worktree (branch from origin's default branch) and a fresh OpenCode session there that receives \`prompt\` as its task. Requires the root session. Source session stays open. Put any extra setup the destination needs in \`prompt\`. ${BASE_GUIDANCE} ${LINK_GUIDANCE}`
+const READY_NOTE = "The destination session owns the task. Do not continue implementation in this session. Do not retry a successful allocation."
 
 class HandoffError extends Data.TaggedError("HandoffError")<{ readonly message: string }> {}
 
@@ -25,6 +29,7 @@ export type CreateWorktreeTool = Tool.Info<typeof ToolInputSchema, typeof ToolOu
 
 interface SessionLike {
   readonly id: string
+  readonly projectID: Project.ID
   readonly parentID?: string | undefined
   readonly subpath?: string | undefined
   readonly location: { readonly directory: string; readonly workspaceID?: string | undefined }
@@ -33,37 +38,53 @@ interface SessionLike {
 /** The slice of OpenCode's plugin `Context` used here; the real `Context` satisfies it (see default export). */
 export interface Host {
   readonly location: { readonly directory: string; readonly workspaceID?: string | undefined }
-  readonly session: { readonly get: (input: { readonly sessionID: Session.ID }) => Effect.Effect<SessionLike, unknown> }
-  readonly event: { readonly subscribe: () => Stream.Stream<unknown, unknown> }
-  readonly rpc: {
-    readonly register: (
-      rpc: typeof bridgeDefinition,
-      handlers: RpcHandlers<typeof bridgeDefinition>,
-    ) => Effect.Effect<RpcRegistration<typeof bridgeDefinition>, unknown, Scope.Scope>
+  readonly session: {
+    readonly get: (input: { readonly sessionID: Session.ID }) => Effect.Effect<SessionLike, unknown>
+    readonly create: (input: SessionCreateInput) => Effect.Effect<{ readonly id: Session.ID }, unknown>
+    readonly prompt: (input: SessionPromptInput) => Effect.Effect<unknown, unknown>
+  }
+  readonly worktree: { readonly create: (input: WorktreeCreateInput) => Effect.Effect<{ readonly directory: AbsolutePath }, unknown> }
+  readonly command: {
+    readonly transform: (callback: (editor: { add(definition: CommandDefinition): void }) => void) => Effect.Effect<unknown, never, Scope.Scope>
   }
   readonly tool: {
     readonly transform: (callback: (editor: { add(tool: CreateWorktreeTool): void }) => void) => Effect.Effect<unknown, never, Scope.Scope>
   }
 }
 
-/** Session interruption/deletion; `created` lets a cancellation skip requests made after it. */
-const SessionEnd = Schema.Struct({
-  type: Schema.Literals(["session.deleted", "session.execution.interrupted"]),
-  created: Schema.Finite,
-  data: Schema.Struct({ sessionID: Schema.String }),
-})
-const decodeSessionEnd = Schema.decodeUnknownOption(SessionEnd)
+export interface Options {
+  /** Runs the `provision-env` preflight (tests inject a fake). */
+  readonly run?: typeof runProcess
+  /** The service's environment; `HERDR_*` is always stripped. */
+  readonly env?: NodeJS.ProcessEnv
+}
 
-export const setup = (host: Host) =>
+/** First line of a host failure, bounded. Worktree strategy errors are already sanitized. */
+const reason = (error: unknown): string => {
+  const message = error instanceof Error ? error.message : typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : ""
+  return message.split("\n")[0]?.trim().slice(0, 500) || "no details"
+}
+
+/** The user's request for `/worktree`: the agent picks the branch and calls `create_worktree`. */
+export const worktreeRequest = (task: string) =>
+  [
+    "The user explicitly requests a new worktree. Use create_worktree for the task below; infer a concise conventional branch or use an explicitly named branch, and pass the task as its prompt. Ask before consequential ambiguity. This session stays open.",
+    BASE_GUIDANCE,
+    LINK_GUIDANCE,
+    task ? `Task: ${task}` : "No task was given: ask the user what the new worktree is for.",
+  ].join("\n")
+
+export const setup = (host: Host, options: Options = {}) =>
   Effect.gen(function* () {
-    const bridge = yield* makeBridge()
+    const run = options.run ?? runProcess
+    const env = withoutPaneEnv(options.env ?? process.env)
 
-    /** The root session's working directory, after checking location, subpath and (optionally) root ownership. */
-    const sessionDirectory = (sessionID: string, rootOnly: boolean) =>
+    /** The root session and its working directory, after checking location and subpath. */
+    const sourceSession = (sessionID: string) =>
       Effect.gen(function* () {
         const session = yield* host.session.get({ sessionID: Session.ID.make(sessionID) }).pipe(Effect.mapError(() => new HandoffError({ message: "Invalid session location" })))
         if (session.id !== sessionID || !path.isAbsolute(session.location.directory)) return yield* new HandoffError({ message: "Invalid session location" })
-        if (rootOnly && session.parentID) return yield* new HandoffError({ message: "This operation requires the root session" })
+        if (session.parentID) return yield* new HandoffError({ message: "This operation requires the root session" })
         if (session.location.directory !== host.location.directory || (session.location.workspaceID ?? undefined) !== (host.location.workspaceID ?? undefined)) {
           return yield* new HandoffError({ message: "Session does not belong to this plugin location" })
         }
@@ -71,42 +92,56 @@ export const setup = (host: Host) =>
         const cwd = path.resolve(session.location.directory, session.subpath ?? ".")
         const relative = path.relative(session.location.directory, cwd)
         if (relative === ".." || relative.startsWith(`..${path.sep}`)) return yield* new HandoffError({ message: "Session subpath escapes location" })
-        return cwd
+        return { cwd, projectID: session.projectID }
       })
 
-    // Interruption and deletion cancel this session's pending pane request. The tool fiber is
-    // interrupted by the host too; the events also cover a deletion while a request waits.
-    yield* host.event.subscribe().pipe(
-      Stream.runForEach((event) =>
-        Option.match(decodeSessionEnd(event), {
-          onNone: () => Effect.void,
-          onSome: (end) => bridge.cancelSession(end.data.sessionID, end.type === "session.deleted" ? Number.POSITIVE_INFINITY : end.created),
-        }),
-      ),
-      Effect.ignore,
-      Effect.forkScoped,
-    )
+    /** Vercel link check before anything is allocated. Only a strict exit-3 report is recoverable. */
+    const preflight = (cwd: string) =>
+      Effect.gen(function* () {
+        const result = yield* run("provision-env", ["--repo", cwd, "--check-vercel-link", "--non-interactive"], {
+          cwd,
+          env,
+          timeout: PREFLIGHT_TIMEOUT,
+          capture: "both",
+        }).pipe(Effect.mapError(() => new HandoffError({ message: "Vercel preflight failed; nothing allocated" })))
+        if (result.code === 0) return Option.none<Link>()
+        const link = result.code === 3 ? decodeLink(result.stderr.trim()).pipe(Option.filter((value) => path.isAbsolute(value.directory))) : Option.none<Link>()
+        if (Option.isNone(link)) return yield* new HandoffError({ message: "Vercel preflight failed; nothing allocated" })
+        return link
+      })
 
     const execute = (input: WorktreeInput, tool: { readonly sessionID: string }) =>
       Effect.gen(function* () {
         const resolved = yield* Effect.try({ try: () => resolveInput(input), catch: (error) => new HandoffError({ message: error instanceof Error ? error.message : "Invalid input" }) })
-        const cwd = yield* sessionDirectory(tool.sessionID, true)
-        const outcome = yield* bridge.request({ sessionID: tool.sessionID, rootID: tool.sessionID, cwd, input: resolved }, REQUEST_TIMEOUT)
-        if (outcome.status === "failed") return yield* new HandoffError({ message: outcome.reason })
-        const output: Output = outcome.status === "vercel_link_required" ? { ...outcome, retry: resolved } : outcome
-        return { output, content: `${JSON.stringify(output)}\n${outcome.status === "vercel_link_required" ? LINK_GUIDANCE : READY_NOTE}` }
+        const name = yield* Effect.try({
+          try: () => branchToName(resolved.branch),
+          catch: () => new HandoffError({ message: `Branch ${resolved.branch} has no exact worktree name: use "/"-separated segments of letters, digits, ".", "_" and "-", none starting or ending with "-" or containing "--"` }),
+        })
+        const source = yield* sourceSession(tool.sessionID)
+        const link = yield* preflight(source.cwd)
+        if (Option.isSome(link)) {
+          const output: Output = { status: "vercel_link_required", link: link.value, retry: resolved }
+          return { output, content: `${JSON.stringify(output)}\n${LINK_GUIDANCE}` }
+        }
+        // `branch` is OpenCode's starting ref: the strategy passes it as the CLI's --base (no fetch).
+        const { directory } = yield* host.worktree
+          .create({ projectID: source.projectID, name, ...(resolved.base ? { branch: resolved.base } : {}) })
+          .pipe(Effect.mapError((error) => new HandoffError({ message: `Creating the worktree failed: ${reason(error)}` })))
+        const session = yield* host.session
+          .create({ location: { directory }, title: resolved.prompt?.split("\n")[0]?.slice(0, 120) || resolved.branch })
+          .pipe(Effect.mapError((error) => new HandoffError({ message: `Creating the destination session failed: ${reason(error)}. Worktree kept at ${directory}` })))
+        if (resolved.prompt) {
+          yield* host.session
+            .prompt({ sessionID: session.id, text: resolved.prompt })
+            .pipe(
+              Effect.mapError(
+                (error) => new HandoffError({ message: `Sending the task failed: ${reason(error)}. Worktree kept at ${directory}; session ${session.id} created without the task` }),
+              ),
+            )
+        }
+        const output: Output = { status: "ready", destination: { directory, branch: resolved.branch, sessionID: session.id, prompted: resolved.prompt !== undefined } }
+        return { output, content: `${JSON.stringify(output)}\n${READY_NOTE}` }
       }).pipe(Effect.mapError((error) => new Tool.Error({ message: error.message })))
-
-    const asRpcFailure = <A, E extends { readonly message: string }>(effect: Effect.Effect<A, E>) => effect.pipe(Effect.catch((error) => Effect.die(new Error(error.message))))
-    yield* host.rpc
-      .register(bridgeDefinition, {
-        // A TUI binds only to a root session of this location.
-        pulse: (input) => sessionDirectory(input.rootID, true).pipe(Effect.andThen(bridge.pulse(input)), asRpcFailure),
-        authorize: (input) => bridge.authorize(input),
-        complete: (input) => bridge.complete(input).pipe(asRpcFailure),
-        release: (input) => bridge.release(input),
-      })
-      .pipe(Effect.orDie)
 
     yield* host.tool.transform((editor) => {
       editor.add({
@@ -118,7 +153,14 @@ export const setup = (host: Host) =>
         execute,
       })
     })
-    return { bridge, execute, sessionDirectory }
+
+    // A server command, so it works in every client. It submits a user request, never a tool call.
+    const command = (input: CommandInvocation) =>
+      host.session.prompt({ sessionID: input.sessionID, text: worktreeRequest(input.prompt.text.trim()), delivery: input.delivery }).pipe(Effect.asVoid)
+    yield* host.command.transform((editor) => {
+      editor.add({ name: "worktree", description: "New worktree and session for a task", execute: command })
+    })
+    return { execute, command }
   })
 
 export default {

@@ -86,9 +86,9 @@ are ordinary CLI informational output, not this creation-result interface.
 `agentName` is the requested Herdr alias (not an OpenCode session ID); after timeout
 recovery the alias may be unavailable, so use `paneId` to address the agent.
 
-OpenCode's `dotfiles-tools` plugin launches this CLI through the invoking TUI's
-pane-local environment, never the shared server's environment. Source-session
-shutdown is deliberately manual after a successful ownership handoff.
+OpenCode's `create_worktree` (`dotfiles-tools`) does not use `worktree create`: it goes
+through OpenCode's native worktree API, which runs `worktree checkout` (below) via the
+`worktrees` strategy, then starts a fresh session there.
 **Do not use Pi's `/worktrees` retirement on OpenCode assessment worktrees:** its
 agent checks currently see only Pi. Use the additive mixed-agent manager below.
 

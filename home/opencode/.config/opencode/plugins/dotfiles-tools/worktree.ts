@@ -1,4 +1,4 @@
-// Pure `create_worktree` helpers shared by the server (tool) and the TUI (confirmation, pane run).
+// Pure `create_worktree` helpers: agent guidance and branch inference.
 import type { ResolvedInput, WorktreeInput } from "./contract.ts"
 
 export const LINK_GUIDANCE =
@@ -26,16 +26,4 @@ export function resolveInput(value: WorktreeInput): ResolvedInput {
   }
   if (!branch) throw new Error("Provide a branch or a kickoff prompt")
   return { ...value, branch }
-}
-
-/** `worktree` argv for the resolved input; always OpenCode, JSON, and the server-resolved repo. */
-export function buildArgs(input: WorktreeInput, cwd: string): string[] {
-  const resolved = resolveInput(input)
-  const args = ["create", "--agent", "opencode", "--json", "--repo", cwd, "--branch", resolved.branch]
-  for (const name of ["base", "path", "label", "ttl", "prompt"] as const) {
-    const value = resolved[name]
-    if (value) args.push(`--${name}`, value)
-  }
-  for (const command of resolved.setup ?? []) args.push("--setup", command)
-  return args
 }

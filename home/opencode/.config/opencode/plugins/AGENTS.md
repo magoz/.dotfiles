@@ -7,7 +7,8 @@ Local OpenCode runtime plugins.
 - `subs-claude-gateway`: Effect plugin for `subs-claude` (CLIProxyAPI pool): content-only shaping,
   sentinel-URL fail closed. See its README. (The old direct Claude Pro/Max OAuth plugin was removed:
   it never loaded on 2.0.20, and the gateway replaced it.)
-- `dotfiles-tools`: Effect server bridge + plain-JS pane-local TUI (`create_worktree`); never trust server Herdr env.
+- `dotfiles-tools`: Effect server, `create_worktree` + `/worktree`: preflight, native `worktree.create`
+  (`worktrees` strategy), fresh session with the task (Fleet launcher's path). No TUI, Herdr or confirmation.
 - `until`: Effect plugin (TS, own `effect` pinned to the host's; host-validated schemas must be `portable()`), pi-until parity (same tool contract): durable session watches/recurring wakes in plugin storage; no consent prompt, gated by `shell`; subagent watches belong to and wake the family root; composer dock + `/until*`.
 - `herdr-opencode`: unchanged vendored V12; preserve provenance.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.

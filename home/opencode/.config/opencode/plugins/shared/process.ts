@@ -2,7 +2,7 @@
 // group, bounded captured output, sanitized errors. Interruption and timeout SIGTERM the group;
 // after every run, even a clean exit, the group gets `cleanupGraceMs` and a final SIGKILL, so
 // resistant descendants of a leader that already exited are reaped too.
-// The plain-JS TUI plugins use ../dotfiles-tools/process.js, which has the same contract.
+// The plain-JS TUI plugins use ./process.js, which has the same contract.
 import { spawn } from "node:child_process"
 import { Data, Deferred, Duration, Effect, Option } from "effect"
 
