@@ -1,15 +1,27 @@
-# dotfiles-tools — OpenCode V2.0.3 assessment
+# dotfiles-tools — `create_worktree` pane handoff
 
-Opt-in, dependency-free **Promise server + pane-local TUI** plugin. Pi, shared
-skills, existing configs, and the worktree CLI are untouched. No skill toggle,
-compaction, Herdr vendor, quota, or configuration migration here.
+**Effect server + pane-local plain-JS TUI** plugin. Pi, shared skills, existing configs,
+and the worktree CLI are untouched.
 
-## Entry points / API baseline
+## Files
 
-Plain ESM JavaScript exports structural `{ id, setup }` definitions; V2's
-`Plugin.define` is an identity helper. No V1 hooks, SDK casts, `any`, or bundled
-Effect runtime. Portable JSON schemas plus explicit runtime validation protect
-inputs, RPC replies, and CLI success results. No dependency install required.
+| File | Side | Role |
+| --- | --- | --- |
+| `server.ts` | server (Effect) | `create_worktree` tool, bridge RPC, session-end events, session cwd |
+| `bridge.ts` | server (Effect) | pane request queue: leases, single claim, correlation, cancellation |
+| `contract.ts` | shared | Effect Schemas; portable host schemas; exact decoders for the TUI |
+| `worktree.ts` | shared | branch inference, `worktree create` argv, agent guidance |
+| `view.js` / `tui.js` | TUI | binding, pulse/claim, confirmation, `/worktree`; `tui.js` injects Solid |
+| `pane.js` | TUI | `provision-env` + `worktree create` with this pane's environment |
+| `process.js` | TUI | Promise process runner (also used by `worktree-manager`) |
+
+The server is an OpenCode Effect plugin (shared deps in `../package.json`). Host-validated
+schemas (tool input/output, RPC) are `portable(..., { exact: true })`: unknown keys such as a
+model-supplied `repo` are rejected. `Outcome` is a tagged union, so each status carries exactly
+its own data. The TUI API is Promise-only, so that half stays plain JS and decodes RPC replies
+with `contract.ts`.
+
+## API baseline (historical V2.0.3 assessment; still accurate unless noted)
 
 Assessed against the exact **V2.0.3** source downloaded under
 `/tmp/opencode-v2-assessment/packages/` (not the older V1 SDK):
@@ -34,7 +46,7 @@ Assessed against the exact **V2.0.3** source downloaded under
   and cached permission/form/pending sync/list. No invented UI command API.
 - `plugin/src/host.ts`: resolver tries `server`, then default; TUI uses `tui`.
   `package.json` therefore exports `.`, `./server`, **`./tui`**. For a local
-  directory the matching `server.js` / `tui.js` also exist. Configure both
+  directory the matching `server.ts` / `tui.js` also exist. Configure both
   sides with the **package directory**, not only the server file. Parent-owned
   config wiring is intentionally not included in this milestone.
 - `core/src/tool.ts` and `plugin/src/promise/permission.ts`: tool
@@ -116,10 +128,9 @@ malicious process already authorized to call OpenCode RPC. Do not expose this
 server RPC to untrusted clients. Multiple root-attached TUIs fail closed;
 Web/headless clients cannot execute these pane operations.
 
-V2 lacks a public per-tool AbortSignal; interruption uses durable event timestamps
-and cancels only operations that existed when that event was created. New calls
-have fresh controllers; old events cannot leave a sticky cancelled session.
-Event stream failure disables the plugin until reload. A lost TUI RPC call aborts
+Interrupting the tool call (Effect fiber interruption) withdraws its pane request. Session
+interruption/deletion events also cancel requests created at or before the event, so an old
+event never cancels a later run. A lost TUI RPC call aborts
 local work within the heartbeat/request bounds. There is no atomic family lock;
 a child starting after verification remains a race, another reason source auto
 shutdown is disabled. Reviewer/manual host integration is still required for
@@ -128,12 +139,12 @@ actual loader wiring, terminal lifecycle and native dialog ergonomics.
 ## Validation
 
 ```sh
-cd home/opencode/.config/opencode/plugins/dotfiles-tools
-npm test
-# or: node --test test/*.test.js
+npm test --prefix home/opencode/.config/opencode   # typecheck + all plugin tests
+# or, here: node --test test/*.test.ts test/*.test.js
 ```
 
-24 dependency-free Node tests cover exact interface-shaped mocks, schemas,
+Bridge tests run on `TestClock`; the JS integration tests drive the Effect server and the TUI
+together through a fake RPC that runs the server's Effect handlers. They cover exact interface-shaped mocks, schemas,
 CLI/Vercel behavior, root/family/permission/cwd correlation, server-vs-local pane
 environments, single claims/leases/late replies, cancellation isolation,
 cleanup and argv/process bounds. The Linux regression launches only harmless shell descendants and

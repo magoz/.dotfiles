@@ -1,32 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveInput, buildArgs, sessionDirectory, executeWorktree } from '../worktree.js';
-import { validate, worktreeInput, destinationSchema, outcome } from '../schema.js';
-import { verifyPane, confirmation } from '../tui.js';
-import { request, destination, fixture, root, location } from './helpers.js';
+import { Effect } from 'effect';
+import { executeWorktree } from '../pane.js';
+import { verifyPane, confirmation } from '../view.js';
+import { request, destination, fixture, root, location, startServer } from './helpers.js';
 
-test('same inferred branch and optional CLI argv behavior, explicit OpenCode/JSON', () => {
-  assert.equal(resolveInput({ prompt: 'Please create a new worktree to fix the broken café' }).branch, 'fix/broken-cafe');
-  assert.equal(resolveInput({ branch: '  exact/name  ', prompt: 'ignored' }).branch, 'exact/name');
-  assert.throws(() => resolveInput({}));
-  const input = { branch: 'feat/task', base: 'origin/main', path: '/checkout space', label: 'label', ttl: '7d', prompt: 'hello; no shell', setup: ['one', 'two'] };
-  assert.deepEqual(buildArgs(input, '/repo'), ['create', '--agent', 'opencode', '--json', '--repo', '/repo', '--branch', 'feat/task', '--base', 'origin/main', '--path', '/checkout space', '--label', 'label', '--ttl', '7d', '--prompt', 'hello; no shell', '--setup', 'one', '--setup', 'two']);
-  assert.ok(!buildArgs({ prompt: 'task' }, '/repo').includes('--base'));
-});
-
-test('strict runtime boundaries reject model repo, unknown fields, non-OpenCode/incomplete success', () => {
-  for (const value of [{ repo: '/evil' }, { branch: 2 }, { setup: ['ok', null] }, { branch: 'x\0y' }]) assert.throws(() => validate(worktreeInput, value));
-  for (const value of [{ ...destination, agentKind: 'pi' }, { ...destination, extra: true }, { branch: 'x' }]) assert.throws(() => validate(destinationSchema, value));
-  assert.throws(() => outcome({ status: 'ready' }));
-});
-
-test('server resolves authoritative session cwd, location/subpath and root ownership', async () => {
-  const f = fixture();
-  assert.equal((await sessionDirectory(f.server, root.id, true)).cwd, '/repo');
+test('server resolves authoritative session cwd, location/subpath and root ownership', async (t) => {
+  const f = fixture(); const server = await startServer(f); t.after(server.stop);
+  const directory = () => Effect.runPromise(server.api.sessionDirectory(root.id, true));
+  assert.equal(await directory(), '/repo');
   f.setSession({ ...root, subpath: 'app' });
-  assert.equal((await sessionDirectory(f.server, root.id, true)).cwd, '/repo/app');
+  assert.equal(await directory(), '/repo/app');
   for (const session of [{ ...root, parentID: 'parent' }, { ...root, subpath: '../escape' }, { ...root, location: { directory: '/other' } }, { ...root, subpath: '/absolute' }]) {
-    f.setSession(session); await assert.rejects(sessionDirectory(f.server, root.id, true));
+    f.setSession(session); await assert.rejects(directory());
   }
 });
 

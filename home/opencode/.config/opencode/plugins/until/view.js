@@ -1,7 +1,7 @@
 // `until` terminal view: a dock above the composer while watches run, slash commands, a watch
 // picker, and toasts for `wake=notify` results. The OpenTUI Solid runtime is injected (see
 // tui.js), so this module builds elements without JSX and runs under node --test.
-import { rpcLocation } from '../dotfiles-tools/tui.js';
+import { rpcLocation } from '../shared/location.js';
 import { formatDuration } from './format.ts';
 import { definition } from './rpc.ts';
 

@@ -1,6 +1,6 @@
 // `/quota` terminal command; the host's Solid `createComponent` is injected (see tui.js).
 import { definition } from './rpc.ts';
-import { rpcLocation } from '../dotfiles-tools/tui.js';
+import { rpcLocation } from '../shared/location.js';
 
 /** CLI plugins must create keymap layers inside a rendered slot: V2 `setup` has no Keymap provider. */
 export function setupUsage(ctx, createComponent) {

@@ -22,6 +22,8 @@
   },
   "include": [
     "shared/*.ts",
+    "dotfiles-tools/*.ts",
+    "dotfiles-tools/test/*.ts",
     "skill-commands/*.ts",
     "subscription-usage/*.ts",
     "until/*.ts",

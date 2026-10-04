@@ -12,8 +12,9 @@ export interface Portable<Input, Output> extends StandardSchemaV1<Input, Output>
   readonly "~standard": StandardSchemaV1.Props<Input, Output> & StandardJSONSchemaV1.Props<Input, Output>
 }
 
-export function portable<S extends Schema.Codec<unknown, unknown>>(schema: S): Portable<S["Encoded"], S["Type"]> {
-  const standard = Schema.toStandardSchemaV1(schema)["~standard"]
+/** `exact`: unknown object keys are rejected instead of stripped (e.g. a model-supplied `repo`). */
+export function portable<S extends Schema.Codec<unknown, unknown>>(schema: S, options: { readonly exact?: boolean } = {}): Portable<S["Encoded"], S["Type"]> {
+  const standard = Schema.toStandardSchemaV1(schema, options.exact ? { parseOptions: { onExcessProperty: "error" } } : undefined)["~standard"]
   const json = Schema.toStandardJSONSchemaV1(schema)["~standard"].jsonSchema
   return {
     "~standard": {
