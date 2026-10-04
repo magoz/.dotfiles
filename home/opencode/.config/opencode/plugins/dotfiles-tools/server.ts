@@ -1,13 +1,13 @@
 // `create_worktree` and `/worktree` (OpenCode V2 Effect API). Same path as Fleet's launcher: a
 // provisioned checkout through OpenCode's native worktree API (the dotfiles `worktrees` strategy),
 // then a fresh session there that receives the task. No Herdr, no TUI: works from the web app,
-// Fleet and the TUI alike.
+// Fleet and the TUI, for this session's repository or any other.
 import path from "node:path"
-import type { SessionCreateInput, SessionPromptInput, WorktreeCreateInput } from "@opencode/client/effect/api"
+import type { SessionCreateInput, SessionMoveInput, SessionPromptInput, WorktreeCreateInput } from "@opencode/client/effect/api"
 import type { CommandDefinition, CommandInvocation } from "@opencode/plugin/effect/command"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import type { Project } from "@opencode/schema/project"
-import type { AbsolutePath } from "@opencode/schema/schema"
+import { AbsolutePath } from "@opencode/schema/schema"
 import { Session } from "@opencode/schema/session"
 import { Tool } from "@opencode/schema/tool"
 import { Data, Effect, Option, type Scope } from "effect"
@@ -18,7 +18,8 @@ import { WorktreeInput, WorktreeOutput, decodeLink, type Link, type WorktreeOutp
 import { BASE_GUIDANCE, LINK_GUIDANCE, resolveInput } from "./worktree.ts"
 
 const PREFLIGHT_TIMEOUT = "30 seconds"
-const DESCRIPTION = `Only when the user explicitly asks: create a provisioned worktree (branch from origin's default branch) and a fresh OpenCode session there that receives \`prompt\` as its task. Requires the root session. Source session stays open. Put any extra setup the destination needs in \`prompt\`. ${BASE_GUIDANCE} ${LINK_GUIDANCE}`
+const GIT_TIMEOUT = "10 seconds"
+const DESCRIPTION = `Only when the user explicitly asks: create a provisioned worktree (branch from origin's default branch) and a fresh OpenCode session there that receives \`prompt\` as its task. \`repo\`: absolute path of the repository to branch when it is not this session's (default). Requires the root session. Source session stays open. Put any extra setup the destination needs in \`prompt\`. ${BASE_GUIDANCE} ${LINK_GUIDANCE}`
 const READY_NOTE = "The destination session owns the task. Do not continue implementation in this session. Do not retry a successful allocation."
 
 class HandoffError extends Data.TaggedError("HandoffError")<{ readonly message: string }> {}
@@ -40,7 +41,8 @@ export interface Host {
   readonly location: { readonly directory: string; readonly workspaceID?: string | undefined }
   readonly session: {
     readonly get: (input: { readonly sessionID: Session.ID }) => Effect.Effect<SessionLike, unknown>
-    readonly create: (input: SessionCreateInput) => Effect.Effect<{ readonly id: Session.ID }, unknown>
+    readonly create: (input: SessionCreateInput) => Effect.Effect<{ readonly id: Session.ID; readonly projectID: Project.ID }, unknown>
+    readonly move: (input: SessionMoveInput) => Effect.Effect<unknown, unknown>
     readonly prompt: (input: SessionPromptInput) => Effect.Effect<unknown, unknown>
   }
   readonly worktree: { readonly create: (input: WorktreeCreateInput) => Effect.Effect<{ readonly directory: AbsolutePath }, unknown> }
@@ -53,7 +55,7 @@ export interface Host {
 }
 
 export interface Options {
-  /** Runs the `provision-env` preflight (tests inject a fake). */
+  /** Runs `git` and the `provision-env` preflight (tests inject a fake). */
   readonly run?: typeof runProcess
   /** The service's environment; `HERDR_*` is always stripped. */
   readonly env?: NodeJS.ProcessEnv
@@ -68,7 +70,7 @@ const reason = (error: unknown): string => {
 /** The user's request for `/worktree`: the agent picks the branch and calls `create_worktree`. */
 export const worktreeRequest = (task: string) =>
   [
-    "The user explicitly requests a new worktree. Use create_worktree for the task below; infer a concise conventional branch or use an explicitly named branch, and pass the task as its prompt. Ask before consequential ambiguity. This session stays open.",
+    "The user explicitly requests a new worktree. Use create_worktree for the task below; infer a concise conventional branch or use an explicitly named branch, and pass the task as its prompt. Pass repo when the task names another repository. Ask before consequential ambiguity. This session stays open.",
     BASE_GUIDANCE,
     LINK_GUIDANCE,
     task ? `Task: ${task}` : "No task was given: ask the user what the new worktree is for.",
@@ -79,8 +81,8 @@ export const setup = (host: Host, options: Options = {}) =>
     const run = options.run ?? runProcess
     const env = withoutPaneEnv(options.env ?? process.env)
 
-    /** The root session and its working directory, after checking location and subpath. */
-    const sourceSession = (sessionID: string) =>
+    /** The root session's working directory, after checking location and subpath. */
+    const sourceDirectory = (sessionID: string) =>
       Effect.gen(function* () {
         const session = yield* host.session.get({ sessionID: Session.ID.make(sessionID) }).pipe(Effect.mapError(() => new HandoffError({ message: "Invalid session location" })))
         if (session.id !== sessionID || !path.isAbsolute(session.location.directory)) return yield* new HandoffError({ message: "Invalid session location" })
@@ -92,7 +94,18 @@ export const setup = (host: Host, options: Options = {}) =>
         const cwd = path.resolve(session.location.directory, session.subpath ?? ".")
         const relative = path.relative(session.location.directory, cwd)
         if (relative === ".." || relative.startsWith(`..${path.sep}`)) return yield* new HandoffError({ message: "Session subpath escapes location" })
-        return { cwd, projectID: session.projectID }
+        return cwd
+      })
+
+    /** The top level of the Git checkout containing `directory`. */
+    const checkout = (directory: string) =>
+      Effect.gen(function* () {
+        const invalid = new HandoffError({ message: `Not a Git checkout: ${directory}` })
+        if (!path.isAbsolute(directory)) return yield* new HandoffError({ message: "repo must be an absolute path" })
+        const result = yield* run("git", ["-C", directory, "rev-parse", "--show-toplevel"], { cwd: "/", env, timeout: GIT_TIMEOUT, capture: "stdout" }).pipe(Effect.mapError(() => invalid))
+        const top = result.stdout.trim()
+        if (result.code !== 0 || !path.isAbsolute(top) || top.includes("\n")) return yield* invalid
+        return AbsolutePath.make(top)
       })
 
     /** Vercel link check before anything is allocated. Only a strict exit-3 report is recoverable. */
@@ -117,19 +130,27 @@ export const setup = (host: Host, options: Options = {}) =>
           try: () => branchToName(resolved.branch),
           catch: () => new HandoffError({ message: `Branch ${resolved.branch} has no exact worktree name: use "/"-separated segments of letters, digits, ".", "_" and "-", none starting or ending with "-" or containing "--"` }),
         })
-        const source = yield* sourceSession(tool.sessionID)
-        const link = yield* preflight(source.cwd)
+        const cwd = yield* sourceDirectory(tool.sessionID)
+        const repo = yield* checkout(resolved.repo ?? cwd)
+        const link = yield* preflight(repo)
         if (Option.isSome(link)) {
           const output: Output = { status: "vercel_link_required", link: link.value, retry: resolved }
           return { output, content: `${JSON.stringify(output)}\n${LINK_GUIDANCE}` }
         }
-        // `branch` is OpenCode's starting ref: the strategy passes it as the CLI's --base (no fetch).
-        const { directory } = yield* host.worktree
-          .create({ projectID: source.projectID, name, ...(resolved.base ? { branch: resolved.base } : {}) })
-          .pipe(Effect.mapError((error) => new HandoffError({ message: `Creating the worktree failed: ${reason(error)}` })))
+        // Plugins cannot look up a directory's project, but creating a session there resolves it:
+        // the destination session starts in `repo` and moves into the worktree once it exists.
         const session = yield* host.session
-          .create({ location: { directory }, title: resolved.prompt?.split("\n")[0]?.slice(0, 120) || resolved.branch })
-          .pipe(Effect.mapError((error) => new HandoffError({ message: `Creating the destination session failed: ${reason(error)}. Worktree kept at ${directory}` })))
+          .create({ location: { directory: repo }, title: resolved.prompt?.split("\n")[0]?.slice(0, 120) || resolved.branch })
+          .pipe(Effect.mapError((error) => new HandoffError({ message: `Creating the destination session failed: ${reason(error)}; nothing allocated` })))
+        // `branch` is OpenCode's starting ref: the strategy passes it as the CLI's --base (no fetch).
+        // Plugins cannot delete sessions (2.0.20), so a failure here leaves that empty session.
+        const { directory } = yield* host.worktree
+          .create({ projectID: session.projectID, name, ...(resolved.base ? { branch: resolved.base } : {}) })
+          .pipe(Effect.mapError((error) => new HandoffError({ message: `Creating the worktree failed: ${reason(error)}. Empty session ${session.id} left in ${repo}; delete it` })))
+        // Queued before the task, so the task runs in the worktree.
+        yield* host.session
+          .move({ sessionID: session.id, directory })
+          .pipe(Effect.mapError((error) => new HandoffError({ message: `Moving the destination session failed: ${reason(error)}. Worktree kept at ${directory}; session ${session.id} left in ${repo}` })))
         if (resolved.prompt) {
           yield* host.session
             .prompt({ sessionID: session.id, text: resolved.prompt })

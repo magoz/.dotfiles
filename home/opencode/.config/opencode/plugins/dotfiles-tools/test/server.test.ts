@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import type { SessionCreateInput, SessionPromptInput, WorktreeCreateInput } from "@opencode/client/effect/api"
+import type { SessionCreateInput, SessionMoveInput, SessionPromptInput, WorktreeCreateInput } from "@opencode/client/effect/api"
 import type { CommandDefinition } from "@opencode/plugin/effect/command"
 import { Project } from "@opencode/schema/project"
 import { AbsolutePath } from "@opencode/schema/schema"
@@ -24,6 +24,7 @@ function fixture(options: { preflight?: ProcessResult; worktree?: Effect.Effect<
   const calls: Call[] = []
   const worktrees: WorktreeCreateInput[] = []
   const sessions: SessionCreateInput[] = []
+  const moves: SessionMoveInput[] = []
   const prompts: SessionPromptInput[] = []
   const tools = new Map<string, CreateWorktreeTool>()
   const commands = new Map<string, CommandDefinition>()
@@ -31,7 +32,10 @@ function fixture(options: { preflight?: ProcessResult; worktree?: Effect.Effect<
     location,
     session: {
       get: ({ sessionID }) => Effect.succeed(sessionID === root.id ? root : { ...root, id: sessionID, parentID: root.id }),
-      create: (input) => Effect.sync(() => (sessions.push(input), { id: Session.ID.make("ses_new") })),
+      // OpenCode resolves the project of the directory a session is created in.
+      create: (input) =>
+        Effect.sync(() => (sessions.push(input), { id: Session.ID.make("ses_new"), projectID: Project.ID.make(input.location?.directory === "/other" ? "prj_other" : "prj_repo") })),
+      move: (input) => Effect.sync(() => void moves.push(input)),
       prompt: (input) => Effect.suspend(() => (prompts.push(input), input.sessionID === root.id ? Effect.void : (options.prompt ?? Effect.void))),
     },
     worktree: {
@@ -40,10 +44,13 @@ function fixture(options: { preflight?: ProcessResult; worktree?: Effect.Effect<
     command: { transform: (edit) => Effect.sync(() => edit({ add: (definition) => void commands.set(definition.name, definition) })) },
     tool: { transform: (edit) => Effect.sync(() => edit({ add: (tool) => void tools.set(tool.name, tool) })) },
   }
+  // `git rev-parse --show-toplevel` succeeds for /repo (and its subdirectories) and /other.
   const run = (command: string, args: readonly string[], process: ProcessOptions) =>
-    Effect.sync(() => {
+    Effect.sync((): ProcessResult => {
       calls.push({ command, args, env: process.env })
-      return options.preflight ?? { code: 0, stdout: "", stderr: "" }
+      if (command !== "git") return options.preflight ?? { code: 0, stdout: "", stderr: "" }
+      const top = ["/repo", "/other"].find((repo) => args[1] === repo || args[1]?.startsWith(`${repo}/`))
+      return top ? { code: 0, stdout: `${top}\n`, stderr: "" } : { code: 128, stdout: "", stderr: "not a git repository" }
     })
   let api: Effect.Success<ReturnType<typeof setup>> | undefined
   const start = async () => {
@@ -56,7 +63,7 @@ function fixture(options: { preflight?: ProcessResult; worktree?: Effect.Effect<
     assert.ok(api)
     return Effect.runPromise(api.execute(input, { sessionID }))
   }
-  return { calls, worktrees, sessions, prompts, tools, commands, start, call }
+  return { calls, worktrees, sessions, moves, prompts, tools, commands, start, call }
 }
 
 test("registers create_worktree with an exact schema and a /worktree command", async (t) => {
@@ -66,21 +73,24 @@ test("registers create_worktree with an exact schema and a /worktree command", a
   assert.deepEqual([...f.tools.keys()], ["create_worktree"])
   const tool = f.tools.get("create_worktree")
   assert.deepEqual(tool?.options, { codemode: false, permission: "create_worktree" })
-  // The host validates tool input with this portable schema: a model-supplied repo is refused.
-  const refused = await tool?.input["~standard"].validate({ branch: "feat/task", repo: "/evil" })
+  // The host validates tool input with this exact portable schema: Herdr-era fields are refused.
+  const refused = await tool?.input["~standard"].validate({ branch: "feat/task", setup: ["npm ci"] })
   assert.ok(refused && "issues" in refused && refused.issues?.length)
   assert.deepEqual([...f.commands.keys()], ["worktree"])
 })
 
-test("no TUI or Herdr needed: preflight, native worktree, fresh session that receives the task", async (t) => {
+test("no TUI or Herdr needed: preflight, native worktree, fresh session moved there that receives the task", async (t) => {
   const f = fixture()
   t.after(await f.start())
   const result = await f.call({ branch: "feat/task", prompt: "Implement the task\nwith details" })
-  assert.deepEqual(f.calls.map((call) => [call.command, ...call.args]), [["provision-env", "--repo", "/repo", "--check-vercel-link", "--non-interactive"]])
-  assert.equal(f.calls[0]?.env.HERDR_SOCKET, undefined)
-  assert.equal(f.calls[0]?.env.PATH, "/bin")
+  assert.deepEqual(f.calls.map((call) => [call.command, ...call.args]), [
+    ["git", "-C", "/repo", "rev-parse", "--show-toplevel"],
+    ["provision-env", "--repo", "/repo", "--check-vercel-link", "--non-interactive"],
+  ])
+  for (const call of f.calls) assert.deepEqual(call.env, { PATH: "/bin" })
+  assert.deepEqual(f.sessions, [{ location: { directory: "/repo" }, title: "Implement the task" }])
   assert.deepEqual(f.worktrees, [{ projectID: "prj_repo", name: "feat--task" }])
-  assert.deepEqual(f.sessions, [{ location: { directory: "/repo-feat-task" }, title: "Implement the task" }])
+  assert.deepEqual(f.moves, [{ sessionID: "ses_new", directory: "/repo-feat-task" }])
   assert.deepEqual(f.prompts, [{ sessionID: "ses_new", text: "Implement the task\nwith details" }])
   assert.deepEqual(result.output, { status: "ready", destination: { directory: "/repo-feat-task", branch: "feat/task", sessionID: "ses_new", prompted: true } })
   assert.ok(typeof result.content === "string" && /destination session owns the task/.test(result.content))
@@ -91,10 +101,24 @@ test("base becomes the starting ref; an inferred branch and no prompt still work
   t.after(await f.start())
   await f.call({ branch: "fix/api/retry", base: "abc123" })
   assert.deepEqual(f.worktrees, [{ projectID: "prj_repo", name: "fix--api--retry", branch: "abc123" }])
-  assert.deepEqual(f.sessions, [{ location: { directory: "/repo-feat-task" }, title: "fix/api/retry" }])
+  assert.deepEqual(f.sessions, [{ location: { directory: "/repo" }, title: "fix/api/retry" }])
   assert.deepEqual(f.prompts, [])
   await f.call({ prompt: "Add CSV export" })
   assert.equal(f.worktrees[1]?.name, "feat--csv-export")
+})
+
+test("repo targets another repository's project from this session", async (t) => {
+  const f = fixture()
+  t.after(await f.start())
+  await f.call({ repo: "/other/packages/x", branch: "feat/task", prompt: "task" })
+  assert.deepEqual(f.calls.map((call) => call.args[1]), ["/other/packages/x", "/other"])
+  assert.deepEqual(f.sessions, [{ location: { directory: "/other" }, title: "task" }])
+  assert.deepEqual(f.worktrees, [{ projectID: "prj_other", name: "feat--task" }])
+  await assert.rejects(f.call({ repo: "/nowhere", branch: "feat/task" }), /Not a Git checkout: \/nowhere/)
+  await assert.rejects(f.call({ repo: "relative", branch: "feat/task" }), /absolute path/)
+  // Still root-only, whatever the target.
+  await assert.rejects(f.call({ repo: "/other", branch: "feat/task" }, "ses_child"), /root session/)
+  assert.equal(f.worktrees.length, 1)
 })
 
 test("vercel link required: structured retry, nothing allocated", async (t) => {
@@ -107,6 +131,7 @@ test("vercel link required: structured retry, nothing allocated", async (t) => {
     retry: { branch: "feat/task", prompt: "task" },
   })
   assert.deepEqual(f.worktrees, [])
+  assert.deepEqual(f.sessions, [])
 })
 
 test("fails closed before allocating: child session, unknown preflight failure, unencodable branch", async (t) => {
@@ -121,8 +146,11 @@ test("fails closed before allocating: child session, unknown preflight failure, 
 test("failures after allocation say what was kept", async (t) => {
   const failed = fixture({ worktree: Effect.fail(new Error("worktree checkout refused feat/task before allocating anything\nstack")) })
   t.after(await failed.start())
-  await assert.rejects(failed.call({ branch: "feat/task" }), (error: Error) => error.message === "Creating the worktree failed: worktree checkout refused feat/task before allocating anything")
-  assert.deepEqual(failed.sessions, [])
+  await assert.rejects(
+    failed.call({ branch: "feat/task" }),
+    (error: Error) => error.message === "Creating the worktree failed: worktree checkout refused feat/task before allocating anything. Empty session ses_new left in /repo; delete it",
+  )
+  assert.deepEqual(failed.moves, [])
 
   const unsent = fixture({ prompt: Effect.fail(new Error("busy")) })
   t.after(await unsent.start())

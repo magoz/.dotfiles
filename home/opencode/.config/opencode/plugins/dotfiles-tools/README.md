@@ -11,28 +11,35 @@ Herdr. It works the same from the web app, Fleet and the TUI.
 
 ## Flow
 
-`create_worktree` takes `{ branch?, base?, prompt? }`. If `branch` is missing, it is inferred
-from `prompt`. Repo/cwd are **not model parameters**: the server resolves them from the calling
-session's location and subpath, rejects escapes and cross-location sessions, and accepts root
-sessions only. Host schemas are `portable(..., { exact: true })`, so unknown keys (such as
-`repo`, or the Herdr-era `setup`/`ttl`/`path`/`label`) are rejected.
+`create_worktree` takes `{ repo?, branch?, base?, prompt? }`. If `branch` is missing, it is
+inferred from `prompt`. `repo` (absolute) picks another repository, so a session in one repo
+can start work in another. It defaults to the calling session's directory, which the server
+resolves from its location and subpath (escapes and cross-location sessions are rejected).
+Either way, the target is `git rev-parse --show-toplevel` of that directory. Only root
+sessions can call the tool. Host schemas are `portable(..., { exact: true })`, so unknown keys
+(such as the Herdr-era `setup`/`ttl`/`path`/`label`) are rejected.
 
-1. `provision-env --repo <cwd> --check-vercel-link --non-interactive` (30s), run with the
+1. `provision-env --repo <repo> --check-vercel-link --non-interactive` (30s), run with the
    service's environment minus `HERDR_*`. Nothing has been allocated at this point. Only exit 3
    with a strict `{status:'vercel_link_required',directory,reason}` report becomes a structured
    result containing the identical `retry` input. Any other failure stops the call, and
    stderr is never echoed.
-2. `ctx.worktree.create({ projectID, name, branch: base })`: OpenCode's native worktree API,
+2. `ctx.session.create({ location: { directory: repo } })`: the destination session. Plugins
+   have no project lookup, and creating a session is how `repo`'s project gets resolved.
+3. `ctx.worktree.create({ projectID, name, branch: base })`: OpenCode's native worktree API,
    which goes through the dotfiles `worktrees` strategy. That creates a provisioned sibling
    checkout and an ownership marker, and the checkout can be retired from OpenCode and Fleet.
    `name` is `branchToName(branch)` (`feat/x` → `feat--x`). Branches without an exact encoding
    are refused before anything is allocated.
-3. `ctx.session.create({ location: { directory } })`, then `ctx.session.prompt` with `prompt`.
+   OpenCode runs the target project's own strategy, so this works across repositories.
+4. `ctx.session.move` into the worktree, then `ctx.session.prompt` with `prompt`. The move is
+   queued before the task, so the task runs in the worktree.
 
-This is the same sequence as Fleet's launcher (`worktree.create` → `session.create` →
-`session.prompt`), so the new session shows up in Fleet like any launch. When a step after
-step 2 fails, the error says what was kept (the worktree, or the session without its task).
-Nothing is rolled back and nothing is retried automatically.
+Apart from the session being created first and then moved, this matches Fleet's launcher
+(`worktree.create` → `session.create` → `session.prompt`), so the new session shows up in Fleet
+like any launch. When a step after the preflight fails, the error says what was kept: an
+empty session (plugins cannot delete sessions in 2.0.20), the worktree, or the session without
+its task. Nothing is rolled back and nothing is retried automatically.
 
 There is no confirmation prompt. Consent is the user's explicit request: the tool description
 says to use it only when the user asks, and `/worktree` is a user action. Child agents

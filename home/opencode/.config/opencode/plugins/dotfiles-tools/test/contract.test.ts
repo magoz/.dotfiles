@@ -10,8 +10,8 @@ test("explicit branch wins, else a conventional branch is inferred from the prom
   assert.throws(() => resolveInput({}))
 })
 
-test("strict boundaries reject a model repo, Herdr-era fields, unknown keys and impossible outputs", () => {
-  for (const value of [{ repo: "/evil" }, { setup: ["npm ci"] }, { ttl: "7d" }, { branch: 2 }, { branch: "x\0y" }]) assert.throws(() => decodeWorktreeInput(value))
+test("strict boundaries reject Herdr-era fields, unknown keys and impossible outputs", () => {
+  for (const value of [{ repo: 1 }, { setup: ["npm ci"] }, { ttl: "7d" }, { branch: 2 }, { branch: "x\0y" }]) assert.throws(() => decodeWorktreeInput(value))
   const destination = { directory: "/repo-feat-x", branch: "feat/x", sessionID: "ses_new", prompted: true }
   assert.deepEqual(decodeOutput({ status: "ready", destination }), { status: "ready", destination })
   // Each status carries exactly its own data.

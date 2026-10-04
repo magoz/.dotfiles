@@ -6,8 +6,9 @@ export const MAX_TEXT = 16_384
 /** Non-empty, bounded, no NUL: values end up as CLI argv and prompt text. */
 export const Text = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(MAX_TEXT), Schema.makeFilter((value) => !value.includes("\0")))
 
-/** Model-facing tool input. Repo/cwd are deliberately absent: the server resolves them. */
+/** Model-facing tool input. `repo` defaults to the calling session's checkout. */
 export const WorktreeInput = Schema.Struct({
+  repo: Schema.optionalKey(Text),
   branch: Schema.optionalKey(Text),
   base: Schema.optionalKey(Text),
   prompt: Schema.optionalKey(Text),
