@@ -94,12 +94,45 @@ like the `shell` tool, and not a sandbox: conditions must be side-effect free by
   the running turn and holds them through compaction.
 - `/until-resume`: restoration is automatic from durable storage.
 
+## Implementation
+
+The server is an OpenCode V2 **Effect** plugin in TypeScript (`server.ts` exports
+`{ id, effect }`); OpenCode loads `.ts` directly, no build. The TUI (`tui.js`, `view.js`) stays
+plain JS on the host's Solid runtime.
+
+- **One fiber per watch** in a plugin-scoped `FiberMap`. A watch is `raceFirst(loop, deadline)`;
+  checks, sleeps and wake retries are interruptible Effects. Unloading the plugin interrupts the
+  fibers without finishing the watches; the next generation restores them from storage.
+- **Checks** (`check.ts`) are an Effect over a detached process group: `timeoutOption` makes a
+  slow check `killed` (= false), and interruption SIGTERMs then SIGKILLs the whole group.
+- **Recurring serialization** waits on a `Deferred` per in-flight wake, completed by
+  `session.inbox.delivered` + `session.execution.*` events (or `session.wait` as backstop).
+- **Parse at the boundary:** tool input, stored records (`Schema.fromJsonString(StoredWatch)`),
+  telemetry lines and session events are decoded with Effect Schema; malformed records are
+  dropped, never half-run.
+- **Tests** use `TestClock`, so cadence, deadlines and retries run instantly and deterministically.
+
+### Effect version and `portable()`
+
+The plugin ships its own `effect`, **pinned exactly** to the version OpenCode is built on
+(`effect` in `@opencode/plugin`'s dependencies; `tests/config.test.mjs` enforces the match).
+Effects interoperate across the host's copy and this one, but **Effect schemas do not**: the host
+re-runs refinements (`Int`, `Finite`, min/max) with its own copy and rejects valid values
+("Expected an integer"). So every schema the host validates (tool input, RPC
+inputs/outputs/errors/events) goes through `portable()`, a plain Standard Schema (+ JSON Schema)
+whose validation runs in this plugin's copy. A test asserts none of them is an Effect schema.
+
+Upgrading OpenCode: bump `@opencode/plugin` and `@opencode/schema` to the new CLI version and
+`effect` to the exact version `@opencode/plugin` depends on, then `npm install` and `npm test`.
+
 ## Files
 
-`domain.js` (contract, parsing, cadence, packets) · `engine.js` (timers, checks, delivery,
-persistence) · `check.js` (process-group runner) · `server.js` (tool, RPC, events) ·
-`view.js`/`tui.js` (dock, commands) · `rpc.js` · `telemetry.js`.
+`domain.ts` (contract, schemas, parsing, cadence, packets) · `engine.ts` (watch fibers, delivery,
+persistence) · `check.ts` (process-group runner) · `server.ts` (plugin, tool, RPC, events) ·
+`rpc.ts` · `portable.ts` · `telemetry.ts` · `format.ts` · `view.js`/`tui.js` (dock, commands).
 
 ```sh
-node --test test/*.test.js
+npm ci            # installed by arch/install and macos/install
+npm run typecheck # strict TS: no any, assertions or non-null
+node --test test/*.test.ts test/*.test.js
 ```

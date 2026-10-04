@@ -47,7 +47,12 @@ function fixture() {
     client: {
       rpc: () => ({
         list: async (input, options) => { calls.push(['list', input, options.location]); return { watches: server.watches }; },
-        start: async (input) => { calls.push(['start', input]); return input.condition === 'bad' ? { error: 'cwd is not a directory' } : { id: 'new00001', label: 'condition', status: 'running' }; },
+        start: async (input) => {
+          calls.push(['start', input]);
+          // The real client throws declared RPC errors as { type, message }.
+          if (input.condition === 'bad') throw { type: 'until.error', message: 'cwd is not a directory' };
+          return { id: 'new00001', label: 'condition', status: 'running' };
+        },
         cancel: async (input) => { calls.push(['cancel', input]); return { id: input.id, status: 'cancelled' }; },
         status: async (input) => ({ id: input.id, text: 'receipt' }),
         stats: async () => ({ text: 'stats' }),

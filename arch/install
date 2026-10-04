@@ -65,6 +65,7 @@ bun install --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 bun install --ignore-scripts --cwd "$HOME_PACKAGES/opencode/.config/opencode"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-anthropic-auth"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-vim-compat"
+npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/until"
 npm ci --omit=dev --prefix "$HOME_PACKAGES/pi/.pi"
 
 while IFS= read -r package; do

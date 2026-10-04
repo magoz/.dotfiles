@@ -2,14 +2,17 @@
 // picker, and toasts for `wake=notify` results. The OpenTUI Solid runtime is injected (see
 // tui.js), so this module builds elements without JSX and runs under node --test.
 import { rpcLocation } from '../dotfiles-tools/tui.js';
-import { formatDuration } from './domain.js';
-import { definition } from './rpc.js';
+import { formatDuration } from './format.ts';
+import { definition } from './rpc.ts';
 
 const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 export const DOCK_ROWS = 3;
 const POLL_MS = 5000;
 /** OpenCode's own queued-prompt dock border (tui/src/ui/border.ts SplitBorder). */
 const SPLIT_BORDER = { topLeft: '', bottomLeft: '', vertical: '┃', topRight: '', bottomRight: '', horizontal: ' ', bottomT: '', topT: '', cross: '', leftT: '', rightT: '' };
+
+/** Declared RPC errors (`until.error`) arrive as `{ type, message }`; anything else is generic. */
+const failure = (error, fallback) => (error?.type === 'until.error' && typeof error.message === 'string' ? error.message : fallback);
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -133,10 +136,9 @@ export function setupUntil(ctx, runtime, deps = {}) {
     if (!call) return;
     try {
       const result = await rpc.start({ sessionID, condition }, call);
-      if (result.error) return toast('error', result.error);
       toast('info', `Watching ${result.label} as ${result.id}`);
       void refresh(sessionID);
-    } catch { toast('error', 'until is unavailable for this session'); }
+    } catch (error) { toast('error', failure(error, 'until is unavailable for this session')); }
   };
 
   const manage = async (sessionID, verb, id) => {
@@ -144,11 +146,10 @@ export function setupUntil(ctx, runtime, deps = {}) {
     if (!call) return;
     try {
       const result = await rpc[verb]({ sessionID, id }, call);
-      if (result.error) return toast('warning', result.error);
       if (verb === 'status') return ctx.ui.dialog.alert({ title: `until · ${id}`, message: result.text });
       toast('info', `${verb === 'cancel' ? 'Cancelled' : 'Completed'} ${id}`);
       void refresh(sessionID);
-    } catch { toast('error', 'until is unavailable for this session'); }
+    } catch (error) { toast('warning', failure(error, 'until is unavailable for this session')); }
   };
 
   /** `/until-cancel <id>` and friends; without an ID, pick from the running watches. */
@@ -190,9 +191,8 @@ export function setupUntil(ctx, runtime, deps = {}) {
     if (!call) return toast('info', 'Open a session to read until stats');
     try {
       const result = await rpc.stats({}, call);
-      if (result.error) return toast('warning', result.error);
       await ctx.ui.dialog.alert({ title: 'until stats', message: result.text });
-    } catch { toast('error', 'until stats are unavailable'); }
+    } catch (error) { toast('warning', failure(error, 'until stats are unavailable')); }
   };
 
   const theme = () => ctx.theme;

@@ -24,7 +24,8 @@ test('OpenCode agents are generated from the shared ~/.agents/agents definitions
 });
 test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', async () => {
   for (const target of config.plugins) {
-    await access(new URL(`${target}/server.js`, root)).catch(async () => {
+    // Effect plugins (plugins/until) are TypeScript; OpenCode loads `server.ts` directly.
+    await access(new URL(`${target}/server.js`, root)).catch(() => access(new URL(`${target}/server.ts`, root))).catch(async () => {
       assert.ok(['./plugins/opencode-anthropic-auth', './plugins/opencode-anthropic-auth/gateway'].includes(target), target);
       await access(new URL(`${target}/index.mjs`, root));
     });
@@ -65,4 +66,10 @@ test('child agents deny by default, never delegate, and only writers may edit or
     assert.ok(!permissions.some((p) => p.action === 'subagent' && p.effect === 'allow'), role);
     if (!writers.has(role)) assert.ok(!permissions.some((p) => ['shell', 'edit', 'create_worktree'].includes(p.action) && p.effect === 'allow'), role);
   }
+});
+test('Effect plugins pin the Effect version OpenCode is built on and type-check', async () => {
+  const until = JSON.parse(await read('plugins/until/package.json'));
+  const cli = JSON.parse(await read('plugins/until/node_modules/@opencode/plugin/package.json'));
+  assert.equal(until.dependencies.effect, cli.dependencies.effect, 'bump effect with @opencode/plugin');
+  assert.equal(until.devDependencies['@opencode/plugin'], until.dependencies['@opencode/schema']);
 });

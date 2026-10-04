@@ -9,7 +9,7 @@ Local OpenCode runtime plugins.
 - `opencode-anthropic-auth/gateway`: separate entry for `subs-claude` (CLIProxyAPI pool):
   content-only shaping, sentinel-URL fail closed. See `gateway/README.md`.
 - `dotfiles-tools`: pane-local worktree bridge; never trust server Herdr env.
-- `until`: pi-until parity (same tool contract): durable session watches/recurring wakes in plugin storage; no consent prompt, gated by `shell`; subagent watches belong to and wake the family root; composer dock + `/until*`.
+- `until`: Effect plugin (TS, own `effect` pinned to the host's; host-validated schemas must be `portable()`), pi-until parity (same tool contract): durable session watches/recurring wakes in plugin storage; no consent prompt, gated by `shell`; subagent watches belong to and wake the family root; composer dock + `/until*`.
 - `herdr-opencode`: unchanged vendored V12; preserve provenance.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.
 - `worktrees`: server worktree strategy `dotfiles` (Herdr-free `worktree checkout` + `retire-checkout`); `name` `feat--x` → branch `feat/x`; owns only checkouts with the private-git-dir `dotfiles-worktree` marker.
