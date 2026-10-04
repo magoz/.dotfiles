@@ -14,7 +14,7 @@ Capture one observed problem and continue it through triage.
 Explicit invocation:
 
 ```text
-/skill:report-issue <report or current-context reference> [--blocks <issue-number-or-url>]
+Load skill `report-issue` with <report or current-context reference> [--blocks <issue-number-or-url>].
 ```
 
 `--blocks 4` means the newly reported issue blocks Issue #4, not the reverse.
@@ -47,7 +47,7 @@ Never:
 - let a read-only investigator mutate GitHub;
 - create tracker labels, Projects, milestones, or broad workflow scaffolding.
 
-The parent Pi session is the sole GitHub mutator. Issue reporting is an intake write, not an execution claim.
+The parent session is the sole GitHub mutator. Issue reporting is an intake write, not an execution claim.
 
 ## Provenance
 

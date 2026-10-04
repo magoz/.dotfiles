@@ -31,7 +31,7 @@ identity does not cancel already running workers or undo earlier work.
     "coding": {
       "description": "Architecture, supervision, and delivery",
       "prompt": "primary-agents/coding.md",
-      "workers": ["general", "ui-design", "explore-codebase", "pr-reviewer", "web-researcher"],
+      "workers": ["general", "ui-design", "explore", "pr-reviewer", "web-researcher"],
       "models": [
         { "id": "provider/model-id", "guidance": "Prefer for UI design." }
       ]
@@ -50,7 +50,7 @@ identity does not cancel already running workers or undo earlier work.
 - The roster is prompt guidance, not an automatic dispatcher, enforced allowlist,
   or runtime privacy gate. It never changes the main model. Worker defaults live
   in their own frontmatter; coding uses explicit per-launch overrides when needed.
-- Workers remain defined in `~/.pi/agent/agents/` and managed by pi-subagents.
+- Workers are defined in the shared `~/.agents/agents/` and managed by pi-subagents.
   Primary prompts live separately so they are not discovered as workers.
 - Live capability discovery, model lookup, authentication, and execution preflight
   remain pi-subagents' responsibility. A configured entry is not availability proof.
@@ -74,8 +74,8 @@ no mandatory phases or delegation quota are imposed.
 | `ui-design` (public or private repo) | `subs-claude/claude-opus-5-5` |
 | `aha` (one Aha page per launch) | `subs-claude/claude-opus-5-5`, thinking medium |
 | `general` (including all implementation and UI implementation, public or private repo) | `subs-claude/claude-opus-5-5`; automatic `subs-codex/gpt-6.1-sol`, then `xai/grok-4.7`, then `zai/glm-5.3`, fallback for availability/auth/quota failures |
-| `explore-codebase` in a verified public repo | `opencode-go/muse-spark-1.3-contributor` via explicit per-launch override |
-| `explore-codebase` in a private/unknown-visibility repo | `opencode-go/deepseek-v4.1-flash` |
+| `explore` in a verified public repo | `opencode-go/muse-spark-1.3-contributor` via explicit per-launch override |
+| `explore` in a private/unknown-visibility repo | `opencode-go/deepseek-v4.1-flash` |
 | `web-researcher` | `opencode-go/deepseek-v4.1-flash` |
 
 The configured models do not have overlapping provider routes. On availability,
@@ -105,11 +105,11 @@ production edits, and the designer reports any browser/visual validation gaps.
 `general` defaults to `subs-claude/claude-opus-5-5` and handles all implementation (including
 UI) regardless of repository visibility, with `subs-codex/gpt-6.1-sol`, then `xai/grok-4.7`,
 and finally `zai/glm-5.3` if earlier models are unavailable. Coding explicitly selects
-`opencode-go/muse-spark-1.3-contributor` for `explore-codebase` in public repositories.
+`opencode-go/muse-spark-1.3-contributor` for `explore` in public repositories.
 Before using `opencode-go/muse-spark-1.3-contributor` by default, coding verifies the actual
 repository is public and that the handoff contains no private material; a remote URL alone
 is not proof of visibility. Unknown visibility routes to `opencode-go/deepseek-v4.1-flash`
-for `explore-codebase` by default. An explicit user
+for `explore` by default. An explicit user
 instruction to use a specific model overrides this default visibility routing; coding
 confirms the requested scope and proceeds with the user's choice.
 

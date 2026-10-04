@@ -12,14 +12,16 @@ Local OpenCode runtime plugins.
 - `herdr-opencode`: unchanged vendored V12; preserve provenance.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.
 - `worktrees`: server worktree strategy `dotfiles` (Herdr-free `worktree checkout` + `retire-checkout`); `name` `feat--x` → branch `feat/x`; owns only checkouts with the private-git-dir `dotfiles-worktree` marker.
-- `skill-adapters`: canonical source overlays (id allowlist) and native harness substitutions.
+- `skill-commands`: registers `/<id>` for shared skills with `metadata.opencode/slash: "true"`; runs as a skill-attached prompt.
 - `subscription-usage`: server-only OAuth resolution, sanitized on-demand TUI output.
 - `fleet`: auto-discovered TUI-only Fleet client of `fleet.oox.sh` (sidebar, launcher, handled/undo via Fleet's JSON routes with `Origin`).
 
 CLI plugins must call `ctx.keymap.layer` inside a rendered slot/route (e.g. `append: 'app'`),
 not directly in `setup`: V2 setup has no Keymap provider ("Keymap.Provider is missing").
 
-See `../ASSESSMENT.md` and each plugin README. Pi/shared skills stay unchanged.
+See `../ASSESSMENT.md` and each plugin README. Skills and agents live in `~/.agents` and are
+shared with Pi: fix harness differences in the shared text or `scripts/sync-agents.mjs`, never by
+rewriting skills at runtime.
 Run root `npm test`; no live resources or provider calls in tests.
 
 ## Why this plugin exists

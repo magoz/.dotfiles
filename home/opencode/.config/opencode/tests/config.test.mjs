@@ -1,17 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, access } from 'node:fs/promises';
+import { readFile, readdir, access } from 'node:fs/promises';
 import { assertChildReads } from './permissions.mjs';
 const root = new URL('../', import.meta.url);
 const read = (path) => readFile(new URL(path, root), 'utf8');
 const config = JSON.parse((await read('opencode.jsonc')).replace(/^\s*\/\/.*$/gm, ''));
-test('OpenCode assessment uses native compaction/models and explicit shared skill precedence', () => {
+test('OpenCode uses native compaction/models and only the shared ~/.agents skill source', async () => {
   assert.equal(config.compaction.auto, true);
   assert.equal(config.model, 'subs-claude/claude-opus-5-5');
   assert.equal(config.agents.build.model, 'subs-claude/claude-opus-5-5#high');
   assert.equal(config.agents.build.system, undefined);
-  assert.equal(config.skills[0], '~/.config/opencode/shared-skills');
+  // Skills live only in ~/.agents/skills, which OpenCode and Pi discover natively.
+  assert.equal(config.skills, undefined);
+  await assert.rejects(access(new URL('skills', root)));
   assert.ok(!JSON.stringify(config).includes('/Users/'));
+});
+test('OpenCode agents are generated from the shared ~/.agents/agents definitions', async () => {
+  const { plan, SOURCE } = await import(new URL('scripts/sync-agents.mjs', root).href);
+  const { writes, removals } = await plan();
+  assert.deepEqual([...writes.map((w) => w.entry), ...removals], [], 'run `npm run sync:agents`');
+  const shared = (await readdir(SOURCE)).filter((entry) => entry.endsWith('.md')).sort();
+  assert.deepEqual(shared, ['aha.md', 'explore.md', 'general.md', 'pr-reviewer.md', 'tech-lead.md', 'ui-design.md', 'web-researcher.md']);
 });
 test('server and TUI integration entrypoints exist; pinned V2 Herdr assets', async () => {
   for (const target of config.plugins) {
@@ -46,13 +55,14 @@ test('subs-claude fails closed: sentinel baseURL, gateway plugin before direct m
   const gateway = config.plugins.indexOf('./plugins/opencode-anthropic-auth/gateway');
   assert.ok(gateway !== -1 && gateway < config.plugins.indexOf('./plugins/opencode-anthropic-auth'));
 });
-test('readonly roles deny ambient tools and general does not delegate', async () => {
-  for (const role of ['general', 'explore', 'pr-reviewer', 'web-researcher']) {
+test('child agents deny by default, never delegate, and only writers may edit or run shell', async () => {
+  const writers = new Set(['general', 'aha']);
+  for (const role of ['aha', 'explore', 'general', 'pr-reviewer', 'tech-lead', 'ui-design', 'web-researcher']) {
     const text = await read(`agents/${role}.md`);
     const permissions = JSON.parse(text.match(/^permissions: (.+)$/m)[1]);
     assert.equal(permissions[0].action, '*'); assert.equal(permissions[0].effect, 'deny');
     if (role !== 'web-researcher') assertChildReads(assert, [...config.permissions, ...permissions]);
-    assert.ok(!permissions.some((p) => p.action === 'subagent' && p.effect === 'allow'));
-    if (role !== 'general') assert.ok(!permissions.some((p) => ['shell', 'edit', 'create_worktree'].includes(p.action) && p.effect === 'allow'));
+    assert.ok(!permissions.some((p) => p.action === 'subagent' && p.effect === 'allow'), role);
+    if (!writers.has(role)) assert.ok(!permissions.some((p) => ['shell', 'edit', 'create_worktree'].includes(p.action) && p.effect === 'allow'), role);
   }
 });

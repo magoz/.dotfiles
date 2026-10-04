@@ -59,7 +59,7 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 
 ### 4. Spawn both sub-agents in parallel
 
-Send a single message with two `Agent` tool calls. Use the `general-purpose` subagent for both.
+Launch two fresh, read-only `pr-reviewer` subagents in parallel: one for Standards, one for Spec. Give each a self-contained task prompt and explicit no-edit instructions. Evidence must be inline or inside the repository checkout the child reads; inline any external standards or spec content.
 
 **Standards sub-agent prompt** — include:
 
@@ -70,7 +70,7 @@ Send a single message with two `Agent` tool calls. Use the `general-purpose` sub
 **Spec sub-agent prompt** — include:
 
 - The diff command and commit list.
-- The path or fetched contents of the spec.
+- The repository-local path or inline fetched contents of the spec.
 - The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
 
 If the spec is missing, skip the Spec sub-agent and note this in the final report.

@@ -1,7 +1,7 @@
 ---
 name: pr
 description: Prepare, create, update, ready, audit, and squash-merge pull requests using the current repository's own policies, tooling, and validation commands. Use for draft synchronization, readiness gates, pre-merge audits, and guarded merge cleanup.
-compatibility: Requires git, GitHub CLI authentication, and Pi with the pi-subagents package.
+compatibility: Requires git, GitHub CLI authentication, and subagent support.
 metadata:
   opencode/slash: 'true'
 ---
@@ -19,10 +19,10 @@ commands, branch conventions, deployment providers, or quality gates.
 
 | Invocation                | Behavior                                                                   |
 | ------------------------- | -------------------------------------------------------------------------- |
-| `/skill:pr`               | Prepare, commit, push, and create/update; new PRs start as drafts             |
-| `/skill:pr ready`         | Prepare, validate, push, review, and mark the PR ready                       |
-| `/skill:pr pre-merge [PR]` | Audit an exact remote PR head; never merge                                   |
-| `/skill:pr merge`         | Squash-merge if still open, delete the remote branch, clean up a matching worktree if present |
+| Load skill `pr`               | Prepare, commit, push, and create/update; new PRs start as drafts             |
+| Load skill `pr` with `ready`         | Prepare, validate, push, review, and mark the PR ready                       |
+| Load skill `pr` with `pre-merge [PR]` | Audit an exact remote PR head; never merge                                   |
+| Load skill `pr` with `merge`         | Squash-merge if still open, delete the remote branch, clean up a matching worktree if present |
 
 A pre-merge PR argument may be a number or URL. With no argument, resolve the PR for the current
 branch. In merge mode, infer the intended PR and repository from the conversation, supplied PR identity,
@@ -51,17 +51,17 @@ is a gap to report, not permission to invent policy.
 Invoking a mode authorizes its routine actions. Follow the obvious happy path without asking for
 confirmation, narrating every Git step, or treating draft state as a problem.
 
-- `/skill:pr` authorizes the always-on Conform/Learn/Tidy preparation pass, staging task-owned files,
+- Loading skill `pr` authorizes the always-on Conform/Learn/Tidy preparation pass, staging task-owned files,
   committing, pushing, safely updating a rewritten PR branch with an explicit-SHA force lease, and
   creating or updating a PR. A new PR is a draft; an existing draft remains a draft. Do not publish an
-  unvalidated new head to a ready PR in this mode; require `/skill:pr ready` unless the remote head is
+  unvalidated new head to a ready PR in this mode; require `ready` mode unless the remote head is
   unchanged and only managed metadata is updated.
-- `/skill:pr ready` runs the same preparation pass and additionally authorizes full repository-defined
+- Loading skill `pr` with `ready` runs the same preparation pass and additionally authorizes full repository-defined
   validation, independent readiness review, PR body updates, and `gh pr ready` after all gates pass.
-- `/skill:pr pre-merge` authorizes read-only Git/GitHub inspection plus an isolated temporary clone and
+- Loading skill `pr` with `pre-merge` authorizes read-only Git/GitHub inspection plus an isolated temporary clone and
   review artifacts outside the repository. All fetch, checkout, installation, and validation work
   occurs in temporary state; the current repository and GitHub state must remain unchanged.
-- `/skill:pr merge` authorizes evidence-aware readiness and pre-merge checks, squash merge, guarded
+- Loading skill `pr` with `merge` authorizes evidence-aware readiness and pre-merge checks, squash merge, guarded
   source-branch deletion, optional matching linked-worktree removal, and guarded local branch-ref
   deletion. Reuse valid existing evidence; it does not request a fresh full audit. No matching linked worktree is a normal cleanup skip, not a merge blocker. For an already-merged
   PR, it authorizes cleanup only after verifying the merged PR and exact cleanup target. The invocation
@@ -104,7 +104,7 @@ run` or `blocked`, never `passed`.
 - Preserve draft state except in `ready` mode. Never push an incompletely validated new head to an
   existing ready PR, and always preserve human-authored PR content.
 - Stop for unapproved product, architecture, access-control, data, migration, or scope decisions.
-- Merge only in `/skill:pr merge`, only by squash, and only after applicable readiness evidence and
+- Merge only in `pr`'s `merge` mode, only by squash, and only after applicable readiness evidence and
   the final remote-state gate pass. Existing evidence can satisfy these gates under Evidence reuse. Never use administrator bypass, enable auto-merge, enter a merge queue, or fall back to
   merge-commit or rebase strategies.
 - Never remove a primary checkout, dirty worktree, mismatched worktree, or branch/ref that moved after
@@ -139,25 +139,25 @@ reason to repeat work.
 
 ## Two independent review opinions
 
-Whenever a fresh independent review is needed, use two fresh-context, read-only `pr-reviewer`
-children with explicit model overrides:
+Whenever a fresh independent review is needed, launch two fresh-context, read-only `pr-reviewer`
+children in parallel:
 
-- **Opus (primary):** `subs-claude/claude-opus-5-5` — the `pr-reviewer` frontmatter default
-- **Astra (secondary):** `subs-codex/gpt-6-astra`
+- **Opus (primary):** `subs-claude/claude-opus-5-5` — use the `pr-reviewer` frontmatter default; an explicit per-launch override may pin this same model
+- **Astra (secondary):** `subs-codex/gpt-6-astra` — explicit per-launch model override
 
 The configured review models do not have overlapping provider routes. Never retry the same model
 through another provider. Explicit user provider/model selection determines the initial model;
 fallback remains automatic unless the user explicitly requires that exact model or forbids fallback.
 
-Both review the **same frozen bundle, scope, requirements, validation evidence, and assigned axes**.
+Both review the **same immutable target, scope, requirements, validation evidence, and assigned axes**.
 These are two opinions on the same work, not complementary assignments: never give Standards only to
 Opus and Spec only to Astra. A normal full review uses two children total, each covering Standards,
 Spec, and Knowledge in separately labeled sections, rather than one child per model per axis. For a
 focused follow-up, give both the same affected scope and axes. Do not show either reviewer the other's
 findings or inherited implementation rationale before their independent reports are complete.
 
-Before launching, use pi-subagents capability/model discovery and its supported authentication and
-execution preflight; a configured model name is not availability proof. If Opus or Astra is
+Before launching, use the harness's model/auth availability check;
+a configured model name is not availability proof. If Opus or Astra is
 unavailable, automatically fall back to the caller agent's model for the affected slot without waiting
 for user confirmation. Resolve the caller's exact provider/model and pass it as an explicit override:
 omitting the override uses the `pr-reviewer` frontmatter default, not necessarily the caller's model.
@@ -166,7 +166,7 @@ opinion blocked rather than relaunching it. Report every model fallback with the
 reason, and actual model used. A caller-model fallback must be labeled as such.
 
 Deduplicate by underlying model: if the caller matches the other reviewer's model, reuse that opinion
-for the same bundle and axes rather than launching a duplicate. If both preferred models are
+for the same target and axes rather than launching a duplicate. If both preferred models are
 unavailable, run only once on the available caller model. Never count two runs of the same model as
 two independent opinions. Stricter repository or user requirements for both Opus and Astra still
 block readiness when either preferred opinion is missing.
@@ -179,14 +179,21 @@ a new explicit launch without asking for approval. Do not revisit models already
 this invocation. Allow at most one same-model retry for a genuinely transient network blip or timeout,
 then follow the fallback order. Other launch, tooling, prompt-runtime, extension, or workflow failures
 remain infrastructure blockers: stop, retain the exact failure/run identity and partial evidence, and
-follow pi-subagents recovery rules before retrying or asking the owner. Never switch execution engines
+follow the harness's recovery guidance before retrying or asking the user. Never switch execution engines
 as a fallback.
 
-Use one top-level async pi-subagents workflow per invocation, with parallel `runs.all` calls for the
-reviewers inside it; any later review rounds belong to that same workflow. Follow pi-subagents guidance
-for parent-owned fixes and subsequent rounds. Pass the frozen bundle and relevant audit-only skills to
-both, bind distinct durable outputs on each child call outside the repository, and omit reviewer
-acceptance gates. Neither reviewer may write project files. The parent waits for both required results
+The default review target is an immutable commit. The parent ensures the current repository worktree
+is a clean checkout of the exact head SHA, without discarding or hiding unrelated work. Reviewers read
+the changed files from that checkout. Give each child a self-contained task prompt containing, inline:
+base SHA, head SHA, the parent-computed digest of `git diff <base>..<head>` for record-keeping,
+changed-file inventory, scope/specification, validation results and skips, applicable guidance, and
+relevant audit-only axis skill instructions. Fresh children inherit no context. Evidence must be
+inline or inside that repository checkout, never an external bundle path. A complete frozen patch
+bundle is an alternative only when it fits inline in the task prompt; include the same evidence and
+do not silently truncate it.
+
+Neither reviewer may write project files or mutate Git/GitHub state. Keep parent-owned fixes between
+review rounds; do not edit or move the checkout while reviewers inspect it. The parent waits for both required results
 before editing, verifies and deduplicates findings without dropping their attribution, and dispositions
 every finding. A pass from one reviewer never cancels a supported blocker from the other; unresolved
 blocker disagreements require clarification, not majority voting.
@@ -225,7 +232,7 @@ verify GitHub identity and the source push URL directly instead.
    the GitHub repository/default branch. Resolve the unambiguous GitHub push remote from the branch
    upstream, configured push remote, remotes, and `gh` repository identity; use `origin` only when it
    is verified as that remote. Verify any repository-declared runtime version.
-2. Confirm `pi-subagents` is available and user/project agent `pr-reviewer` is discoverable. If not,
+2. Confirm subagent support is available and agent `pr-reviewer` is discoverable. If not,
    stop and suggest installing/configuring the dependency; do not silently downgrade independent
    review. Before any fresh review, apply Two independent review opinions to discover/preflight both
    preferred models. Skip this dependency check for verified already-merged cleanup, which runs no review.
@@ -237,7 +244,7 @@ verify GitHub identity and the source push URL directly instead.
 5. Establish intent from the conversation, linked issue, supplied plan/specification, commits, and
    repository guidance. If intent remains ambiguous, ask before reviewing or writing a PR summary.
 
-## Always-on preparation (`/skill:pr` and `/skill:pr ready`)
+## Always-on preparation (load skill `pr`, default and `ready` modes)
 
 Run this pass for new or changed work before staging or committing in either mutation mode. Reuse
 completed preparation for unchanged content; do not rerun Conform/Learn/Tidy solely for a lifecycle
@@ -286,7 +293,7 @@ about database migration history, not Git commit squashing. Repository migration
   data transformations. Run relevant safe checks under the existing validation safety rules. Missing
   required migration evidence blocks Ready; never bypass safety restrictions to obtain it.
 - Record the affected paths/stream, outcome (`consolidated`, `kept separate` with reason, or `blocked`
-  with the question), application-history evidence, and validation in the review bundle and managed
+  with the question), application-history evidence, and validation in the review context and managed
   PR body when applicable. Supply this policy and disposition to both reviewers for applicable
   Standards/Spec coverage; they report unjustified splits, unsafe rewrites, or evidence gaps, never edit.
 - Pre-merge audits this decision against the exact remote patch without changing files. Missing or
@@ -379,11 +386,11 @@ captures or publishes new assets.
    never imply screenshots were attached. A draft may still be created with that disclosure. Missing
    visual evidence blocks Ready when repository-required or change-critical, like other missing checks.
 
-## Draft synchronization (`/skill:pr`)
+## Draft synchronization (load skill `pr`, default mode)
 
 Draft synchronization publishes work in progress; it does not claim merge readiness. Draft state is
 normal and should not produce warnings or extra confirmation prompts. If the existing PR is ready and
-the operation would change its remote head, stop and require `/skill:pr ready`; do not silently retain
+the operation would change its remote head, stop and require `ready` mode; do not silently retain
 ready or auto-merge eligibility for an incompletely validated commit.
 
 1. Complete the Always-on preparation pass, then inspect staged, unstaged, and untracked paths. Infer
@@ -479,7 +486,7 @@ presentation guidelines do not replace validation, review evidence, or safety ga
   mobile layout regressions or API incompatibility. Record uncertainty instead of claiming risk-free
   operation; do not turn this into an exhaustive hypothetical checklist.
 
-## Ready workflow (`/skill:pr ready`)
+## Ready workflow (load skill `pr` with `ready`)
 
 A ready run may create the draft if necessary, but it must not mark the PR ready until all gates pass.
 
@@ -509,16 +516,21 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
    relevant and safe under repository policy. Missing evidence for a repository-required or
    change-critical check blocks ready rather than being inferred as success. For visible UI changes,
    complete or refresh Visual proof (captures stay in the temporary directory outside the repository;
-   they are attached via `gh --attach`, never committed) and include capture provenance in the review
-   bundle before freezing it.
-5. Freeze the complete prepared patch before independent review, including documentation from the
+   they are attached via `gh --attach`, never committed) and include capture provenance in the inline
+   review context before freezing the target.
+5. Freeze the complete prepared target before independent review, including documentation from the
    Always-on preparation pass:
-   - write scope/specification, changed paths, exact binary patch, and validation evidence to a
-     temporary directory outside the repository;
-   - compute the patch digest with `git hash-object --stdin` over the exact binary diff;
-   - do not edit while reviewers inspect it.
+   - default to an immutable commit: stage only task-owned prepared paths, run
+     `git diff --cached --check`, commit if needed, and ensure the current repository worktree is a
+     clean checkout of that head SHA; stop rather than hiding or discarding unrelated work;
+   - record base/head SHAs and compute `git diff <base>..<head> | git hash-object --stdin`;
+     this digest is record-keeping, not a substitute for the immutable checkout;
+   - supply each reviewer the complete inline task context specified in Two independent review opinions;
+   - alternatively, use a complete frozen patch bundle only when it fits inline in the task prompt,
+     with its exact binary diff and digest plus the same context and evidence;
+   - do not edit or move the checkout while reviewers inspect it.
 6. When independent review is missing or invalidated, apply Two independent review opinions. For a
-   full review, both Opus and Astra cover all three axes against that same complete bundle:
+   full review, both Opus and Astra cover all three axes against that same immutable target:
    - **Standards**, with the `conform` skill supplied and explicit `--check`/no-edit instructions;
    - **Spec**, with the exact requirements and no inherited implementation rationale;
    - **Knowledge**, with `learn` and `tidy` supplied in `--check`/no-edit mode.
@@ -540,14 +552,14 @@ The Always-on preparation pass already runs Learn and Tidy once. After implement
    instructions; otherwise retain the already prepared documentation.
 3. Format changed documentation/agent files with repository tooling and run the narrowest relevant
    documentation, formatting, stale-reference, and link checks.
-4. Confirm the complete bundle still matches the reviewed implementation, documentation, scope,
+4. Confirm the complete target still matches the reviewed implementation, documentation, scope,
    changed paths, and validation evidence. Reuse both Knowledge opinions from the code loop when
-   unchanged. If later edits invalidate them, freeze a new complete bundle and apply Two independent
+   unchanged. If later edits invalidate them, freeze a new complete target and apply Two independent
    review opinions to the affected Knowledge scope with `learn` and `tidy` in `--check`/no-edit mode.
 5. When later edits change agent instructions, executable config, or other behavior-bearing tooling
    guidance, include the invalidated Standards and Spec axes in that same review round for both
    models. Tool and capability policy is not documentation-only merely because it is written in
-   Markdown. Do not repeat axes already covered by valid opinions on the complete bundle.
+   Markdown. Do not repeat axes already covered by valid opinions on the complete target.
 6. Fix blocker/high findings and explicitly disposition medium findings. Re-run only axes invalidated
    by subsequent changes.
 7. Return to the code loop only if documentation changed an implementation rule, executable config,
@@ -575,7 +587,7 @@ Before marking ready:
 - If all gates pass, run `gh pr ready` without another confirmation; invoking `ready` already granted
   that authority. If the PR is already ready, update evidence without toggling state.
 
-## Pre-merge workflow (`/skill:pr pre-merge [PR]`)
+## Pre-merge workflow (load skill `pr` with `pre-merge [PR]`)
 
 This mode is audit-only and must not edit project files, commits, branches, the current repository's
 Git state, or GitHub state.
@@ -594,11 +606,15 @@ Git state, or GitHub state.
    temporary state, never the current repository; remove the owned temporary clone afterward.
 5. Reuse applicable Standards, Spec, and Knowledge opinions per model. Apply Two independent review
    opinions for missing or invalidated coverage; explicit full audits give both models all three axes
-   against the same exact base-to-head patch.
+   against the same exact base-to-head patch. Use the current repository checkout only when it is
+   already clean at the exact head SHA; this mode must not change it to establish a review target.
+   Otherwise use the complete inline frozen-patch alternative. Inline evidence from temporary
+   validation state; never give reviewers outside-repository paths. If neither review target is
+   available, report the missing review as blocked without weakening the audit-only boundary.
 6. Report `ready`, `not ready`, or `blocked by missing evidence`, bound to exact base/head SHAs,
    distinguishing reused evidence from newly executed checks. Never merge.
 
-## Merge workflow (`/skill:pr merge`)
+## Merge workflow (load skill `pr` with `merge`)
 
 This mode is intentionally destructive after merge, but it must fail closed before the irreversible
 step. Resolve the intended PR and its repository independently of the launch directory. Prefer explicit
@@ -713,7 +729,7 @@ another merge.
    merge commit, and `performed-squash` provenance before advancing the receipt. After an ambiguous or
    lost response, query the PR only to report current state; a later merged state does not prove this
    squash request won over a concurrent merge. Do not advance cleanup automatically in that run—retain
-   the branch/worktree and `prepared` receipt. A later explicit `/skill:pr merge` may verify an
+   the branch/worktree and `prepared` receipt. A later explicit `pr` invocation with `merge` may verify an
    already-merged PR and perform cleanup without claiming the earlier merge method. If GitHub confirms
    the PR remains open and the request definitely failed, a later invocation may rerun readiness/audit
    before another merge attempt.
@@ -778,7 +794,7 @@ another merge.
      local branch ref. These are local predicates only: do not require or query a present remote source
      ref. Git provides no atomic identity lock spanning worktree verification and removal, so require
      exclusive local ownership of all worktree mutations under the common Git directory. The parent
-     must be the sole writer, with no active async child or other Git/worktree mutator; if that
+     must be the sole writer, with no active child or other Git/worktree mutator; if that
      exclusion cannot be established, stop and retain the receipt for manual cleanup rather than
      claiming concurrency safety.
 
@@ -863,7 +879,7 @@ and residual risks. Do not claim that draft creation implies readiness.
 - Broad staging, hiding unrelated work, or silently discarding changes
 - Claiming review or validation against content that changed afterward
 - Marking a PR ready when required evidence is missing
-- Merging outside `/skill:pr merge` or cleaning up before GitHub confirms the merge
+- Merging outside `pr`'s `merge` mode or cleaning up before GitHub confirms the merge
 - Reusing a pre-deletion remote-ref predicate after the `remote-deleted` milestone
 - Treating an absent remote ref as a changed ref, or reporting a completed receipt milestone as undone
   because a later cleanup step failed

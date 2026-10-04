@@ -95,15 +95,13 @@
     "./plugins/opencode-anthropic-auth",
     "./plugins/dotfiles-tools",
     "./plugins/herdr-opencode",
-    "./plugins/skill-adapters",
+    // `/<id>` for shared skills flagged `metadata.opencode/slash: "true"`.
+    "./plugins/skill-commands",
     "./plugins/subscription-usage",
     // Native worktree strategy `dotfiles`: provisioned sibling checkouts (worktree checkout),
     // Herdr-free retirement (worktree-manage). See plugins/worktrees/README.md.
     "./plugins/worktrees"
   ],
-  // Explicit shared source comes after old OpenCode skill copies. Runtime
-  // adapters below change only OpenCode's view, never the shared files.
-  "skills": ["~/.config/opencode/shared-skills"],
   "mcp": {
     "servers": {
       "executor": { "type": "remote", "url": "https://executor.magoz.is/mcp" }

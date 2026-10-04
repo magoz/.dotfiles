@@ -14,7 +14,7 @@ Turn one understood but oversized GitHub issue into an approved graph of agent-s
 Explicit invocation:
 
 ```text
-/skill:slice-issue <issue-number-or-url>
+Load skill `slice-issue` with <issue-number-or-url>.
 ```
 
 ## Purpose
@@ -63,7 +63,7 @@ Never:
 - let read-only investigators mutate GitHub;
 - delete, close, relabel, or recreate partially published children during recovery without explicit direction.
 
-The parent Pi session is the sole GitHub mutator. Repository exploration and advisory agents remain read-only.
+The parent session is the sole GitHub mutator. Repository exploration and advisory agents remain read-only.
 
 ## Model
 
@@ -81,7 +81,7 @@ Hierarchy, implementation blocking, and PR delivery topology are distinct:
 - native sub-issues express **part of**;
 - native dependencies express **blocked by** for independent/default-base delivery and final completion;
 - `stack_on` expresses the one reviewed lower PR head a child may use as its implementation/PR base before that lower issue closes;
-- `parallel_group` expresses children that may be launched concurrently in separate worktrees/Pi sessions;
+- `parallel_group` expresses children that may be launched concurrently in separate worktrees/agent sessions;
 - siblings are independent unless one genuinely cannot begin before another completes; a stack/review order alone never creates a native dependency.
 
 A stack edge is valid only when the lower deliverable is a stable base the upper child can consume, and one ancestor lineage contains every open prerequisite needed by the child. Fan-out is valid: multiple children may stack on the same lower child. A join with prerequisite changes in multiple sibling heads must wait for those heads to merge unless an approved linear ancestor stack already contains all of them.

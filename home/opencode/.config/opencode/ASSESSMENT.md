@@ -16,7 +16,7 @@ No Pi credentials/sessions are imported and no Pi extension is required by OpenC
 | Provisioned handoff | Pane-local `create_worktree`; shared CLI `--agent opencode` |
 | Mixed-agent inventory/cleanup | Pane-local `/worktrees`; shared `worktree-manage` |
 | Delegation | Native `general`, `explore`, `pr-reviewer`, `web-researcher` |
-| Delivery/research skills | Canonical shared skills + OpenCode runtime adapters |
+| Delivery/research skills | Shared `~/.agents/skills`, harness-neutral text; `/<id>` via `skill-commands` |
 | Shell-condition wake | Session-owned `until`, explicit local consent |
 | Allowance | `/quota` / `/subscription-usage`, cached on-demand OAuth snapshot |
 | Fleet (all Box sessions) | Needs-me sidebar, footer badge, `/fleet` page (`ctrl+x f`), next needs-me (`ctrl+x j`), launcher (`ctrl+x o`), handled/undo (`ctrl+x h`/`z`) |
@@ -33,15 +33,10 @@ preserving the `.env.example` exception. This protects native read authorization
 not shell/grep content access; it is not a complete sandbox. External-directory
 access remains denied for children.
 
-Frozen PR review bundles are delivered **INLINE through native `subagent.prompt`**:
-complete sanitized exact UTF-8 patch, Git blob digest, one immutable target, one
-axis, scope/specification, changed-file inventory, validation and guidance evidence.
-Parent still freezes outside the repository but never sends only those paths or Pi
-`reads` parameters. The small skill-adapters transport helper checks bytes/digest,
-required fields and an explicit complete-prompt budget (256 KiB ceiling); parent
-must also confirm actual native model context fit. Missing/unrepresentable evidence
-or a bundle that cannot fit blocks; never truncate, hash different bytes or open
-broad filesystem access. See the adapter README; canonical policy/digests unchanged.
+PR reviews target an immutable commit checked out cleanly in the repository the
+reviewer reads; base/head SHA, diff digest, file inventory and evidence go inline in
+the child prompt (see shared `pr` skill). A frozen patch is an alternative only when
+it fits inline. Children never read external bundle paths.
 
 Quota provider failures consistently retain same-verified-identity stale data for
 strictly less than 24h from the last success, never across failed auth checks or
@@ -81,21 +76,21 @@ do not run another lifecycle mutator or start a writer during retirement.
 **Do not use the existing Pi-only worktree dashboard for mixed/OpenCode assessment
 worktrees.** It cannot account for OpenCode writers; it is intentionally unchanged.
 
-## Skill source safety
+## Skill and agent sources
 
-`shared-skills` is a symlink to the canonical shared skill directory. Its distinct
-source path is deliberate: V2 deduplicates source paths *before* applying precedence,
-so explicitly repeating `~/.agents/skills` would not override older OpenCode copies.
-The alias wins without deleting those copies or changing shared files.
+Skills and agents are centralized in the `agents` Stow package (`~/.agents`):
 
-Runtime adapters retain canonical locations/supporting files and preserve policy
-gates; `sources.json` is an id allowlist, not content digests, so changed
-canonical skills adapt without a blocking review gate. V2 loads config
-skills after user plugins; adapters re-register on plugin updates and synchronously
-at prompt/tool/context boundaries. Context guidance also covers already-persisted
-raw skill activations. Custom compaction/toggle is not ported; old aliases explain native
-compaction instead. Dependency install scripts stay disabled so packages cannot modify
-global commands or shared skills.
+- `~/.agents/skills/<id>/SKILL.md`: the only skill copies. OpenCode loads them
+  through its native `~/.agents` compatibility source; Pi through its own discovery.
+  Text is harness-neutral: name agents, say "ask the user"/"load skill `x`"; no
+  harness tool shapes. `metadata.opencode/slash: "true"` registers `/<id>` via
+  `plugins/skill-commands` (V2 removed native skill slash commands in v2.0.4).
+- `~/.agents/agents/<name>.md`: Pi-format agent definitions, read natively by
+  pi-subagents. `scripts/sync-agents.mjs` generates `agents/*.md` (OpenCode
+  model#variant + deny-first permissions); `npm test` fails when they are stale.
+
+Custom compaction/toggle is not ported. Dependency install scripts stay disabled so
+packages cannot modify global commands or shared skills.
 
 ## Verification and remaining gates
 

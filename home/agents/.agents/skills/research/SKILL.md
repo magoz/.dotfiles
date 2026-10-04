@@ -5,14 +5,15 @@ metadata:
   opencode/slash: "true"
 ---
 
-Delegate the reading legwork through Pi's native subagent mechanism so research can proceed without consuming the main agent's context. **Do not launch a nested Pi CLI, terminal pane, or other process as a substitute for a subagent.** If native subagents are unavailable, research directly in the current session.
+Delegate reading legwork to `web-researcher` (web) and/or `explore` (code) subagents so research can proceed without consuming the parent session's context. Use the harness's subagent tool, not nested CLI processes or terminal panes. If subagents are unavailable, research directly in the current session.
 
 ## Delegation strategy
 
 Choose the number of researchers based on the work rather than a fixed limit:
 
 - Use one focused researcher for a narrow question.
-- Fan out to multiple researchers when the question has genuinely independent tracks, source domains, or competing claims worth checking separately.
+- Launch researchers in parallel when the question has genuinely independent tracks, source domains, or competing claims worth checking separately.
+- Give each child a self-contained task prompt: question, scope, relevant context, source requirements, and expected output. Inline evidence outside the repository; children can read only their repository checkout.
 - Give parallel researchers distinct scopes and ask them to return sources and findings, not to produce or edit the final deliverable.
 - Explicitly tell every researcher not to delegate or spawn further agents.
 - Replace or retry a failed researcher only when useful; do not duplicate work that another researcher is already doing.
