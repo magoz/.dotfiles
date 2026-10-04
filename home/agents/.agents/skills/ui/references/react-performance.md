@@ -1,41 +1,23 @@
----
-name: react-best-practices
-description: React and Next.js performance optimization guidelines from Vercel Engineering. This skill should be used when writing, reviewing, or refactoring React/Next.js code to ensure optimal performance patterns. Triggers on tasks involving React components, Next.js pages, data fetching, bundle optimization, or performance improvements.
-license: MIT
-metadata:
-  author: vercel
-  version: "1.0.0"
----
+# React and Next.js performance (Vercel)
 
-# Vercel React Best Practices
+Source: Vercel Engineering's React Best Practices. One file per rule in
+[react-performance/](react-performance/), named `<rule>.md`; each has why it matters plus incorrect
+and correct examples. Section impacts: [react-performance/_sections.md](react-performance/_sections.md).
 
-Comprehensive performance optimization guide for React and Next.js applications, maintained by Vercel. Contains 45 rules across 8 categories, prioritized by impact to guide automated refactoring and code generation.
-
-## When to Apply
-
-Reference these guidelines when:
-- Writing new React components or Next.js pages
-- Implementing data fetching (client or server-side)
-- Reviewing code for performance issues
-- Refactoring existing React/Next.js code
-- Optimizing bundle size or load times
-
-## Rule Categories by Priority
+If the project uses React Compiler, skip manual memoization and JSX hoisting rules.
 
 | Priority | Category | Impact | Prefix |
 |----------|----------|--------|--------|
-| 1 | Eliminating Waterfalls | CRITICAL | `async-` |
-| 2 | Bundle Size Optimization | CRITICAL | `bundle-` |
-| 3 | Server-Side Performance | HIGH | `server-` |
-| 4 | Client-Side Data Fetching | MEDIUM-HIGH | `client-` |
-| 5 | Re-render Optimization | MEDIUM | `rerender-` |
-| 6 | Rendering Performance | MEDIUM | `rendering-` |
-| 7 | JavaScript Performance | LOW-MEDIUM | `js-` |
-| 8 | Advanced Patterns | LOW | `advanced-` |
+| 1 | Eliminating waterfalls | CRITICAL | `async-` |
+| 2 | Bundle size | CRITICAL | `bundle-` |
+| 3 | Server-side performance | HIGH | `server-` |
+| 4 | Client-side data fetching | MEDIUM-HIGH | `client-` |
+| 5 | Re-render optimization | MEDIUM | `rerender-` |
+| 6 | Rendering performance | MEDIUM | `rendering-` |
+| 7 | JavaScript performance | LOW-MEDIUM | `js-` |
+| 8 | Advanced patterns | LOW | `advanced-` |
 
-## Quick Reference
-
-### 1. Eliminating Waterfalls (CRITICAL)
+## 1. Eliminating waterfalls
 
 - `async-defer-await` - Move await into branches where actually used
 - `async-parallel` - Use Promise.all() for independent operations
@@ -43,7 +25,7 @@ Reference these guidelines when:
 - `async-api-routes` - Start promises early, await late in API routes
 - `async-suspense-boundaries` - Use Suspense to stream content
 
-### 2. Bundle Size Optimization (CRITICAL)
+## 2. Bundle size
 
 - `bundle-barrel-imports` - Import directly, avoid barrel files
 - `bundle-dynamic-imports` - Use next/dynamic for heavy components
@@ -51,7 +33,7 @@ Reference these guidelines when:
 - `bundle-conditional` - Load modules only when feature is activated
 - `bundle-preload` - Preload on hover/focus for perceived speed
 
-### 3. Server-Side Performance (HIGH)
+## 3. Server-side performance
 
 - `server-cache-react` - Use React.cache() for per-request deduplication
 - `server-cache-lru` - Use LRU cache for cross-request caching
@@ -59,12 +41,14 @@ Reference these guidelines when:
 - `server-parallel-fetching` - Restructure components to parallelize fetches
 - `server-after-nonblocking` - Use after() for non-blocking operations
 
-### 4. Client-Side Data Fetching (MEDIUM-HIGH)
+## 4. Client-side data fetching
 
 - `client-swr-dedup` - Use SWR for automatic request deduplication
 - `client-event-listeners` - Deduplicate global event listeners
+- `client-passive-event-listeners` - Use passive listeners for scroll/touch
+- `client-localstorage-schema` - Version and validate localStorage data
 
-### 5. Re-render Optimization (MEDIUM)
+## 5. Re-render optimization
 
 - `rerender-defer-reads` - Don't subscribe to state only used in callbacks
 - `rerender-memo` - Extract expensive work into memoized components
@@ -74,7 +58,7 @@ Reference these guidelines when:
 - `rerender-lazy-state-init` - Pass function to useState for expensive values
 - `rerender-transitions` - Use startTransition for non-urgent updates
 
-### 6. Rendering Performance (MEDIUM)
+## 6. Rendering performance
 
 - `rendering-animate-svg-wrapper` - Animate div wrapper, not SVG element
 - `rendering-content-visibility` - Use content-visibility for long lists
@@ -84,7 +68,7 @@ Reference these guidelines when:
 - `rendering-activity` - Use Activity component for show/hide
 - `rendering-conditional-render` - Use ternary, not && for conditionals
 
-### 7. JavaScript Performance (LOW-MEDIUM)
+## 7. JavaScript performance
 
 - `js-batch-dom-css` - Group CSS changes via classes or cssText
 - `js-index-maps` - Build Map for repeated lookups
@@ -99,27 +83,7 @@ Reference these guidelines when:
 - `js-set-map-lookups` - Use Set/Map for O(1) lookups
 - `js-tosorted-immutable` - Use toSorted() for immutability
 
-### 8. Advanced Patterns (LOW)
+## 8. Advanced patterns
 
 - `advanced-event-handler-refs` - Store event handlers in refs
 - `advanced-use-latest` - useLatest for stable callback refs
-
-## How to Use
-
-Read individual rule files for detailed explanations and code examples:
-
-```
-rules/async-parallel.md
-rules/bundle-barrel-imports.md
-rules/_sections.md
-```
-
-Each rule file contains:
-- Brief explanation of why it matters
-- Incorrect code example with explanation
-- Correct code example with explanation
-- Additional context and references
-
-## Full Compiled Document
-
-For the complete guide with all rules expanded: `AGENTS.md`
