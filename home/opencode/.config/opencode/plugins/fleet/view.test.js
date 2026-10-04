@@ -474,7 +474,7 @@ test('page: needs me then working with stuck labels; j/k move; enter opens; h ha
   assert.deepEqual(f.navigations.at(-1), { type: 'session', sessionID: 'ses_wait_new' });
   f.setRoute({ type: 'plugin', name: ROUTE });
   f.run('o'); await flush();
-  assert.deepEqual(f.opened, ['https://box.tail129a86.ts.net:9446/server/aHR0cHM6Ly9ib3gudGFpbDEyOWE4Ni50cy5uZXQ6OTQ0Ng/session/ses_wait_new']);
+  assert.deepEqual(f.opened, ['https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_wait_new']);
   f.net.respond('POST', '/api/fleet/sessions/ses_done_old/handled', 200, { sessionID: 'ses_done_old', outcome: 'handled' });
   f.run('j'); f.run('j');
   f.run('h'); await flush();

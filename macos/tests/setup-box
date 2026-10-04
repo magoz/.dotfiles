@@ -149,7 +149,7 @@ printf 'ok: label collisions and duplicate profiles require operator resolution\
 reset
 run_setup
 grep -Fxq 'security add fake-secret' "$CALLS"
-grep -Fxq 'curl -fsS --max-time 10 -K - https://opencode.oox.sh/api/info' "$CALLS"
+grep -Fxq 'curl -fsS --max-time 10 -K - https://fleet.oox.sh/api/info' "$CALLS"
 grep -Fxq 'curl-stdin user = "opencode:fake-secret"' "$CALLS"
 absent -Eq '^curl .*fake-secret' "$CALLS"
 absent -Fq 'npm ' "$CALLS"

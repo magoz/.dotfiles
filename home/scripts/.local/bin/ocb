@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ocb: OpenCode on Box. Runs the local OpenCode 2 terminal client against the
-# Box server at https://opencode.oox.sh (tailnet-only, Let's Encrypt). Fallback:
-# OCB_URL=https://box.tail129a86.ts.net:9446 (Tailscale Serve). Agents, tools
-# and repositories stay on Box; only the UI runs here.
+# Box server, published by Fleet at https://fleet.oox.sh (tailnet-only, Let's
+# Encrypt; Fleet proxies OpenCode's API). Agents, tools and repositories stay on
+# Box; only the UI runs here.
 #
 #   ocb --setup      store the Box server password in the macOS Keychain
 #   ocb --check      print the Box server version (verifies URL + password)
@@ -12,7 +12,7 @@
 # session with ctrl+x l or /sessions. See ~/.box/opencode.md on Box.
 set -euo pipefail
 
-url=${OCB_URL:-https://opencode.oox.sh}
+url=${OCB_URL:-https://fleet.oox.sh}
 host=${OCB_SSH_HOST:-box}
 service=opencode-box
 account=opencode
