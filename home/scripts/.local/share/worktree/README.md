@@ -24,15 +24,9 @@ only when needed:
 /worktree --branch fix/card-title Fix the resource-card fallback title
 ```
 
-For an implementation-ready GitHub issue:
-
-```text
-/skill:implement-issue 212
-```
-
-Both flows create and provision a sibling checkout, open its grouped Herdr
-workspace, start a fresh Pi, submit the task as its first prompt once Pi is
-ready, focus it, and shut down the source Pi after successful handoff.
+This creates and provisions a sibling checkout, opens its grouped Herdr
+workspace, starts a fresh Pi, submits the task as its first prompt once Pi is
+ready, focuses it, and shuts down the source Pi after successful handoff.
 
 ### First-use project trust
 
@@ -157,10 +151,6 @@ an unambiguous existing project/team proactively, then retries the same tool
 request. Only uncertain selection or missing authentication/access needs user
 input. Remote project discovery is agent-owned, not hard-coded in provisioning;
 no new Vercel project or deployment is created during linking.
-
-`implement-issue` uses the same tool and hands the destination Pi to the internal
-`implement-issue-worktree` continuation skill, so issue-driven and local creation
-have the same session lifecycle.
 
 ## Worktree manager
 
