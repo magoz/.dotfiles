@@ -69,9 +69,14 @@ try:
     broken = {p["id"] for p in plugins if p["state"]["status"] != "active"}
     assert broken <= {"opencode-anthropic-auth"}, broken
     # plugin/check covers package plugins only; the plugin list proves local plugins loaded.
-    effect_plugins = {"dotfiles-until", "dotfiles-skill-commands"}
+    effect_plugins = {"dotfiles-until", "dotfiles-skill-commands", "dotfiles-subscription-usage"}
     poll("/api/plugin", "plugin-list.json",
          lambda data: effect_plugins <= {p["id"] for p in data if p["state"]["status"] == "active"})
+    # Effect plugin RPC round trip through the host's schema validation (no credentials here).
+    session = json.loads(call(["api", "POST", "/api/session", "--data", "{}"], "session.json"))["data"]
+    quota = json.loads(call(["api", "POST", "/api/rpc/dotfiles-subscription-usage/get",
+                             "--data", json.dumps({"input": {"sessionID": session["id"]}})], "quota.json"))
+    assert quota["output"]["status"] == "unavailable", quota
     shared = {d.name for d in (agents_home / "skills").iterdir() if (d / "SKILL.md").is_file()}
     # Compatibility skills, then skill commands, load asynchronously after boot.
     skills = poll("/api/skill", "skills.json", lambda data: shared <= {s["id"] for s in data})

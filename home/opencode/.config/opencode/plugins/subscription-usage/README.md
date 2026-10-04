@@ -24,6 +24,15 @@ auth/model data reports unavailable, never 100% allowance.
 
 Assessment limitation: this has synthetic tests, not live quota-provider checks.
 
+Implementation: the server half is an OpenCode Effect plugin (`server.ts`, `usage.ts`; shared
+deps in `../package.json`). A plugin-scoped `FiberMap` keyed by session makes a newer request
+interrupt the older one; the host interrupting an RPC handler (TUI abort) and plugin unload
+both interrupt the fetch, whose body read releases its reader on any exit. Time comes from
+Effect's `Clock`, so tests run on `TestClock`. Provider/model lookups use `ctx.provider` and
+`ctx.model` (2.0.20 removed `ctx.catalog`, which made earlier versions always unavailable). The
+TUI half (`view.js`, plain JS) registers `/quota` while the `app` slot renders: V2 `setup` has
+no Keymap provider.
+
 Cache/security boundaries:
 
 - Every call verifies session location, model/provider origin and the current

@@ -14,7 +14,7 @@ Local OpenCode runtime plugins.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.
 - `worktrees`: server worktree strategy `dotfiles` (Herdr-free `worktree checkout` + `retire-checkout`); `name` `feat--x` → branch `feat/x`; owns only checkouts with the private-git-dir `dotfiles-worktree` marker.
 - `skill-commands`: Effect plugin; registers `/<id>` for shared skills with `metadata.opencode/slash: "true"`; runs as a skill-attached prompt.
-- `subscription-usage`: server-only OAuth resolution, sanitized on-demand TUI output.
+- `subscription-usage`: Effect server (credential resolution, bounded cached fetch), sanitized on-demand TUI output.
 - `fleet`: auto-discovered TUI-only Fleet client of `fleet.oox.sh` (sidebar, launcher, handled/undo via Fleet's JSON routes with `Origin`).
 
 Effect plugins (server side only: the TUI API is Promise-only) are TypeScript `server.ts` files
