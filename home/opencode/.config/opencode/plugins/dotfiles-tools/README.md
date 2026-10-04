@@ -16,7 +16,7 @@ Assessed against the exact **V2.0.3** source downloaded under
 
 - `plugin/src/promise/plugin.ts`, `tool.ts`, `session.ts`, `event.ts`, `rpc.ts`,
   `README.md`: imperative `ctx.tool.transform(tools => tools.add(...))`, Promise
-  executors/results, `ctx.session.get/synthetic`, `ctx.event.subscribe`,
+  executors/results, `ctx.session.get`, `ctx.event.subscribe`,
   `ctx.rpc.register`, and awaited setup cleanup / registration disposal.
 - `schema/src/tool.ts`, `rpc.ts`, `session.ts`, `location.ts`, `session-event.ts`:
   portable JSON schemas, `sessionID` tool context (no tool AbortSignal!),
@@ -28,8 +28,7 @@ Assessed against the exact **V2.0.3** source downloaded under
   including release. Server-local RPC registration is location scoped.
 - `client/src/promise/generated/types.ts`: `SessionListOutput` is
   `{ data: SessionInfo[], cursor: { previous?, next? } }`; session get returns
-  `SessionInfo` directly. Synthetic input is `{ sessionID, id, text,
-  description, metadata, delivery: 'queue', resume: true }`.
+  `SessionInfo` directly.
 - `plugin/src/tui/context.ts`: native `ctx.ui.router.current()`,
   `ctx.ui.dialog.confirm/prompt`, `ctx.keymap.layer`, `ctx.client.session.prompt`,
   and cached permission/form/pending sync/list. No invented UI command API.
@@ -41,10 +40,10 @@ Assessed against the exact **V2.0.3** source downloaded under
 - `core/src/tool.ts` and `plugin/src/promise/permission.ts`: tool
   `options.permission` filters wholly denied tools, but does **not** request
   permission. Promise plugins have no public permission-assert/request method.
-  Thus every allocating operation and every `until start` uses a real,
-  explicit **native local confirmation**, even with persistent allow rules.
-  `until` additionally sets `options.permission: 'shell'`. This extra confirmation
-  is an assessment safety choice, not an imitation permission API.
+  Thus every allocating operation uses a real, explicit **native local
+  confirmation**, even with persistent allow rules.
+
+Shell-condition watches (`until`) moved to `../until` (pi-until parity, no confirmation).
 
 ## Worktree handoff
 
@@ -105,47 +104,7 @@ success or lost acknowledgement: retain source and all partial resources;
 inspect before retrying. No rollback or automatic allocation retry. Worktree
 stderr is discarded after preflight to avoid leaking provisioning secrets.
 Captured CLI JSON/preflight output is bounded to 64KiB. TUI disposal aborts and
-awaits its process-group cleanup; server unload cancels queues and until jobs.
-
-## `until`
-
-Examples (tool use; no `/watch` aliases are installed):
-
-```json
-{"action":"start","command":"test -f build/ready","intervalMs":5000,"timeoutMs":10000,"runtimeMs":3600000}
-{"action":"list"}
-{"action":"status","id":"<returned job id>"}
-{"action":"cancel","id":"<returned job id>"}
-```
-
-Start currently requires a unique, active **root TUI** for confirmation of the
-exact shell command, session, cwd and bounds. Checks then run server-side using
-`/bin/sh -c` with **every `HERDR_*` variable removed**. Commands MUST be
-side-effect-free by contract. This is **not a shell sandbox**; approval is
-required even for nominally read-only commands. Other ordinary environment
-credentials may still be available to an approved shell; do not use commands
-that transmit or mutate them.
-
-- Default interval/check timeout/runtime: 5s / 10s / 1h.
-- Allowed: interval 1–60s; check timeout 100ms–60s, no larger than runtime;
-  runtime 1s–24h. At most 8 running jobs/session, 64 retained jobs/session,
-  and 1024 jobs/plugin location.
-- Nonzero exit schedules a timer for another check. No agent-side sleeping,
-  overlapping scheduler checks or sleeping shell loop is generated. A process
-  timeout/spawn error stops the job, rather than silently retrying forever.
-- Exit zero initiates exactly **one** synthetic enqueue attempt with a stable
-  `msg_` ID, `delivery:'queue'`, `resume:true`, and only opaque job ID + success
-  text. No command, stdout, stderr, cwd or secret is included in status/wakes.
-  Both output streams use OS-level discard, not retained buffers.
-- Jobs are session-owned; cross-session status/cancel is rejected. Deletion,
-  interruption, explicit cancellation and plugin unload abort processes/timers.
-  SIGTERM is followed by a referenced 250ms grace timer and final process-group
-  SIGKILL even if the leader already exited. Cleanup awaits that grace.
-- Wakes are not retried on transport failure (`wake_failed`), avoiding duplicate
-  resumptions. Admission and cancellation cannot be atomic across a network:
-  an already accepted wake cannot be recalled by a late cancellation. State is
-  in-memory, not persisted/replayed after reload; exactly-once is local enqueue
-  behavior, not a durable distributed delivery guarantee.
+awaits its process-group cleanup; server unload cancels queued requests.
 
 ## Safety / remaining integration boundaries
 
@@ -174,10 +133,9 @@ npm test
 # or: node --test test/*.test.js
 ```
 
-26 dependency-free Node tests cover exact interface-shaped mocks, schemas,
+24 dependency-free Node tests cover exact interface-shaped mocks, schemas,
 CLI/Vercel behavior, root/family/permission/cwd correlation, server-vs-local pane
 environments, single claims/leases/late replies, cancellation isolation,
-until ownership/bounds/output suppression/wakes, cleanup and argv/process
-bounds. The Linux regression launches only harmless shell descendants and
+cleanup and argv/process bounds. The Linux regression launches only harmless shell descendants and
 verifies resistant descendants are gone after leader exit; that one `/proc`
 test skips on other platforms. No real worktrees, DBs, panes or model calls.

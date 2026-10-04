@@ -17,7 +17,7 @@ No Pi credentials/sessions are imported and no Pi extension is required by OpenC
 | Mixed-agent inventory/cleanup | Pane-local `/worktrees`; shared `worktree-manage` |
 | Delegation | Native `general`, `explore`, `pr-reviewer`, `web-researcher` |
 | Delivery/research skills | Shared `~/.agents/skills`, harness-neutral text; `/<id>` via `skill-commands` |
-| Shell-condition wake | Session-owned `until`, explicit local consent |
+| Shell-condition wake | `until` (pi-until parity): watches, recurring wakes, durable, no consent prompt |
 | Allowance | `/quota` / `/subscription-usage`, cached on-demand OAuth snapshot |
 | Fleet (all Box sessions) | Needs-me sidebar, footer badge, `/fleet` page (`ctrl+x f`), next needs-me (`ctrl+x j`), launcher (`ctrl+x o`), handled/undo (`ctrl+x h`/`z`) |
 | Compaction/search/questions/MCP | Native V2; executor MCP uses native Code Mode |

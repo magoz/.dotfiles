@@ -11,6 +11,7 @@
   "plugins": [
     { "package": "./plugins/herdr-opencode" },
     { "package": "./plugins/dotfiles-tools" },
+    { "package": "./plugins/until" },
     { "package": "./plugins/worktree-manager" },
     { "package": "./plugins/subscription-usage" },
     "-ocv-plugin"

@@ -64,18 +64,12 @@ export async function verifyPane(ctx, request, location, signal) {
 }
 
 export function confirmation(request) {
-  if (request.kind === 'worktree') return [
+  return [
     `Session: ${request.sessionID}`, `cwd: ${request.cwd}`,
     'Preflight: ' + JSON.stringify(['provision-env', '--repo', request.cwd, '--check-vercel-link', '--non-interactive']),
     'Allocate (30 minute timeout): ' + JSON.stringify(['worktree', ...buildArgs(request.input, request.cwd)]),
     'Setup commands: ' + JSON.stringify(request.input.setup ?? []),
     'This changes Git/Herdr/environment/database state. Source remains open; destination owns implementation. Allow this request once?',
-  ].join('\n');
-  return [
-    `Session: ${request.sessionID}`, `cwd: ${request.cwd}`,
-    'Shell argv: ' + JSON.stringify(['/bin/sh', '-c', request.input.command]),
-    `intervalMs=${request.input.intervalMs}; timeoutMs=${request.input.timeoutMs}; runtimeMs=${request.input.runtimeMs}`,
-    'Condition MUST be read-only/side-effect-free. Shell is not sandboxed. Output is discarded; server HERDR_* environment is stripped. Allow these repeated checks once?',
   ].join('\n');
 }
 
@@ -103,14 +97,12 @@ export function setupTui(ctx, { run = runProcess, env = { ...process.env }, inte
     let result;
     try {
       await verify();
-      if (request.kind === 'worktree' && env.HERDR_ENV !== '1') throw new Error('Worktree requires this TUI inside Herdr');
+      if (env.HERDR_ENV !== '1') throw new Error('Worktree requires this TUI inside Herdr');
       const allowed = await cancellable(ctx.ui.dialog.confirm({ title: 'dotfiles-tools permission', message: confirmation(request) }), signal);
       signal.throwIfAborted();
       if (allowed !== true) throw new Error('Permission declined');
       await verify();
-      result = request.kind === 'worktree'
-        ? await executeWorktree(request, { run, env, signal, verify })
-        : { status: 'approved' };
+      result = await executeWorktree(request, { run, env, signal, verify });
     } catch (error) {
       result = { status: 'failed', reason: error instanceof Error ? error.message : 'Pane request failed; preserve resources' };
     }

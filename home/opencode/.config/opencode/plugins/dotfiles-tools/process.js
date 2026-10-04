@@ -4,8 +4,7 @@ export function withoutPaneEnv(env) {
   return Object.fromEntries(Object.entries(env).filter(([key]) => !key.startsWith('HERDR_')));
 }
 
-// Never use shell:true. CLI arguments are argv; only an explicitly approved
-// until condition uses /bin/sh -c. No detached process group survives cancellation.
+// Never use shell:true: CLI arguments are argv. No detached process group survives cancellation.
 export function runProcess(command, args, { cwd, env, signal, timeoutMs, capture = 'none', maxBytes = 65536, cleanupGraceMs = 250 }) {
   if (process.platform === 'win32') return Promise.reject(new Error('POSIX process groups required'));
   signal?.throwIfAborted();

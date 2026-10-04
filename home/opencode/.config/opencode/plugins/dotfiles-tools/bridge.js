@@ -78,8 +78,6 @@ export class Bridge {
     if (!request || !request.claimed || request.clientID !== input.clientID || request.rootID !== input.rootID) return { acknowledged: false };
     const status = input.outcome.status;
     if (status === 'ready' && input.outcome.destination.branch !== request.input.branch) throw new Error('Destination branch mismatch');
-    if ((request.kind === 'until' && !['approved', 'failed'].includes(status)) ||
-        (request.kind === 'worktree' && status === 'approved')) throw new Error('Wrong outcome kind');
     this.requests.delete(request.id); clearTimeout(request.timer); request.detach?.();
     request.resolve(input.outcome);
     return { acknowledged: true };

@@ -94,8 +94,7 @@ test('pane route/root/cwd and full family guard rejects running and blocked desc
   await assert.rejects(verifyPane(f.tui, request, location, signal), /blocked/);
 });
 
-test('permission text includes exact setup/cwd and condition bounds', () => {
-  assert.match(confirmation({ ...request, input: { ...request.input, setup: ['npm ci'] } }), /npm ci/);
-  const text = confirmation({ ...request, kind: 'until', input: { command: 'test -f ready', intervalMs: 1000, timeoutMs: 500, runtimeMs: 10000 } });
-  for (const part of ['/repo', 'test -f ready', '1000', '500', '10000', 'side-effect-free']) assert.ok(text.includes(part));
+test('permission text includes exact setup and cwd', () => {
+  const text = confirmation({ ...request, input: { ...request.input, setup: ['npm ci'] } });
+  for (const part of ['/repo', 'npm ci', 'provision-env']) assert.ok(text.includes(part));
 });

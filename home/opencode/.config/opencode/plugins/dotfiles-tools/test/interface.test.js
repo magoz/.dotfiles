@@ -12,11 +12,8 @@ test('structural Promise and TUI exports, exact tool schema/permission contracts
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
   assert.equal(pkg.exports['./server'], './server.js'); assert.equal(pkg.exports['./tui'], './tui.js');
   const f = fixture(); const cleanup = await setupServer(f.server); t.after(cleanup);
-  assert.deepEqual([...f.tools.keys()], ['create_worktree', 'until']);
-  assert.equal(f.tools.get('until').options.permission, 'shell');
-  assert.equal(f.tools.get('until').input.type, 'object'); assert.ok(f.tools.get('until').output);
+  assert.deepEqual([...f.tools.keys()], ['create_worktree']);
   await assert.rejects(f.tools.get('create_worktree').execute({ branch: 'feat/task' }, toolContext), /Exactly one/);
-  await assert.rejects(f.tools.get('until').execute({ action: 'start', command: 'true' }, { ...toolContext, sessionID: 'child' }), /root session/);
 });
 
 test('integrated pane-local CLI only, exact location RPC, native confirmation, source retained', async (t) => {
@@ -38,28 +35,6 @@ test('integrated pane-local CLI only, exact location RPC, native confirmation, s
   assert.match(f.toasts[0].message, /Source retained/);
   await f.tui.commands[0].run('exact task');
   assert.equal(f.prompts[0].sessionID, root.id); assert.equal(f.prompts[0].delivery, 'queue');
-});
-
-test('until confirmation precedes server process; only owner can manage and deletion cancels', async (t) => {
-  const f = fixture(), permission = deferred(), processDone = deferred(); let options, called = 0;
-  f.tui.ui.dialog.confirm = async () => permission.promise;
-  const serverCleanup = await setupServer(f.server, {
-    env: { HERDR_ENV: '1', HERDR_SOCKET: 'SERVER', PATH: '/bin' },
-    run: async (_cmd, _args, value) => { called++; options = value; return processDone.promise; },
-  });
-  const tuiCleanup = setupTui(f.tui, { intervalMs: 5, env: {}, run: async () => assert.fail() });
-  t.after(async () => { processDone.resolve({ code: 1 }); await tuiCleanup(); await serverCleanup(); });
-  await flush();
-  const pending = f.tools.get('until').execute({ action: 'start', command: 'test -f ready' }, toolContext);
-  await flush(); assert.equal(called, 0);
-  permission.resolve(true);
-  const result = await pending;
-  await waitFor(() => called === 1);
-  assert.deepEqual(options.env, { PATH: '/bin' }); assert.equal(options.capture, 'none');
-  await assert.rejects(f.tools.get('until').execute({ action: 'status', id: result.output.id }, { ...toolContext, sessionID: 'other' }), /Unknown/);
-  f.stream.emit({ type: 'session.deleted', created: Date.now(), data: { sessionID: root.id } });
-  await waitFor(() => options.signal.aborted);
-  processDone.resolve({ code: 0 }); await flush(); assert.equal(f.synthetic.length, 0);
 });
 
 test('late permission after interruption cannot execute, a subsequent run is not poisoned', async (t) => {

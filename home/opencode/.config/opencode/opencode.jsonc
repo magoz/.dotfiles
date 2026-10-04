@@ -94,6 +94,8 @@
     "./plugins/opencode-anthropic-auth/gateway",
     "./plugins/opencode-anthropic-auth",
     "./plugins/dotfiles-tools",
+    // Background shell-condition watches and recurring wakes (pi-until parity). See plugins/until/README.md.
+    "./plugins/until",
     "./plugins/herdr-opencode",
     // `/<id>` for shared skills flagged `metadata.opencode/slash: "true"`.
     "./plugins/skill-commands",

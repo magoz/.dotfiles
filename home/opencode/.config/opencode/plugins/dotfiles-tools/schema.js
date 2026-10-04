@@ -4,17 +4,11 @@ export const object = (properties, required = Object.keys(properties)) => ({
   type: 'object', properties, required, additionalProperties: false,
 });
 export const array = (items, maxItems = 64) => ({ type: 'array', items, maxItems });
-export const integer = (minimum, maximum) => ({ type: 'integer', minimum, maximum });
 export const nullable = (schema) => ({ anyOf: [schema, { type: 'null' }] });
 export const worktreeInput = object({
   branch: text, base: text, path: text, label: text, ttl: text, prompt: text,
   setup: array(text, 16),
 }, []);
-export const untilInput = object({
-  action: { enum: ['start', 'list', 'status', 'cancel'] },
-  id: text, command: text, intervalMs: integer(1000, 60000),
-  timeoutMs: integer(100, 60000), runtimeMs: integer(1000, 86400000),
-}, ['action']);
 export const destinationSchema = object({
   source: text, branch: text, base: text, path: text, workspaceId: text,
   paneId: text, agentName: text, agentKind: { enum: ['opencode'] }, warnings: array(text),
@@ -23,19 +17,14 @@ export const linkSchema = object({
   status: { enum: ['vercel_link_required'] }, directory: text, reason: text,
 });
 export const outcomeSchema = object({
-  status: { enum: ['ready', 'vercel_link_required', 'approved', 'failed'] },
+  status: { enum: ['ready', 'vercel_link_required', 'failed'] },
   destination: destinationSchema, link: linkSchema, reason: text,
   sourceRetained: { enum: [true] },
 }, ['status']);
 export const worktreeOutputSchema = object({ ...outcomeSchema.properties, retry: worktreeInput }, ['status']);
-export const jobSchema = object({
-  id: text, state: { enum: ['running', 'waking', 'succeeded', 'cancelled', 'expired', 'failed', 'wake_failed'] },
-  checks: integer(0, Number.MAX_SAFE_INTEGER), created: integer(0, Number.MAX_SAFE_INTEGER), deadline: integer(0, Number.MAX_SAFE_INTEGER),
-});
-export const untilOutputSchema = { anyOf: [jobSchema, array(jobSchema)] };
 export const requestSchema = object({
   id: text, sessionID: text, rootID: text, cwd: text,
-  kind: { enum: ['worktree', 'until'] }, input: { anyOf: [worktreeInput, untilInput] },
+  kind: { enum: ['worktree'] }, input: worktreeInput,
 });
 const identity = { clientID: text, rootID: text };
 export const bridgeDefinition = {
@@ -82,9 +71,6 @@ export function validate(schema, value, path = 'input') {
   if (schema.type === 'string' && (typeof value !== 'string' || value.length < (schema.minLength ?? 0) ||
       value.length > (schema.maxLength ?? Infinity) || value.includes('\0'))) throw new Error(`${path}: invalid string`);
   if (schema.type === 'boolean' && typeof value !== 'boolean') throw new Error(`${path}: expected boolean`);
-  if (schema.type === 'integer' && (!Number.isSafeInteger(value) || value < schema.minimum || value > schema.maximum)) {
-    throw new Error(`${path}: integer outside bounds`);
-  }
   if (schema.type === 'array') {
     if (!Array.isArray(value) || value.length > schema.maxItems) throw new Error(`${path}: invalid array`);
     value.forEach((item, index) => validate(schema.items, item, `${path}[${index}]`));

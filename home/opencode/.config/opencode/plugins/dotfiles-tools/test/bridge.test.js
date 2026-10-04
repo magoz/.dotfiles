@@ -55,9 +55,9 @@ test('expired claims never execute late approval', async (t) => {
   let now = 0;
   const bridge = new Bridge({ now: () => now }); t.after(() => bridge.dispose());
   bridge.pulse(client);
-  const pending = bridge.request({ ...request, kind: 'until' }, 1000), rejected = assert.rejects(pending);
+  const pending = bridge.request(request, 1000), rejected = assert.rejects(pending);
   const claim = bridge.pulse(client).request;
   now = 1001;
-  assert.equal(bridge.complete({ ...client, id: claim.id, outcome: { status: 'approved' } }).acknowledged, false);
+  assert.equal(bridge.complete({ ...client, id: claim.id, outcome: { status: 'failed', reason: 'late' } }).acknowledged, false);
   await rejected;
 });

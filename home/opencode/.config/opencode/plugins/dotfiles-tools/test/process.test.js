@@ -6,7 +6,7 @@ import { runProcess, withoutPaneEnv } from '../process.js';
 
 const base = { cwd: process.cwd(), env: { PATH: '/bin:/usr/bin' }, timeoutMs: 3000 };
 
-test('process runtime respects argv, drops condition output, caps captured output', async () => {
+test('process runtime respects argv, discards uncaptured output, caps captured output', async () => {
   assert.deepEqual(withoutPaneEnv({ HERDR_ENV: '1', HERDR_SOCKET: 'secret', PATH: '/bin' }), { PATH: '/bin' });
   const quiet = await runProcess('/bin/sh', ['-c', 'printf secret; printf secret >&2; exit 1'], base);
   assert.deepEqual(quiet, { code: 1, stdout: '', stderr: '' });

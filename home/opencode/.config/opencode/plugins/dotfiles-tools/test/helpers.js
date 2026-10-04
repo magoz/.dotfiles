@@ -33,13 +33,12 @@ export function eventStream() {
   };
 }
 export function fixture() {
-  const stream = eventStream(), tools = new Map(), toasts = [], synthetic = [], prompts = [];
+  const stream = eventStream(), tools = new Map(), toasts = [], prompts = [];
   let handlers, route = { type: 'session', sessionID: root.id }, session = root, confirmations = 0;
   const server = {
     location, event: stream,
     session: {
       async get({ sessionID }) { return sessionID === root.id ? session : { ...root, id: sessionID, parentID: root.id }; },
-      async synthetic(input, options) { assert.ok(options.signal); synthetic.push(input); },
     },
     rpc: { async register(definition, methods) { assert.equal(definition.id, 'dotfiles-tools'); handlers = methods; return { async dispose() {} }; } },
     tool: { async transform(edit) { edit({ add(tool) { tools.set(tool.name, tool); } }); return { async dispose() {} }; } },
@@ -75,7 +74,7 @@ export function fixture() {
     },
   };
   return {
-    server, tui, tools, toasts, synthetic, prompts, stream,
+    server, tui, tools, toasts, prompts, stream,
     get handlers() { return handlers; }, get confirmations() { return confirmations; },
     setRoute(value) { route = value; }, setSession(value) { session = value; },
   };

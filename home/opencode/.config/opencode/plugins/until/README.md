@@ -1,0 +1,105 @@
+# until
+
+Background shell-condition watches and recurring agent wakes for OpenCode, owned by one
+session. A port of Pi's [pi-until](https://github.com/joelhooks/pi-until) (`e2eceb0`) with the
+same tool contract, so agents use it the same way in both harnesses.
+
+The agent arms a watch and ends its turn. The server polls; the session is woken with a receipt.
+
+```text
+until({ action: "start", condition: "gh run view 123 --json status -q .status | grep -qx completed", label: "CI run 123" })
+```
+
+## Agent tool
+
+One direct tool, `until`, with pi-until's six actions and parameter names:
+
+| Action | Does |
+| --- | --- |
+| `start` | Run `condition` now, then every `intervalSeconds` (30). Wakes on true, on `timeoutSeconds`, or on failure. |
+| `repeat` | Wake every `intervalSeconds` with a fixed `instruction` + `quickRef` until `timeoutSeconds` (required). Optional `condition` gates each tick. |
+| `list` / `status` | Receipts for this session (status includes the condition and cwd). |
+| `complete` | End a recurring watch as achieved. |
+| `cancel` | Stop a watch without success; nobody is woken. |
+
+Other `start` parameters: `label`, `cwd` (relative or `~`, from the session directory),
+`checkTimeoutSeconds` (30), `wake: agent | notify`. `repeat` adds `contextRefs` and `immediate`.
+The description carries pi-until's guidance (fail-closed conditions, no same-batch arming,
+verify a wake before acting, list before re-arming), so it reaches every model unprompted.
+
+What makes it pleasant for agents:
+
+- **No confirmation.** Gated only by the agent's `shell` permission (`options.permission`):
+  wherever shell is denied, the tool is hidden.
+- **Inline answer.** `start` waits up to 3s for the first check. Already true: the call returns
+  `Condition is already true… continue now` and no watch or wake exists. Otherwise it returns the
+  watch ID, cadence and first exit code, plus "end your turn; do not poll".
+- **Every outcome wakes.** Success, timeout and spawn failure each queue one synthetic message
+  (`delivery: queue`, `resume: true`) with the receipt and what to do next. The transcript shows
+  `until · <label> · condition met after 3 checks (1m30s)`.
+- **Slow checks are not fatal.** A check past `checkTimeoutSeconds` is terminated with its
+  process group and counts as false; polling continues.
+- **Errors say what to fix**: `cwd is not a directory: …`, `Unknown until watch in this
+  session: x. Run until action=list…`, `action=list does not accept id`.
+- **Subagents can arm watches; the main session is woken.** OpenCode reports a subagent's result
+  to its parent once, so waking the finished subagent would do unseen work. A subagent's watch
+  belongs to the family root instead: the root is woken, the receipt says `Armed by: subagent
+  session …`, and the subagent is told to put the watch ID in its result and finish. The
+  condition still runs in the subagent's directory. Any session in the family can list/cancel.
+
+## Lifecycle
+
+- Esc does not stop watches (pi parity). Session deletion forgets them; `cancel` stops them.
+- Every change is written to plugin storage (`ctx.storage`, `watch/<session>/<id>`). Plugin
+  reloads and server restarts restore this location's running watches (`reloads` counts them).
+  Watches whose deadline passed while nothing owned them finish silently, like pi-until.
+  Plugins run per location, so after a server restart a location's watches resume when
+  OpenCode next loads that location (opening any of its sessions does).
+- Wakes carry a persisted `msg_` ID and are retried (0, 1s, 5s, 30s) with that same ID, so a
+  retry or a post-restart resend is admitted at most once. An exhausted wake is kept and marked
+  `wake failed` in receipts.
+- Recurring wakes are serialized per watch: the next tick waits until OpenCode delivers the
+  wake (`session.inbox.delivered`) and the run ends (`session.execution.*`, or `session.wait`
+  as backstop). Ticks that pass meanwhile become `missedTicks`; cadence stays anchored.
+- Limits: 32 running watches and 50 finished receipts per session.
+
+## TUI
+
+- A dock above the composer (OpenCode's queued-prompt style) while the family's watches run:
+  `◷ CI run 123 · next 12s · 2m14s · 5 checks`, at most three rows; click opens the list.
+- `/until <condition>` (prompts when empty), `/until-list` (picker → status/complete/cancel),
+  `/until-cancel [id]`, `/until-complete [id]` (pick when empty), `/until-stats`.
+- `wake: notify` results toast in-app and send a desktop notification when the terminal is blurred.
+
+Conditions, cwd and task text never cross the TUI RPC (views carry labels and counts only;
+`status` shows the receipt on request).
+
+## Telemetry
+
+One JSON line per event in `$XDG_STATE_HOME/opencode/until/events.jsonl` (`started`,
+`finished`, `resumed`, `action`). Conditions are a 12-character hash; instructions never.
+Labels are written, so keep them safe.
+`OPENCODE_UNTIL_TELEMETRY=0` disables it; `OPENCODE_UNTIL_TELEMETRY_FILE` moves it.
+
+## Safety
+
+Conditions run through `$SHELL -c` with the server's environment minus `HERDR_*` (the server's
+pane is never the user's). Output is discarded at the OS level. This is arbitrary shell access,
+like the `shell` tool, and not a sandbox: conditions must be side-effect free by contract.
+
+## Not ported
+
+- pi-until's `pi-until:follow-up` queue sharing for other extensions (no OpenCode consumer).
+- A session-wide arbiter across watches: OpenCode's inbox already queues synthetic wakes behind
+  the running turn and holds them through compaction.
+- `/until-resume`: restoration is automatic from durable storage.
+
+## Files
+
+`domain.js` (contract, parsing, cadence, packets) · `engine.js` (timers, checks, delivery,
+persistence) · `check.js` (process-group runner) · `server.js` (tool, RPC, events) ·
+`view.js`/`tui.js` (dock, commands) · `rpc.js` · `telemetry.js`.
+
+```sh
+node --test test/*.test.js
+```
