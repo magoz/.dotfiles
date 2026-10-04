@@ -67,9 +67,15 @@ test('child agents deny by default, never delegate, and only writers may edit or
     if (!writers.has(role)) assert.ok(!permissions.some((p) => ['shell', 'edit', 'create_worktree'].includes(p.action) && p.effect === 'allow'), role);
   }
 });
-test('Effect plugins pin the Effect version OpenCode is built on and type-check', async () => {
-  const until = JSON.parse(await read('plugins/until/package.json'));
-  const cli = JSON.parse(await read('plugins/until/node_modules/@opencode/plugin/package.json'));
-  assert.equal(until.dependencies.effect, cli.dependencies.effect, 'bump effect with @opencode/plugin');
-  assert.equal(until.devDependencies['@opencode/plugin'], until.dependencies['@opencode/schema']);
+test('Effect plugins share one dependency set, pinned to the Effect version OpenCode is built on', async () => {
+  const shared = JSON.parse(await read('plugins/package.json'));
+  const host = JSON.parse(await read('plugins/node_modules/@opencode/plugin/package.json'));
+  assert.equal(shared.dependencies.effect, host.dependencies.effect, 'bump effect with @opencode/plugin');
+  assert.equal(shared.devDependencies['@opencode/plugin'], shared.dependencies['@opencode/schema']);
+  // Every TypeScript server entry is type-checked by plugins/tsconfig.json.
+  const checked = JSON.parse(await read('plugins/tsconfig.json')).include;
+  for (const target of config.plugins) {
+    const ts = await access(new URL(`${target}/server.ts`, root)).then(() => true, () => false);
+    if (ts) assert.ok(checked.includes(`${target.replace('./plugins/', '')}/*.ts`), target);
+  }
 });

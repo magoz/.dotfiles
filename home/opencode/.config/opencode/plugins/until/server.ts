@@ -16,7 +16,7 @@ import {
   startedText, type Origin, type Watch,
 } from "./domain.ts"
 import { makeEngine, type UiEvent } from "./engine.ts"
-import { portable } from "./portable.ts"
+import { portable } from "../shared/portable.ts"
 import { definition, view } from "./rpc.ts"
 import { makeTelemetry, readTelemetry, summarize, summaryText, telemetryOptions, type Telemetry } from "./telemetry.ts"
 

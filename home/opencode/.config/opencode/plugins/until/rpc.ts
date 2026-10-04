@@ -4,7 +4,7 @@
 // traffic with these, so they must not be Effect schemas from this plugin's copy.
 import { Schema } from "effect"
 import { Status, type Watch } from "./domain.ts"
-import { portable } from "./portable.ts"
+import { portable } from "../shared/portable.ts"
 
 const session = { sessionID: Schema.String }
 const count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))

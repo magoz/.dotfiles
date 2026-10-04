@@ -13,9 +13,14 @@ Local OpenCode runtime plugins.
 - `herdr-opencode`: unchanged vendored V12; preserve provenance.
 - `worktree-manager`: TUI-only, mixed-agent cleanup with exact plan and receipts.
 - `worktrees`: server worktree strategy `dotfiles` (Herdr-free `worktree checkout` + `retire-checkout`); `name` `feat--x` → branch `feat/x`; owns only checkouts with the private-git-dir `dotfiles-worktree` marker.
-- `skill-commands`: registers `/<id>` for shared skills with `metadata.opencode/slash: "true"`; runs as a skill-attached prompt.
+- `skill-commands`: Effect plugin; registers `/<id>` for shared skills with `metadata.opencode/slash: "true"`; runs as a skill-attached prompt.
 - `subscription-usage`: server-only OAuth resolution, sanitized on-demand TUI output.
 - `fleet`: auto-discovered TUI-only Fleet client of `fleet.oox.sh` (sidebar, launcher, handled/undo via Fleet's JSON routes with `Origin`).
+
+Effect plugins (server side only: the TUI API is Promise-only) are TypeScript `server.ts` files
+sharing `plugins/package.json` (one `npm ci`, `effect` pinned to the host's version) and
+`plugins/tsconfig.json` (strict; add each new plugin to `include`). Hand the host only
+`shared/portable.ts` schemas: host-side checks of this copy's Effect schemas reject valid values.
 
 CLI plugins must call `ctx.keymap.layer` inside a rendered slot/route (e.g. `append: 'app'`),
 not directly in `setup`: V2 setup has no Keymap provider ("Keymap.Provider is missing").

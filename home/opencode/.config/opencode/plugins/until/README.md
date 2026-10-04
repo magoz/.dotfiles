@@ -114,25 +114,28 @@ plain JS on the host's Solid runtime.
 
 ### Effect version and `portable()`
 
-The plugin ships its own `effect`, **pinned exactly** to the version OpenCode is built on
-(`effect` in `@opencode/plugin`'s dependencies; `tests/config.test.mjs` enforces the match).
+The local Effect plugins share `plugins/package.json`: their own `effect`, **pinned exactly** to
+the version OpenCode is built on (`effect` in `@opencode/plugin`'s dependencies;
+`tests/config.test.mjs` enforces the match).
 Effects interoperate across the host's copy and this one, but **Effect schemas do not**: the host
 re-runs refinements (`Int`, `Finite`, min/max) with its own copy and rejects valid values
 ("Expected an integer"). So every schema the host validates (tool input, RPC
 inputs/outputs/errors/events) goes through `portable()`, a plain Standard Schema (+ JSON Schema)
-whose validation runs in this plugin's copy. A test asserts none of them is an Effect schema.
+whose validation runs in this plugin's copy (`../shared/portable.ts`). A test asserts none of them
+is an Effect schema.
 
 Upgrading OpenCode: bump `@opencode/plugin` and `@opencode/schema` to the new CLI version and
-`effect` to the exact version `@opencode/plugin` depends on, then `npm install` and `npm test`.
+`effect` to the exact version `@opencode/plugin` depends on in `plugins/package.json`, then
+`npm install --prefix plugins` and `npm test`.
 
 ## Files
 
 `domain.ts` (contract, schemas, parsing, cadence, packets) · `engine.ts` (watch fibers, delivery,
 persistence) · `check.ts` (process-group runner) · `server.ts` (plugin, tool, RPC, events) ·
-`rpc.ts` · `portable.ts` · `telemetry.ts` · `format.ts` · `view.js`/`tui.js` (dock, commands).
+`rpc.ts` · `telemetry.ts` · `format.ts` · `view.js`/`tui.js` (dock, commands).
 
 ```sh
-npm ci            # installed by arch/install and macos/install
-npm run typecheck # strict TS: no any, assertions or non-null
+npm ci --prefix ..            # shared deps; arch/install and macos/install run it
+npm run typecheck --prefix .. # strict TS: no any, assertions or non-null
 node --test test/*.test.ts test/*.test.js
 ```

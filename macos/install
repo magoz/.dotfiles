@@ -195,7 +195,7 @@ bun install --ignore-scripts --cwd "$HOME_PACKAGES/opencode/.config/opencode"
 
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-anthropic-auth"
 npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/opencode-vim-compat"
-npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins/until"
+npm ci --prefix "$HOME_PACKAGES/opencode/.config/opencode/plugins"
 
 echo "📦 Installing Pi extension dependencies"
 # Extensions resolve from their real (stowed) source paths in this repo, so

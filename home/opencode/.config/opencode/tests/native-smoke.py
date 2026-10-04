@@ -69,8 +69,9 @@ try:
     broken = {p["id"] for p in plugins if p["state"]["status"] != "active"}
     assert broken <= {"opencode-anthropic-auth"}, broken
     # plugin/check covers package plugins only; the plugin list proves local plugins loaded.
+    effect_plugins = {"dotfiles-until", "dotfiles-skill-commands"}
     poll("/api/plugin", "plugin-list.json",
-         lambda data: any(p["id"] == "dotfiles-until" and p["state"]["status"] == "active" for p in data))
+         lambda data: effect_plugins <= {p["id"] for p in data if p["state"]["status"] == "active"})
     shared = {d.name for d in (agents_home / "skills").iterdir() if (d / "SKILL.md").is_file()}
     # Compatibility skills, then skill commands, load asynchronously after boot.
     skills = poll("/api/skill", "skills.json", lambda data: shared <= {s["id"] for s in data})

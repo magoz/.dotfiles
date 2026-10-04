@@ -74,7 +74,6 @@ test("one direct `until` tool: no confirmation, hidden only where shell is denie
   const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"))
   assert.equal(pkg.exports["./server"], "./server.ts")
   assert.equal(pkg.exports["./tui"], "./tui.js")
-  assert.equal(pkg.dependencies.effect, "4.0.0-rc.112", "the host's exact Effect version")
   await run(Effect.gen(function* () {
     const f = yield* fixture()
     assert.equal(f.tool.name, "until")

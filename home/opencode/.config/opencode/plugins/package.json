@@ -1,0 +1,22 @@
+{
+  "name": "dotfiles-opencode-plugins",
+  "private": true,
+  "type": "module",
+  "description": "Shared dependencies for the local OpenCode Effect plugins. OpenCode resolves them by walking up from each plugin; `effect` is pinned to the version the host is built on.",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@opencode/schema": "2.0.20",
+    "effect": "4.0.0-rc.112"
+  },
+  "devDependencies": {
+    "@opencode/plugin": "2.0.20",
+    "@standard-schema/spec": "1.1.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
