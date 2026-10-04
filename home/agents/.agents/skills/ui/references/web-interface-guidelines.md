@@ -1,13 +1,7 @@
----
-description: Review UI code for Vercel Web Interface Guidelines compliance
-argument-hint: <file-or-pattern>
----
+# Web Interface Guidelines (Vercel)
 
-# Web Interface Guidelines
-
-Review these files for compliance: $ARGUMENTS
-
-Read files, check against rules below. Output concise but comprehensive—sacrifice grammar for brevity. High signal-to-noise.
+Source: https://github.com/vercel-labs/web-interface-guidelines (`command.md`).
+Local copy so reviews work offline; refresh from upstream when it changes.
 
 ## Rules
 
