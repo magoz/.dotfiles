@@ -62,11 +62,11 @@ test('registers flagged skills, skips taken names, and runs them as skill-attach
 
   await commands()[0].execute({
     sessionID: 'ses_1', delivery: 'steer',
-    prompt: { text: ' open draft ', files: [{ uri: 'file:///a' }], skills: [{ id: 'pr' }, { id: 'tdd' }] },
+    prompt: { text: ' open draft ', files: [{ uri: 'file:///a' }], skills: [{ id: 'pr' }, { id: 'learn' }] },
   });
   await commands()[0].execute({ sessionID: 'ses_1', delivery: 'queue', prompt: { text: '' } });
   assert.deepEqual(prompts, [
-    { sessionID: 'ses_1', text: 'open draft', files: [{ uri: 'file:///a' }], skills: [{ id: 'pr' }, { id: 'tdd' }], delivery: 'steer' },
+    { sessionID: 'ses_1', text: 'open draft', files: [{ uri: 'file:///a' }], skills: [{ id: 'pr' }, { id: 'learn' }], delivery: 'steer' },
     { sessionID: 'ses_1', text: 'Run the pr skill.', skills: [{ id: 'pr' }], delivery: 'queue' },
   ]);
   await cleanup();
