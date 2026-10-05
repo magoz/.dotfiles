@@ -32,6 +32,7 @@ const createFake = (
     commonDir?: string
     startErrorCode?: "cli:agent:start:timeout" | "agent_pane_busy"
     detectedStatus?: "idle" | "working" | "blocked"
+    manifest?: string
   } = {}
 ) => {
   const calls: Array<Call> = []
@@ -55,6 +56,12 @@ const createFake = (
         }))
       }
       return Effect.succeed({ stdout: "abc123\n", stderr: "" })
+    }
+    if (command === "git" && args.includes("ls-tree")) {
+      return Effect.succeed({ stdout: options.manifest === undefined ? "" : "package.json\n", stderr: "" })
+    }
+    if (command === "git" && args.includes("show")) {
+      return Effect.succeed({ stdout: options.manifest ?? "", stderr: "" })
     }
     if (command === "git" && args.includes("--git-common-dir")) {
       return Effect.succeed({ stdout: `${options.commonDir ?? "/repo/.git"}\n`, stderr: "" })
@@ -356,6 +363,28 @@ test("the lifecycle provisions before setup and starts one fresh Pi", async () =
     "wA:p1",
     "Implement the feature"
   ])
+})
+
+test("package.json worktree.setup at the pinned base runs before caller setup", async () => {
+  const fake = createFake({ manifest: JSON.stringify({ worktree: { setup: ["pnpm db:migrate"] } }) })
+  await Effect.runPromise(createEnvironment({
+    repo: "/repo", branch: "feat/feature", ttl: "7d", prompt: "Go", setupCommands: ["pnpm db:seed"]
+  }).pipe(Effect.provide(fake.layer)))
+  const show = fake.calls.find((call) => call.command === "git" && call.args.includes("show"))
+  expect(show?.args.at(-1)).toBe("abc123:package.json")
+  const shell = process.env.SHELL || "/bin/sh"
+  const ordered = fake.calls
+    .filter((call) => call.command === "provision-env" || call.command === shell || (call.command === "herdr" && call.args[1] === "start"))
+    .map((call) => call.command === shell ? call.args[1] : call.command)
+  expect(ordered).toEqual(["provision-env", "pnpm db:migrate", "pnpm db:seed", "herdr"])
+})
+
+test("a malformed worktree.setup fails before allocating Herdr resources", async () => {
+  const fake = createFake({ manifest: JSON.stringify({ worktree: { setup: "pnpm db:migrate" } }) })
+  await expect(Effect.runPromise(createEnvironment({
+    repo: "/repo", branch: "feat/feature", ttl: "7d", setupCommands: []
+  }).pipe(Effect.provide(fake.layer)))).rejects.toThrow("invalid package.json worktree.setup")
+  expect(fake.calls.every((call) => call.command === "git")).toBe(true)
 })
 
 test("a start timeout is recovered when Pi is detected in the destination pane", async () => {

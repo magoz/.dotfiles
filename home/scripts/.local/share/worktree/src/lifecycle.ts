@@ -7,7 +7,7 @@ import {
   focusWorkspace,
   startAgent
 } from "./herdr"
-import { resolveBranchBase, resolveSource, runProvisioning, runSetupCommands } from "./steps"
+import { readDeclaredSetup, resolveBranchBase, resolveSource, runProvisioning, runSetupCommands } from "./steps"
 
 export const createEnvironment = (options: CreateOptions) =>
   Effect.gen(function* () {
@@ -22,6 +22,7 @@ export const createEnvironment = (options: CreateOptions) =>
       yield* Console.log(`worktree: using primary checkout ${herdrSource} for Herdr (invoked from linked worktree ${source})`)
     }
     const { base, path: destinationPath } = yield* resolveBranchBase(herdrSource, options, "default-base")
+    const declaredSetup = yield* readDeclaredSetup(herdrSource, base)
     const resolvedOptions = { ...options, path: destinationPath }
 
     yield* Console.log(`worktree: creating ${options.branch} from ${base}`)
@@ -40,7 +41,7 @@ export const createEnvironment = (options: CreateOptions) =>
         })
       )
     )
-    yield* runSetupCommands(destination, options.setupCommands).pipe(
+    yield* runSetupCommands(destination, [...declaredSetup, ...options.setupCommands]).pipe(
       Effect.mapError((error) =>
         new WorktreeError({
           message:

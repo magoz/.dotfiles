@@ -54,6 +54,16 @@ exit 0
 
 type Fixture = ReturnType<typeof fixture>
 
+/** Commit files on origin's default branch only; the source checkout's working tree is untouched. */
+const publish = (f: Fixture, files: Record<string, string>) => {
+  for (const [name, content] of Object.entries(files)) writeFileSync(join(f.producer, name), content)
+  git(f.producer, "add", "-A")
+  git(f.producer, "commit", "-m", "publish")
+  git(f.producer, "push", "origin", "main")
+}
+
+const declaring = (setup: unknown) => JSON.stringify({ name: "app", worktree: { setup } })
+
 const run = async (f: Fixture, args: string[], env: Record<string, string> = {}) => {
   const child = Bun.spawn([process.execPath, resolve(import.meta.dir, "../src/main.ts"), "checkout", ...args], {
     cwd: f.root,
@@ -161,7 +171,50 @@ test("setup commands run in order in the new checkout through the login shell", 
   expect(result.stdout).not.toContain("setup-stdout")
 })
 
+test("package.json worktree.setup runs after provisioning, before caller --setup", async () => {
+  const f = fixture({
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+    "package.json": declaring(["pwd > setup.txt", "echo declared >> setup.txt"])
+  })
+  const result = await run(f, ["--repo", f.repo, "--branch", "feat/declared", "--json", "--setup", "echo caller >> setup.txt"])
+  expect(result.exitCode).toBe(0)
+  const path = join(f.root, "repo-feat-declared")
+  expect(readFileSync(join(path, "setup.txt"), "utf8")).toBe(`${path}\ndeclared\ncaller\n`)
+  expect(result.provisions).toEqual([`--repo ${path} --skip-vercel --non-interactive`])
+  // Declaring setup is not Vercel configuration evidence.
+  expect(JSON.parse(result.stdout).warnings).toEqual([NO_VERCEL_WARNING])
+})
+
+test("worktree.setup is read from the pinned base, not the source working tree", async () => {
+  const f = fixture()
+  publish(f, { "package.json": declaring(["echo fresh > setup.txt"]) })
+  const fresh = await run(f, ["--repo", f.repo, "--branch", "feat/fresh", "--json"])
+  expect(fresh.exitCode).toBe(0)
+  expect(readFileSync(join(f.root, "repo-feat-fresh", "setup.txt"), "utf8")).toBe("fresh\n")
+  // Explicit older base without the declaration: nothing runs.
+  const old = await run(f, ["--repo", f.repo, "--branch", "feat/old", "--base", "main", "--json"])
+  expect(old.exitCode).toBe(0)
+  expect(existsSync(join(f.root, "repo-feat-old", "setup.txt"))).toBe(false)
+})
+
+test("a failing declared setup command preserves the checkout and skips caller setup", async () => {
+  const f = fixture({ "package.json": declaring(["exit 3"]) })
+  const result = await run(f, ["--repo", f.repo, "--branch", "feat/fails", "--json", "--setup", "touch caller.txt"])
+  const path = join(f.root, "repo-feat-fails")
+  expect(result.exitCode).toBe(2)
+  expect(JSON.parse(result.stdout)).toEqual({ status: "failed", stage: "setup", branch: "feat/fails", path, checkout: "preserved" })
+  expect(existsSync(join(path, "caller.txt"))).toBe(false)
+})
+
+const malformed = (setup: unknown) => (f: Fixture) => {
+  publish(f, { "package.json": declaring(setup) })
+  return ["--branch", "feat/malformed"]
+}
+
 const preflightFailures: ReadonlyArray<readonly [string, (f: Fixture) => string[], string]> = [
+  ["a non-array worktree.setup", malformed("pnpm db:migrate"), "invalid package.json worktree.setup"],
+  ["a blank worktree.setup command", malformed(["pnpm db:migrate", " "]), "setup commands must be non-empty strings"],
+  ["an invalid package.json", (f) => { publish(f, { "package.json": "{" }); return ["--branch", "feat/badjson"] }, "invalid package.json worktree.setup"],
   ["an existing branch", (f) => { git(f.repo, "branch", "feat/taken"); return ["--branch", "feat/taken"] }, "branch already exists"],
   ["an existing branch with --base", (f) => { git(f.repo, "branch", "feat/taken"); return ["--branch", "feat/taken", "--base", "main"] }, "branch already exists"],
   ["an unreachable origin", (f) => { git(f.repo, "remote", "set-url", "origin", join(f.root, "missing.git")); return ["--branch", "feat/offline"] }, "refusing a stale local base"],

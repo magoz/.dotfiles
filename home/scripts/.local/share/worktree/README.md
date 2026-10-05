@@ -187,29 +187,44 @@ all irreversible steps that completed so recovery remains explicit.
 
 ## Repository setup
 
-`provision-env` deliberately does not prepare a repository schema. Pass one or
-more explicit setup commands when the new checkout needs additional bootstrap:
+`provision-env` deliberately does not prepare a repository schema: fresh sandbox
+leases clone a baseline that lags the checked-out code. A repository declares its
+own bootstrap in its root `package.json`, so every entry point (Pi, OpenCode,
+Fleet, the `worktrees` strategy) applies it:
+
+```json
+"worktree": { "setup": ["pnpm db:migrate", "NODE_ENV=test pnpm db:migrate"] }
+```
+
+Callers may append more with `--setup`:
 
 ```sh
 worktree create \
   --branch feat/reporting \
-  --setup "pnpm db:push" \
   --setup "pnpm db:seed"
 ```
 
-Setup commands run in order from the new checkout through the user's login
-shell. They are trusted local commands supplied by the caller; the CLI does not
-guess repository-specific schema or seed operations.
+`worktree.setup` is read from the pinned base (the code the checkout will contain)
+before anything is allocated; a value that is not an array of non-empty strings, or
+an unparsable `package.json`, fails preflight. No `package.json` or no key means no
+declared commands. It is not Vercel-configuration evidence (`provisionEnv` is).
+
+After provisioning, declared commands run first, then `--setup` commands, in order,
+from the new checkout root through the user's login shell (`$SHELL -lc`). A monorepo
+declares root-relative commands (e.g. `pnpm --filter`). Each repository decides which
+leases to migrate: `.env.local` (`default`) and `.env.test` (`test`) are separate
+databases. Setup failure preserves the checkout (`stage: setup`); nothing rolls back.
+The CLI never guesses repository-specific schema or seed operations.
 
 ## Lifecycle
 
 In order, `worktree create`:
 
-1. resolves the source Git checkout, requires a new destination branch and fetches/pins origin's current default tip unless `--base` is explicit, then resolves the sibling checkout path;
+1. resolves the source Git checkout, requires a new destination branch and fetches/pins origin's current default tip unless `--base` is explicit, resolves the sibling checkout path, and reads the base's `package.json` `worktree.setup`;
 2. calls `herdr worktree create --path ...`, which creates both the checkout and its grouped Herdr workspace;
 3. resolves the workspace's initial root pane;
 4. runs `provision-env --database --non-interactive`, failing safely on unexpected existing env files, pulling Development and `test` Vercel variables, removing deployment-only metadata and integration database URLs, and creating independent database leases for both;
-5. runs every explicit `--setup` command;
+5. runs the declared `worktree.setup` commands, then every explicit `--setup` command;
 6. starts a fresh selected agent (Pi by default) without a task attached;
 7. verifies the agent's kind, alias, destination pane, and explicit interactive readiness;
 8. submits the kickoff task as the fresh session's first prompt;
@@ -266,11 +281,13 @@ pane. In order, it:
    `--base`), pins the base exactly like `create` (fresh origin default tip through a
    unique temporary ref, fail closed; explicit `--base` used without fetching),
    resolves the sibling path `<primary>-<branch-slug>` (or `--path`), refuses an
-   existing destination, and decides the provisioning plan — all before allocating;
+   existing destination, decides the provisioning plan and reads the base's
+   `worktree.setup` — all before allocating;
 2. runs `git -C <primary> worktree add -b <branch> -- <path> <base>`, then writes the
    ownership marker (below) before provisioning;
 3. provisions (rule below);
-4. runs every `--setup` command through `$SHELL -lc` in the checkout.
+4. runs the declared `worktree.setup` commands, then every `--setup` command, through
+   `$SHELL -lc` in the checkout (see [Repository setup](#repository-setup)).
 
 `--json` prints exactly one object on stdout. Success:
 `{source, branch, base, path, warnings}`. Failure exits 2 and prints a report with no

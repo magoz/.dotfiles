@@ -1,4 +1,5 @@
-import { Console, Effect } from "effect"
+import { Console, Effect, Schema } from "effect"
+import { WorktreeError } from "./domain"
 import { defaultWorktreePath, requireNewBranch, resolveBase, resolvePrimaryRoot, resolveRepository } from "./git"
 import { Process } from "./process"
 
@@ -74,6 +75,32 @@ export const runInstallOnly = (destination: string) =>
       "--skip-vercel",
       "--non-interactive"
     ])
+  })
+
+const SetupCommand = Schema.String.pipe(
+  Schema.filter((command) => command.trim().length > 0, { message: () => "setup commands must be non-empty strings" })
+)
+const Manifest = Schema.Struct({
+  worktree: Schema.optional(Schema.Struct({ setup: Schema.optional(Schema.Array(SetupCommand)) }))
+})
+
+/**
+ * Repository-declared setup: root package.json `worktree.setup` (e.g. migrations
+ * for freshly leased sandbox databases), read from the pinned base, i.e. the code
+ * the new checkout will contain. Read before allocating anything, so a malformed
+ * declaration fails preflight. No package.json or no key means no commands.
+ * Callers run these after provisioning and before their own --setup commands.
+ */
+export const readDeclaredSetup = (repo: string, base: string) =>
+  Effect.gen(function* () {
+    const process = yield* Process
+    const listed = yield* process.capture("git", ["-C", repo, "ls-tree", "--name-only", "--end-of-options", base, "--", "package.json"])
+    if (listed.stdout.trim() !== "package.json") return []
+    const manifest = yield* process.capture("git", ["-C", repo, "show", "--end-of-options", `${base}:package.json`])
+    const decoded = yield* Schema.decodeUnknown(Schema.parseJson(Manifest))(manifest.stdout).pipe(
+      Effect.mapError((error) => new WorktreeError({ message: `invalid package.json worktree.setup at ${base}: ${error.message}` }))
+    )
+    return decoded.worktree?.setup ?? []
   })
 
 export const runSetupCommands = (destination: string, commands: ReadonlyArray<string>) =>

@@ -58,7 +58,8 @@ service user already has; nothing is prompted (`--non-interactive`).
   without fetching). Omitted → the CLI fetches origin's live default tip (fail closed).
 - **Provisioning**: exactly `worktree checkout`'s rule (Vercel-configured repos get the
   full `provision-env --database`; others install dependencies only or skip, with
-  warnings). See `home/scripts/.local/share/worktree/README.md`. Warnings are logged
+  warnings), then the repository's `package.json` `worktree.setup` (e.g. migrations).
+  The plugin passes no `--setup`. See `home/scripts/.local/share/worktree/README.md`. Warnings are logged
   to the service journal as `[worktrees] <path>: <warning>`.
 - **Failures** throw `Error`s built only from validated data (stage, branch, absolute
   path) of the CLI's JSON failure report. The CLI's stderr (provisioning/setup output)

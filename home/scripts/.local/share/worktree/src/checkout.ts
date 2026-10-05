@@ -11,7 +11,7 @@ import {
 } from "./domain"
 import { markerPath, writeMarker } from "./marker"
 import { Process } from "./process"
-import { resolveBranchBase, resolveSource, runInstallOnly, runProvisioning, runSetupCommands } from "./steps"
+import { readDeclaredSetup, resolveBranchBase, resolveSource, runInstallOnly, runProvisioning, runSetupCommands } from "./steps"
 
 /**
  * How a provision-only checkout is provisioned. Decided from local evidence only
@@ -123,6 +123,7 @@ export const checkoutEnvironment = (options: CheckoutOptions) =>
     }, "always").pipe(preflight)
     yield* requireAbsent(requested).pipe(preflight)
     const vercelConfigured = yield* isVercelConfigured(source).pipe(preflight)
+    const declaredSetup = yield* readDeclaredSetup(primary, base).pipe(preflight)
 
     yield* Console.log(`worktree: checking out ${branch} from ${base} at ${requested}`)
     const runner = yield* Process
@@ -163,7 +164,7 @@ export const checkoutEnvironment = (options: CheckoutOptions) =>
         warnings.push(NO_VERCEL_WARNING, NO_LOCKFILE_WARNING)
         break
     }
-    yield* runSetupCommands(destination, options.setupCommands).pipe(preserved("setup"))
+    yield* runSetupCommands(destination, [...declaredSetup, ...options.setupCommands]).pipe(preserved("setup"))
     for (const warning of warnings) yield* Console.error(`worktree: warning: ${warning}`)
 
     return { source, branch, base, path: destination, warnings } satisfies CheckedOutEnvironment
