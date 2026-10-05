@@ -25,7 +25,9 @@ sessions can call the tool. Host schemas are `portable(..., { exact: true })`, s
    result containing the identical `retry` input. Any other failure stops the call, and
    stderr is never echoed.
 2. `ctx.session.create({ location: { directory: repo } })`: the destination session. Plugins
-   have no project lookup, and creating a session is how `repo`'s project gets resolved.
+   have no project lookup, and creating a session is how `repo`'s project gets resolved. It is
+   created untitled: OpenCode only generates titles for untitled sessions, and does so from the
+   task.
 3. `ctx.worktree.create({ projectID, name, branch: base })`: OpenCode's native worktree API,
    which goes through the dotfiles `worktrees` strategy. That creates a provisioned sibling
    checkout and an ownership marker, and the checkout can be retired from OpenCode and Fleet.

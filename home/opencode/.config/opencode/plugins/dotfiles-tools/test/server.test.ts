@@ -102,7 +102,8 @@ test("no TUI or Herdr needed: preflight, native worktree, fresh session moved th
     ["provision-env", "--repo", "/repo", "--check-vercel-link", "--non-interactive"],
   ])
   for (const call of f.calls) assert.deepEqual(call.env, { PATH: "/bin" })
-  assert.deepEqual(f.sessions, [{ location: { directory: "/repo" }, title: "Implement the task" }])
+  // Untitled: OpenCode titles it from the task.
+  assert.deepEqual(f.sessions, [{ location: { directory: "/repo" } }])
   assert.deepEqual(f.worktrees, [{ projectID: "prj_repo", name: "feat--task" }])
   assert.deepEqual(f.moves, [{ sessionID: "ses_new", directory: "/repo-feat-task" }])
   assert.deepEqual(f.prompts, [{ sessionID: "ses_new", text: "Implement the task\nwith details" }])
@@ -115,7 +116,7 @@ test("base becomes the starting ref; an inferred branch and no prompt still work
   t.after(await f.start())
   await f.call({ branch: "fix/api/retry", base: "abc123" })
   assert.deepEqual(f.worktrees, [{ projectID: "prj_repo", name: "fix--api--retry", branch: "abc123" }])
-  assert.deepEqual(f.sessions, [{ location: { directory: "/repo" }, title: "fix/api/retry" }])
+  assert.deepEqual(f.sessions, [{ location: { directory: "/repo" } }])
   assert.deepEqual(f.prompts, [])
   await f.call({ prompt: "Add CSV export" })
   assert.equal(f.worktrees[1]?.name, "feat--csv-export")
@@ -126,7 +127,7 @@ test("repo targets another repository's project from this session", async (t) =>
   t.after(await f.start())
   await f.call({ repo: "/other/packages/x", branch: "feat/task", prompt: "task" })
   assert.deepEqual(f.calls.map((call) => call.args[1]), ["/other/packages/x", "/other"])
-  assert.deepEqual(f.sessions, [{ location: { directory: "/other" }, title: "task" }])
+  assert.deepEqual(f.sessions, [{ location: { directory: "/other" } }])
   assert.deepEqual(f.worktrees, [{ projectID: "prj_other", name: "feat--task" }])
   await assert.rejects(f.call({ repo: "/nowhere", branch: "feat/task" }), /Not a Git checkout: \/nowhere/)
   await assert.rejects(f.call({ repo: "relative", branch: "feat/task" }), /absolute path/)

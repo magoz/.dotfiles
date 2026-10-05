@@ -143,8 +143,9 @@ export const setup = (host: Host, options: Options = {}) =>
         }
         // Plugins cannot look up a directory's project, but creating a session there resolves it:
         // the destination session starts in `repo` and moves into the worktree once it exists.
+        // Untitled, so OpenCode names it from the task (it only titles untitled sessions).
         const session = yield* host.session
-          .create({ location: { directory: repo }, title: resolved.prompt?.split("\n")[0]?.slice(0, 120) || resolved.branch })
+          .create({ location: { directory: repo } })
           .pipe(Effect.mapError((error) => new HandoffError({ message: `Creating the destination session failed: ${reason(error)}; nothing allocated` })))
         // Everything after this point is rolled back on failure or interruption, so an identical
         // retry works: the session is deleted and a created worktree retired (never forced). A
