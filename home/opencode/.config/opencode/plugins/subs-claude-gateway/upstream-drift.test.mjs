@@ -3,9 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { OPENCODE_ANCHORS, shapeGatewayPayload } from "./shaping.ts";
 
-// Pinned OpenCode 2.0.20 captures (see fixtures/README.md for refreshing).
+// Pinned OpenCode 2.0.22 captures (see fixtures/README.md for refreshing).
 const fixture = JSON.parse(
-  readFileSync(new URL("./fixtures/opencode-2.0.20.json", import.meta.url), "utf8"),
+  readFileSync(new URL("./fixtures/opencode-2.0.22.json", import.meta.url), "utf8"),
 );
 const requests = {
   title: { kind: "title", body: fixture.title },

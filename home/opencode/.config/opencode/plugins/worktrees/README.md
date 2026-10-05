@@ -13,7 +13,7 @@ agent launch:
 
 Removal always goes through the Herdr-free safe retirement path. No TUI plugin.
 Contract checked against `~/dev/repos/opencode` (v2): `packages/plugin/src/worktree.ts`,
-`promise/worktree.ts`, `core/src/plugin/host.ts`, `core/src/worktree.ts`; live is 2.0.20.
+`promise/worktree.ts`, `core/src/plugin/host.ts`, `core/src/worktree.ts`; live is 2.0.22.
 
 ## What runs where
 
@@ -155,7 +155,7 @@ Go-live notes:
 ```sh
 cd home/opencode/.config/opencode
 node --test plugins/worktrees/test/*.test.js   # also part of the root `npm test`
-# Opt-in, isolated end-to-end check against a throwaway `opencode serve` 2.0.20:
+# Opt-in, isolated end-to-end check against a throwaway `opencode serve` 2.0.22:
 npm run test:worktrees-integration   # node plugins/worktrees/test/integration.mjs
 ```
 

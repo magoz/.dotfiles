@@ -99,7 +99,7 @@ sidebar's 2+2 padding and the 1 column `sidebar.content` keeps for its scrollbar
 wraps; it is cut with a single `…`, the title first. Widths are measured with `Bun.stringWidth`
 under Bun (OpenCode's runtime), else by code points, and cut by grapheme.
 
-These are OpenCode 2.0.20 facts (`packages/tui/src`) that shape the sidebar:
+These are OpenCode 2.0.22 facts (`packages/tui/src`) that shape the sidebar:
 
 - **The sidebar is on the right only.** `session.sidebar` is `"auto" | "hide"`. `cli.json` sets
   `"auto"`, which shows the sidebar when the terminal is wider than 120 columns (minus vertical
@@ -123,7 +123,7 @@ These are OpenCode 2.0.20 facts (`packages/tui/src`) that shape the sidebar:
 | `ctrl+x h` | Fleet: Mark handled | Marks the current session's root handled (finished sessions only) |
 | `ctrl+x z` | Fleet: Undo handled | Reopens the last session marked handled here |
 
-The defaults use leader keys that OpenCode 2.0.20 leaves unbound (`config/keybind.ts`).
+The defaults use leader keys that OpenCode 2.0.22 leaves unbound (`config/keybind.ts`).
 `<leader>n` is `session.new` and `<leader>u` is `session.undo`, so the launcher uses `o` and undo
 uses `z`. The leader key is OpenCode's: `ctrl+x` unless `cli.json` changes it.
 

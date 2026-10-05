@@ -3,7 +3,7 @@
 // then a fresh session there that receives the task. No Herdr, no TUI: works from the web app,
 // Fleet and the TUI, for this session's repository or any other.
 import path from "node:path"
-import type { SessionCreateInput, SessionMoveInput, SessionPromptInput, WorktreeCreateInput } from "@opencode/client/effect/api"
+import type { SessionCreateInput, SessionMoveInput, SessionPromptInput, WorktreeCreateInput, WorktreeRemoveInput } from "@opencode/client/effect/api"
 import type { CommandDefinition, CommandInvocation } from "@opencode/plugin/effect/command"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import type { Project } from "@opencode/schema/project"
@@ -42,10 +42,14 @@ export interface Host {
   readonly session: {
     readonly get: (input: { readonly sessionID: Session.ID }) => Effect.Effect<SessionLike, unknown>
     readonly create: (input: SessionCreateInput) => Effect.Effect<{ readonly id: Session.ID; readonly projectID: Project.ID }, unknown>
+    readonly remove: (input: { readonly sessionID: Session.ID }) => Effect.Effect<unknown, unknown>
     readonly move: (input: SessionMoveInput) => Effect.Effect<unknown, unknown>
     readonly prompt: (input: SessionPromptInput) => Effect.Effect<unknown, unknown>
   }
-  readonly worktree: { readonly create: (input: WorktreeCreateInput) => Effect.Effect<{ readonly directory: AbsolutePath }, unknown> }
+  readonly worktree: {
+    readonly create: (input: WorktreeCreateInput) => Effect.Effect<{ readonly directory: AbsolutePath }, unknown>
+    readonly remove: (input: WorktreeRemoveInput) => Effect.Effect<unknown, unknown>
+  }
   readonly command: {
     readonly transform: (callback: (editor: { add(definition: CommandDefinition): void }) => void) => Effect.Effect<unknown, never, Scope.Scope>
   }
@@ -142,24 +146,32 @@ export const setup = (host: Host, options: Options = {}) =>
         const session = yield* host.session
           .create({ location: { directory: repo }, title: resolved.prompt?.split("\n")[0]?.slice(0, 120) || resolved.branch })
           .pipe(Effect.mapError((error) => new HandoffError({ message: `Creating the destination session failed: ${reason(error)}; nothing allocated` })))
-        // `branch` is OpenCode's starting ref: the strategy passes it as the CLI's --base (no fetch).
-        // Plugins cannot delete sessions (2.0.20), so a failure here leaves that empty session.
-        const { directory } = yield* host.worktree
-          .create({ projectID: session.projectID, name, ...(resolved.base ? { branch: resolved.base } : {}) })
-          .pipe(Effect.mapError((error) => new HandoffError({ message: `Creating the worktree failed: ${reason(error)}. Empty session ${session.id} left in ${repo}; delete it` })))
-        // Queued before the task, so the task runs in the worktree.
-        yield* host.session
-          .move({ sessionID: session.id, directory })
-          .pipe(Effect.mapError((error) => new HandoffError({ message: `Moving the destination session failed: ${reason(error)}. Worktree kept at ${directory}; session ${session.id} left in ${repo}` })))
-        if (resolved.prompt) {
-          yield* host.session
-            .prompt({ sessionID: session.id, text: resolved.prompt })
-            .pipe(
-              Effect.mapError(
-                (error) => new HandoffError({ message: `Sending the task failed: ${reason(error)}. Worktree kept at ${directory}; session ${session.id} created without the task` }),
-              ),
-            )
-        }
+        // Everything after this point is rolled back on failure or interruption, so an identical
+        // retry works: the session is deleted and a created worktree retired (never forced). A
+        // checkout the strategy kept after its own failure is reported in its message.
+        let directory: AbsolutePath | undefined
+        const rollback = Effect.gen(function* () {
+          const left: string[] = []
+          if (directory !== undefined) {
+            const retired = yield* host.worktree.remove({ projectID: session.projectID, directory, force: false }).pipe(Effect.isSuccess)
+            if (!retired) left.push(`worktree ${directory} (retire it with worktree-manage plan-checkout/retire-checkout)`)
+          }
+          const removed = yield* host.session.remove({ sessionID: session.id }).pipe(Effect.isSuccess)
+          if (!removed) left.push(`session ${session.id}`)
+          return left.length === 0 ? "Rolled back: nothing left behind" : `Rollback incomplete; still exists: ${left.join(", ")}`
+        })
+        const step = <A>(effect: Effect.Effect<A, unknown>, failure: string) => effect.pipe(Effect.mapError((error) => new HandoffError({ message: `${failure}: ${reason(error)}` })))
+        yield* Effect.gen(function* () {
+          // `branch` is OpenCode's starting ref: the strategy passes it as the CLI's --base (no fetch).
+          directory = (yield* step(host.worktree.create({ projectID: session.projectID, name, ...(resolved.base ? { branch: resolved.base } : {}) }), "Creating the worktree failed")).directory
+          // Queued before the task, so the task runs in the worktree.
+          yield* step(host.session.move({ sessionID: session.id, directory }), "Moving the destination session failed")
+          if (resolved.prompt) yield* step(host.session.prompt({ sessionID: session.id, text: resolved.prompt }), "Sending the task failed")
+        }).pipe(
+          Effect.catch((error) => rollback.pipe(Effect.flatMap((result) => Effect.fail(new HandoffError({ message: `${error.message}. ${result}` }))))),
+          Effect.onInterrupt(() => rollback.pipe(Effect.ignore)),
+        )
+        if (directory === undefined) return yield* new HandoffError({ message: "Worktree was not created" })
         const output: Output = { status: "ready", destination: { directory, branch: resolved.branch, sessionID: session.id, prompted: resolved.prompt !== undefined } }
         return { output, content: `${JSON.stringify(output)}\n${READY_NOTE}` }
       }).pipe(Effect.mapError((error) => new Tool.Error({ message: error.message })))

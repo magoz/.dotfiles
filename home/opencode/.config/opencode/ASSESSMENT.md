@@ -118,7 +118,9 @@ throwaway temporary repositories. Quota is a snapshot dialog, not Pi-footer pari
 
 `subs-claude` was verified against OpenCode 2.0.20 only with a fake local server in an
 isolated network namespace (prompt/tool fingerprints, checkpoint reasoning, cross-provider
-reasoning, headers, fail closed), then live through a blocking gate (see plugins/subs-claude-gateway/README.md). The
+reasoning, headers, fail closed), then live through a blocking gate (see plugins/subs-claude-gateway/README.md).
+On the upgrade to 2.0.22 the fixtures were re-captured (`fixtures/capture.sh`) and re-checked;
+the live gate was not repeated. The
 old direct-mode Anthropic OAuth plugin (never loaded on 2.0.20) was removed.
 
 Root dependency audit currently reports four vulnerable transitive packages

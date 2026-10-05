@@ -594,7 +594,7 @@ export function setupFleet(ctx, runtime, deps = {}) {
     h('box', { height: 1, flexShrink: 0 }, () => textLine([{ text: 'j/k select · enter open · h handled · o web · esc back', tone: 'muted' }])));
   }
 
-  // Global leader commands (also in the palette): OpenCode 2.0.20's sidebar cannot take keyboard
+  // Global leader commands (also in the palette): OpenCode 2.0.22's sidebar cannot take keyboard
   // focus, so Fleet's keys cannot live inside it. CLI plugins must create layers inside a slot.
   function Commands() {
     ctx.keymap.layer(() => ({ mode: 'global', commands: [

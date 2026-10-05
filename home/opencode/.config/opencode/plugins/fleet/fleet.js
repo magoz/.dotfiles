@@ -447,7 +447,7 @@ export function resolveBaseURL(option, env, fallback = 'https://fleet.oox.sh') {
 export const notifyMode = (v) => (['all', 'gaps', 'off'].includes(v) ? v : 'gaps');
 
 /**
- * Default bindings, all on leader keys OpenCode 2.0.20 leaves unbound (`config/keybind.ts`):
+ * Default bindings, all on leader keys OpenCode 2.0.22 leaves unbound (`config/keybind.ts`):
  * `<leader>n` is session.new and `<leader>u` session.undo, hence `o` and `z`.
  */
 export const DEFAULT_KEYS = { open: '<leader>f', next: '<leader>j', launcher: '<leader>o', handled: '<leader>h', undo: '<leader>z' };

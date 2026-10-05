@@ -37,9 +37,14 @@ sessions can call the tool. Host schemas are `portable(..., { exact: true })`, s
 
 Apart from the session being created first and then moved, this matches Fleet's launcher
 (`worktree.create` → `session.create` → `session.prompt`), so the new session shows up in Fleet
-like any launch. When a step after the preflight fails, the error says what was kept: an
-empty session (plugins cannot delete sessions in 2.0.20), the worktree, or the session without
-its task. Nothing is rolled back and nothing is retried automatically.
+like any launch.
+
+If a later step fails, or the tool call is interrupted, everything allocated after the
+preflight is rolled back so an identical retry works: a created worktree is retired through
+the strategy (`worktree-manage`, never forced) and the destination session is deleted. If the
+worktree creation itself fails, the strategy may keep a partially provisioned checkout on
+purpose, and its message says where. The error names anything the rollback could not remove.
+Nothing is retried automatically.
 
 There is no confirmation prompt. Consent is the user's explicit request: the tool description
 says to use it only when the user asks, and `/worktree` is a user action. Child agents

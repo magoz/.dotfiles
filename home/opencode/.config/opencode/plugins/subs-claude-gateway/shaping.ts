@@ -3,7 +3,7 @@
 // OpenCode port of Pi's `home/pi/.pi/agent/extensions/anthropic-auth`
 // (`shapeAnthropicContentPayload`). The gateway owns Claude Code identity,
 // billing, betas, user-agent, system relocation and tool aliases, so nothing
-// here adds any of those. Anchors verified against OpenCode 2.0.20 captures
+// here adds any of those. Anchors verified against OpenCode 2.0.22 captures
 // (see fixtures/README.md).
 //
 // The transforms are pure functions over parsed JSON (`unknown`, narrowed at each step); the

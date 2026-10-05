@@ -13,7 +13,7 @@ root = pathlib.Path(__file__).resolve().parents[1]
 agents_home = (root / "../../../agents/.agents").resolve()
 cli = shutil.which("opencode")
 if not cli:
-    raise SystemExit("Install OpenCode 2.0.20 first")
+    raise SystemExit("Install OpenCode 2.0.22 first")
 work = pathlib.Path(tempfile.mkdtemp(prefix="opencode-native-smoke-"))
 home = work / "home"
 config_dir = home / ".config/opencode"
@@ -62,8 +62,8 @@ with socket.socket() as probe:
 call(["service", "set", "port", str(port)], "port.log")
 try:
     version = call(["--version"], "version.txt")
-    if "v2.0.20" not in version:
-        raise RuntimeError("This smoke targets OpenCode 2.0.20")
+    if "v2.0.22" not in version:
+        raise RuntimeError("This smoke targets OpenCode 2.0.22")
     plugins = json.loads(call(["api", "POST", "/api/plugin/check", "--data", "{}"], "plugins.json"))["data"]
     broken = {p["id"] for p in plugins if p["state"]["status"] != "active"}
     assert not broken, broken

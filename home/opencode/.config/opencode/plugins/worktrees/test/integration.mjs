@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Opt-in isolated integration check (not part of `npm test`): starts a THROWAWAY
-// `opencode serve` (2.0.20 on PATH) that loads ONLY this plugin, then drives the
+// `opencode serve` (2.0.22 on PATH) that loads ONLY this plugin, then drives the
 // real worktree.create / worktree.list / worktree.remove HTTP API against a temp
 // repo with a local bare origin. The real `worktree` / `worktree-manage` CLIs come
 // from THIS checkout; provision-env and sandbox-db are fakes. Isolation copies
@@ -25,7 +25,7 @@ const PROVISION_DELAY_SECONDS = Number(process.env.PROVISION_DELAY_SECONDS ?? '1
 const binary = spawnSync('sh', ['-c', 'command -v opencode'], { encoding: 'utf8' }).stdout.trim();
 assert.ok(binary, 'opencode not on PATH');
 const version = spawnSync(binary, ['--version'], { encoding: 'utf8' }).stdout.trim();
-assert.match(version, /2\.0\.20/, `expected OpenCode 2.0.20, found ${version}`);
+assert.match(version, /2\.0\.22/, `expected OpenCode 2.0.22, found ${version}`);
 const bun = spawnSync('sh', ['-c', 'command -v bun'], { encoding: 'utf8' }).stdout.trim();
 assert.ok(bun, 'bun not on PATH');
 assert.ok(existsSync(path.join(worktreeSource, 'main.ts')), `missing ${worktreeSource}`);

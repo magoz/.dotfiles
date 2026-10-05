@@ -1,11 +1,11 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import type { SessionCreateInput, SessionMoveInput, SessionPromptInput, WorktreeCreateInput } from "@opencode/client/effect/api"
+import type { SessionCreateInput, SessionMoveInput, SessionPromptInput, WorktreeCreateInput, WorktreeRemoveInput } from "@opencode/client/effect/api"
 import type { CommandDefinition } from "@opencode/plugin/effect/command"
 import { Project } from "@opencode/schema/project"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { Session } from "@opencode/schema/session"
-import { Effect, Exit, Scope } from "effect"
+import { Effect, Exit, Fiber, Scope } from "effect"
 import type { ProcessOptions, ProcessResult } from "../../shared/process.ts"
 import type { WorktreeInput } from "../contract.ts"
 import plugin, { setup, type CreateWorktreeTool, type Host } from "../server.ts"
@@ -20,11 +20,22 @@ interface Call {
   readonly env: NodeJS.ProcessEnv
 }
 
-function fixture(options: { preflight?: ProcessResult; worktree?: Effect.Effect<{ readonly directory: AbsolutePath }, unknown>; prompt?: Effect.Effect<unknown, unknown> } = {}) {
+interface FixtureOptions {
+  readonly preflight?: ProcessResult
+  readonly worktree?: Effect.Effect<{ readonly directory: AbsolutePath }, unknown>
+  readonly move?: Effect.Effect<unknown, unknown>
+  readonly prompt?: Effect.Effect<unknown, unknown>
+  readonly removeSession?: Effect.Effect<unknown, unknown>
+  readonly removeWorktree?: Effect.Effect<unknown, unknown>
+}
+
+function fixture(options: FixtureOptions = {}) {
   const calls: Call[] = []
   const worktrees: WorktreeCreateInput[] = []
   const sessions: SessionCreateInput[] = []
   const moves: SessionMoveInput[] = []
+  const removedSessions: string[] = []
+  const retired: WorktreeRemoveInput[] = []
   const prompts: SessionPromptInput[] = []
   const tools = new Map<string, CreateWorktreeTool>()
   const commands = new Map<string, CommandDefinition>()
@@ -35,11 +46,13 @@ function fixture(options: { preflight?: ProcessResult; worktree?: Effect.Effect<
       // OpenCode resolves the project of the directory a session is created in.
       create: (input) =>
         Effect.sync(() => (sessions.push(input), { id: Session.ID.make("ses_new"), projectID: Project.ID.make(input.location?.directory === "/other" ? "prj_other" : "prj_repo") })),
-      move: (input) => Effect.sync(() => void moves.push(input)),
+      remove: ({ sessionID }) => Effect.suspend(() => (removedSessions.push(sessionID), options.removeSession ?? Effect.void)),
+      move: (input) => Effect.suspend(() => (moves.push(input), options.move ?? Effect.void)),
       prompt: (input) => Effect.suspend(() => (prompts.push(input), input.sessionID === root.id ? Effect.void : (options.prompt ?? Effect.void))),
     },
     worktree: {
       create: (input) => Effect.suspend(() => (worktrees.push(input), options.worktree ?? Effect.succeed({ directory: AbsolutePath.make("/repo-feat-task") }))),
+      remove: (input) => Effect.suspend(() => (retired.push(input), options.removeWorktree ?? Effect.void)),
     },
     command: { transform: (edit) => Effect.sync(() => edit({ add: (definition) => void commands.set(definition.name, definition) })) },
     tool: { transform: (edit) => Effect.sync(() => edit({ add: (tool) => void tools.set(tool.name, tool) })) },
@@ -59,11 +72,12 @@ function fixture(options: { preflight?: ProcessResult; worktree?: Effect.Effect<
     return () => Effect.runPromise(Scope.close(scope, Exit.void))
   }
   /** The registered tool's executor, as the host calls it (failing with the sanitized Tool.Error). */
-  const call = (input: WorktreeInput, sessionID = root.id) => {
+  const execute = (input: WorktreeInput, sessionID = root.id) => {
     assert.ok(api)
-    return Effect.runPromise(api.execute(input, { sessionID }))
+    return api.execute(input, { sessionID })
   }
-  return { calls, worktrees, sessions, moves, prompts, tools, commands, start, call }
+  const call = (input: WorktreeInput, sessionID = root.id) => Effect.runPromise(execute(input, sessionID))
+  return { calls, worktrees, sessions, moves, prompts, removedSessions, retired, tools, commands, start, execute, call }
 }
 
 test("registers create_worktree with an exact schema and a /worktree command", async (t) => {
@@ -143,18 +157,50 @@ test("fails closed before allocating: child session, unknown preflight failure, 
   assert.deepEqual(f.worktrees, [])
 })
 
-test("failures after allocation say what was kept", async (t) => {
-  const failed = fixture({ worktree: Effect.fail(new Error("worktree checkout refused feat/task before allocating anything\nstack")) })
-  t.after(await failed.start())
+test("a failed worktree deletes the destination session; the strategy reports any kept checkout", async (t) => {
+  const f = fixture({ worktree: Effect.fail(new Error("provision failed; preserved checkout /repo-feat-task on branch feat/task\nstack")) })
+  t.after(await f.start())
   await assert.rejects(
-    failed.call({ branch: "feat/task" }),
-    (error: Error) => error.message === "Creating the worktree failed: worktree checkout refused feat/task before allocating anything. Empty session ses_new left in /repo; delete it",
+    f.call({ branch: "feat/task", prompt: "task" }),
+    (error: Error) =>
+      error.message === "Creating the worktree failed: provision failed; preserved checkout /repo-feat-task on branch feat/task. Rolled back: nothing left behind",
   )
-  assert.deepEqual(failed.moves, [])
+  assert.deepEqual(f.removedSessions, ["ses_new"])
+  assert.deepEqual(f.retired, [])
+  assert.deepEqual(f.moves, [])
+})
 
-  const unsent = fixture({ prompt: Effect.fail(new Error("busy")) })
-  t.after(await unsent.start())
-  await assert.rejects(unsent.call({ branch: "feat/task", prompt: "task" }), /Worktree kept at \/repo-feat-task; session ses_new created without the task/)
+test("a failure after the worktree exists retires it and deletes the session, so a retry works", async (t) => {
+  for (const [options, message] of [
+    [{ move: Effect.fail(new Error("busy")) }, "Moving the destination session failed: busy"],
+    [{ prompt: Effect.fail(new Error("busy")) }, "Sending the task failed: busy"],
+  ] as const) {
+    const f = fixture(options)
+    t.after(await f.start())
+    await assert.rejects(f.call({ branch: "feat/task", prompt: "task" }), (error: Error) => error.message === `${message}. Rolled back: nothing left behind`)
+    assert.deepEqual(f.retired, [{ projectID: "prj_repo", directory: "/repo-feat-task", force: false }])
+    assert.deepEqual(f.removedSessions, ["ses_new"])
+  }
+})
+
+test("an incomplete rollback names what is left", async (t) => {
+  const f = fixture({ prompt: Effect.fail(new Error("busy")), removeWorktree: Effect.fail(new Error("dirty")), removeSession: Effect.fail(new Error("gone")) })
+  t.after(await f.start())
+  await assert.rejects(
+    f.call({ branch: "feat/task", prompt: "task" }),
+    /Sending the task failed: busy\. Rollback incomplete; still exists: worktree \/repo-feat-task \(retire it with worktree-manage plan-checkout\/retire-checkout\), session ses_new$/,
+  )
+})
+
+test("interrupting the call rolls back too", async (t) => {
+  const f = fixture({ prompt: Effect.never })
+  t.after(await f.start())
+  const fiber = Effect.runFork(f.execute({ branch: "feat/task", prompt: "task" }))
+  for (let i = 0; i < 50 && f.prompts.length === 0; i++) await new Promise((resolve) => setTimeout(resolve, 1))
+  assert.equal(f.prompts.length, 1)
+  await Effect.runPromise(Fiber.interrupt(fiber))
+  assert.deepEqual(f.retired, [{ projectID: "prj_repo", directory: "/repo-feat-task", force: false }])
+  assert.deepEqual(f.removedSessions, ["ses_new"])
 })
 
 test("/worktree asks the agent in the same session, never calls the tool itself", async (t) => {
