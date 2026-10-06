@@ -31,7 +31,9 @@ Parent owns verification, frozen evidence, mutation ownership and synthesis.
 Child read allowlists repeat the ordered global secret exclusions after `read:*`,
 preserving the `.env.example` exception. This protects native read authorization,
 not shell/grep content access; it is not a complete sandbox. External-directory
-access remains denied for children.
+access stays denied for children, except read-only children may read local repos
+(`~/dev/repos/**`) and managed references (`~/.local/share/opencode/repos/**`) so
+project `references` such as `../yolk-sdk` work.
 
 PR reviews target an immutable commit checked out cleanly in the repository the
 reviewer reads; base/head SHA, diff digest, file inventory and evidence go inline in

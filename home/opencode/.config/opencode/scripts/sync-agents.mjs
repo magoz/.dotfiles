@@ -33,6 +33,10 @@ const TOOLS = {
   webfetch: [allow('webfetch')],
   contact_supervisor: [], // Pi-only; agent prompts fall back to returning the question.
 };
+// Read-only children may read local repos and OpenCode-managed references (project
+// `references`, e.g. ../yolk-sdk). Writers stay confined: external_directory gates edit too.
+const REFERENCE_DIRS = ['~/dev/repos/**', '~/.local/share/opencode/repos/**'];
+const isReadOnly = (tools) => tools.includes('read') && !tools.some((tool) => ['edit', 'write', 'bash'].includes(tool));
 // OpenCode-only differences that Pi frontmatter cannot express.
 const OVERRIDES = {
   // opencode-go DeepSeek Flash has no `medium` variant; use the model default.
@@ -66,7 +70,8 @@ export function permissions(name, tools) {
       if (!seen.has(key)) rules.push(rule), seen.add(key);
     }
   }
-  return [...rules, ...(OVERRIDES[name]?.permissions ?? [])];
+  const references = isReadOnly(tools) ? REFERENCE_DIRS.map((dir) => allow('external_directory', dir)) : [];
+  return [...rules, ...references, ...(OVERRIDES[name]?.permissions ?? [])];
 }
 
 export function render(file, text) {

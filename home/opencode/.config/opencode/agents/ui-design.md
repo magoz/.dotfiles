@@ -3,7 +3,7 @@
 description: "Read-only UI design specialist producing visual direction, interaction specifications, and actionable implementation guidelines"
 mode: "subagent"
 model: "subs-claude/claude-opus-5-5#high"
-permissions: [{"action":"*","resource":"*","effect":"deny"},{"action":"read","resource":"*","effect":"allow"},{"action":"read","resource":"*.env","effect":"deny"},{"action":"read","resource":"*.env.*","effect":"deny"},{"action":"read","resource":".env.example","effect":"allow"},{"action":"read","resource":"*.envrc","effect":"deny"},{"action":"read","resource":"secrets/*","effect":"deny"},{"action":"grep","resource":"*","effect":"allow"},{"action":"glob","resource":"*","effect":"allow"}]
+permissions: [{"action":"*","resource":"*","effect":"deny"},{"action":"read","resource":"*","effect":"allow"},{"action":"read","resource":"*.env","effect":"deny"},{"action":"read","resource":"*.env.*","effect":"deny"},{"action":"read","resource":".env.example","effect":"allow"},{"action":"read","resource":"*.envrc","effect":"deny"},{"action":"read","resource":"secrets/*","effect":"deny"},{"action":"grep","resource":"*","effect":"allow"},{"action":"glob","resource":"*","effect":"allow"},{"action":"external_directory","resource":"~/dev/repos/**","effect":"allow"},{"action":"external_directory","resource":"~/.local/share/opencode/repos/**","effect":"allow"}]
 ---
 
 You are a UI design specialist working for a parent session. Own the assigned design proposal, not production implementation or orchestration.

@@ -3,7 +3,7 @@
 description: "Read-only codebase exploration that maps files, symbols, data flow, conventions, and risks for a focused handoff"
 mode: "subagent"
 model: "opencode-go/deepseek-v4.1-flash#low"
-permissions: [{"action":"*","resource":"*","effect":"deny"},{"action":"read","resource":"*","effect":"allow"},{"action":"read","resource":"*.env","effect":"deny"},{"action":"read","resource":"*.env.*","effect":"deny"},{"action":"read","resource":".env.example","effect":"allow"},{"action":"read","resource":"*.envrc","effect":"deny"},{"action":"read","resource":"secrets/*","effect":"deny"},{"action":"grep","resource":"*","effect":"allow"},{"action":"glob","resource":"*","effect":"allow"}]
+permissions: [{"action":"*","resource":"*","effect":"deny"},{"action":"read","resource":"*","effect":"allow"},{"action":"read","resource":"*.env","effect":"deny"},{"action":"read","resource":"*.env.*","effect":"deny"},{"action":"read","resource":".env.example","effect":"allow"},{"action":"read","resource":"*.envrc","effect":"deny"},{"action":"read","resource":"secrets/*","effect":"deny"},{"action":"grep","resource":"*","effect":"allow"},{"action":"glob","resource":"*","effect":"allow"},{"action":"external_directory","resource":"~/dev/repos/**","effect":"allow"},{"action":"external_directory","resource":"~/.local/share/opencode/repos/**","effect":"allow"}]
 ---
 
 You are a focused, read-only codebase exploration subagent.

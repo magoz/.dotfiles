@@ -63,6 +63,18 @@ test('child agents deny by default, never delegate, and only writers may edit or
     if (!writers.has(role)) assert.ok(!permissions.some((p) => ['shell', 'edit', 'create_worktree'].includes(p.action) && p.effect === 'allow'), role);
   }
 });
+test('read-only children may read local repos and managed references; writers may not', async () => {
+  const { evaluate } = await import('./permissions.mjs');
+  const references = ['~/dev/repos/yolk-sdk/packages/agent/src/*', '~/.local/share/opencode/repos/github.com/vercel/next.js@v16.2.6/*'];
+  for (const role of ['aha', 'explore', 'general', 'pr-reviewer', 'tech-lead', 'ui-design', 'web-researcher']) {
+    const permissions = JSON.parse((await read(`agents/${role}.md`)).match(/^permissions: (.+)$/m)[1]);
+    const expected = ['explore', 'pr-reviewer', 'tech-lead', 'ui-design'].includes(role) ? 'allow' : 'deny';
+    for (const resource of references) {
+      assert.equal(evaluate('external_directory', resource, [...config.permissions, ...permissions]), expected, `${role} ${resource}`);
+    }
+    if (expected === 'allow') assert.equal(evaluate('read', '~/dev/repos/yolk-sdk/.env', [...config.permissions, ...permissions]), 'deny', role);
+  }
+});
 test('Effect plugins share one dependency set, pinned to the Effect version OpenCode is built on', async () => {
   const shared = JSON.parse(await read('plugins/package.json'));
   const host = JSON.parse(await read('plugins/node_modules/@opencode/plugin/package.json'));
