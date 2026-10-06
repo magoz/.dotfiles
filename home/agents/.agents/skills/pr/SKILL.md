@@ -773,6 +773,20 @@ another merge.
      at the receipt SHA and not checked out, delete it using step 10's expected-old-SHA guard. If it
      moved, retain it and report the conflict. Then proceed to step 11.
 
+   - **Worktree processes (recorded linked target only):** before releasing leases or removing the
+     worktree, stop every process still running from it: dev servers, their `portless run` wrappers
+     (whose exit drops the route), watchers and test runners. Enumerate processes owned by the
+     current user whose working directory is the exact canonical target path or inside it (on Linux
+     `readlink /proc/<pid>/cwd`; elsewhere an equivalent such as `lsof -a -d cwd`), excluding this
+     session's own process tree. Send SIGTERM to each process group, wait a bounded time, and verify
+     every process exited; never SIGKILL silently. Never stop shared services that merely serve the
+     worktree, such as the Portless proxy, system services, databases, or another worktree's
+     processes, and never edit Portless state files: Portless prunes the routes of stopped processes
+     itself. Persist `processes-stopped` with the stopped commands and PIDs, or `processes-skipped`
+     with the reason (none found, or enumeration unsupported on this host). If any process survives
+     or cannot be verified, persist the partial outcome, do not remove the worktree, and report
+     cleanup as incomplete. Recovery from `processes-stopped` re-enumerates before continuing.
+
    - **Sandbox database leases (recorded linked target only):** before removing the worktree,
      release every sandbox database lease recorded for that exact canonical checkout path, while its
      ignored environment files still hold the credentials the release needs. After the worktree is
@@ -837,7 +851,8 @@ another merge.
 Report **squash-merged** only with the direct successful squash response; otherwise report **already
 merged** when GitHub confirms an existing merge, without asserting its method. Report the PR URL,
 reviewed base/head (or recorded head and merge evidence for cleanup-only runs), merge commit, remote
-branch deletion, local branch deletion, and worktree removal (or explicit skip reasons). Derive each
+branch deletion, local branch deletion, stopped worktree processes, and worktree removal (or explicit
+skip reasons). Derive each
 reported cleanup outcome from the last durable receipt milestone plus live verification, not from the
 latest exception text. A later worktree/local-ref failure cannot downgrade a persisted
 `remote-deleted` milestone to "remote deletion not performed." Use "source ref changed" only when a
@@ -880,6 +895,8 @@ and residual risks. Do not claim that draft creation implies readiness.
 - Claiming review or validation against content that changed afterward
 - Marking a PR ready when required evidence is missing
 - Merging outside `pr`'s `merge` mode or cleaning up before GitHub confirms the merge
+- Removing a worktree while its dev servers still run, or stopping shared services such as the
+  Portless proxy during cleanup
 - Reusing a pre-deletion remote-ref predicate after the `remote-deleted` milestone
 - Treating an absent remote ref as a changed ref, or reporting a completed receipt milestone as undone
   because a later cleanup step failed
