@@ -11,30 +11,26 @@ Generate images, videos, music, and audio using AI. All generation is asynchrono
 
 Powered by kie.ai — a unified API for frequently updated image, video, music, and speech models.
 
+This skill adds curated model picks and prices on top of kie's official `kie-models` agent skill, whose API guidance (catalog, schema, upload and polling rules) is merged into Steps 2–6.
+
 **Catalog last audited:** 2026-10-07 against the English entries in `https://docs.kie.ai/sitemap.xml`. Every model ID below was copied from its OpenAPI schema on that date.
 
-**Quality rankings last checked:** 2026-10-07 against LMArena (image), Artificial Analysis (video, speech, music) and recent community discussion. Rankings shift monthly; if this date is more than ~6 weeks old, treat the recommendations as a starting point and check what's new in the sitemap.
+**Quality rankings last checked:** 2026-10-07 against LMArena (image), Artificial Analysis (video, speech, music) and recent community discussion. Rankings shift monthly; if this date is more than ~6 weeks old, treat the recommendations as a starting point and check the catalog for newer models.
 
 ## Prerequisites
 
-The `KIE_API_KEY` environment variable must be set. If missing, ask the user to provide their API key from https://kie.ai/api-key and set it in their environment (`export KIE_API_KEY=...` or add to `.env`).
+- `KIE_API_KEY` must be set in the environment. If missing, ask the user to create one at https://kie.ai/api-key and export it (`export KIE_API_KEY=...`). Never write the key into files or chat.
+- `curl` and `jq` on `PATH`.
 
 ## API Basics
 
-**Base URL:** `https://api.kie.ai`
+**Base URL:** `https://api.kie.ai` (uploads use `https://kieai.redpandaai.co`)
 
-**Auth header (all requests):**
+**Auth (all requests):** `Authorization: Bearer $KIE_API_KEY`. A header named `apikey` is rejected with 401.
 
-```
-Authorization: Bearer $KIE_API_KEY
-Content-Type: application/json
-```
+**Flow:** search the catalog → read the model's schema → `POST /api/v1/jobs/createTask` → poll `GET /api/v1/jobs/recordInfo?taskId=…` → download. As of 2026-10, every media family (Market models, Veo, Runway, Aleph, Suno, Flux Kontext, 4o Image) uses this flow; older dedicated endpoints (`/api/v1/veo/generate`, `/api/v1/generate`, etc.) are no longer documented.
 
-**Unified API:** As of 2026-10, every generation family (Market models, Veo, Runway, Runway Aleph, Suno, Flux Kontext, 4o Image) is created with `POST /api/v1/jobs/createTask` and polled with `GET /api/v1/jobs/recordInfo`. Older dedicated endpoints (`/api/v1/veo/generate`, `/api/v1/generate`, etc.) are no longer documented — always follow the fetched docs.
-
-**Async pattern:** Every generation returns a `taskId`. Poll for results, then download.
-
-**Credit check:** `GET https://api.kie.ai/api/v1/chat/credit` — returns `{ "code": 200, "data": <number> }`
+**Every response is `{code, msg, data}`. Check `code` in the body** — HTTP 200 doesn't mean the call succeeded.
 
 ## Workflow
 
@@ -42,7 +38,7 @@ Content-Type: application/json
 
 Choose based on what the user wants. When in doubt, use the **recommended default** (bolded). If the user names a model, use that model.
 
-**Note:** IDs are verified as of the audit date, but kie.ai changes models often. **Always fetch fresh API docs in Step 2** and use the exact model ID from the docs.
+**Note:** IDs are verified as of the audit date, but kie.ai changes models often. **Always confirm the model and read its schema in Step 2** before calling it.
 
 #### Image Generation — "I want to create an image"
 
@@ -210,83 +206,77 @@ curl -s -X POST "https://api.kie.ai/client/v1/model-pricing/page" \
   | jq -r '.data.records[] | [.modelDescription, .creditPrice, .creditUnit, .usdPrice] | @tsv'
 ```
 
-Descriptions are not model IDs (e.g. `wan 3.0 video`, `Google veo 3.1`, `MiniMax H3`); try a shorter search term if nothing matches.
+Descriptions are not model IDs (e.g. `wan 3.0 video`, `Google veo 3.1`, `MiniMax H3`); try a shorter search term if nothing matches. With an API key, `GET /api/v1/models/<model>/price` (Step 2) gives the price for an exact model ID.
 
-### Step 2: Fetch Fresh API Documentation
+### Step 2: Look Up the Model on kie
 
-**MANDATORY.** Before making any API call, fetch the latest docs for your chosen model. kie.ai updates models and parameters frequently — hardcoded params go stale.
+**MANDATORY.** Before calling a model, confirm it exists and read its schema from kie's catalog API. Never write a model ID or parameter from memory — including from this skill's tables. The catalog changes continuously: models are added, renamed and retired.
 
-Fetch the relevant doc page from `https://docs.kie.ai` using web fetch tools or `curl`.
+All catalog endpoints need `Authorization: Bearer $KIE_API_KEY` and return `{code, msg, data}`. **Check `code` in the body before reading `data`** — HTTP 200 does not mean success.
 
-When using `curl`, send `Accept: text/markdown`. Without it, extensionless URLs (and sometimes `.md` URLs) return rendered HTML instead of readable OpenAPI YAML.
+#### Search the catalog
 
-#### Finding a model's doc page
+```bash
+curl -s -G -H "Authorization: Bearer $KIE_API_KEY" \
+  'https://api.kie.ai/api/v1/models' --data-urlencode 'q=seedance'
+```
 
-**Do not derive a documentation URL from a model ID.** Kie documentation routes are irregular and change independently of request model IDs.
+- Optional filters, combinable: `q` (keyword), `provider` (e.g. `Kling`, `Suno`, `Google`), `taskType` (comma-separated, e.g. `Text to Video,Image to Video`). Percent-encode spaces or use `--data-urlencode` — a raw space aborts curl before it sends.
+- The response is not paginated: `data.models[]` with `model` (the ID to use everywhere), `title`, `provider`, `taskType[]`, `description` (sometimes `null`) and `pricingDesc` (prose, matches what the job is billed).
+- No match returns `total: 0` and an empty list — that's not an error.
+- To compare several views, fetch once unfiltered and filter locally (see rate limits below).
 
-1. Fetch `https://docs.kie.ai/sitemap.xml`.
-2. Ignore `/cn/` and `/cnmarket/` paths unless the user requests Chinese docs; prefer the canonical `/market/` entry.
-3. Search the English URLs for the provider/model name and operation (text-to-image, image-to-video, edit, extend, and so on).
-4. Fetch the exact matching page and read its OpenAPI specification.
-5. Copy the request `model` enum/default from the OpenAPI schema. Never infer it from the page URL or this skill's tables.
+#### Read the schema
 
-Examples of current irregular mappings:
+```bash
+curl -s -H "Authorization: Bearer $KIE_API_KEY" \
+  'https://api.kie.ai/api/v1/models/bytedance/seedance-2-5/schema'
+```
 
-| Request model ID | Doc URL |
+- **Don't URL-encode the slash** in the model ID; it goes into the path as-is.
+- `data.openapi` is the model's full OpenAPI 3.1 document, already inlined as a JSON object. It's the authoritative source for the path and method, every `input` field with type, description, allowed values and defaults, the `required` arrays, and the callback payload.
+- `data.openapi` can be `null` when kie hasn't synced the document yet. Fall back to the docs site (below) rather than guessing.
+- **Call the path the schema declares.** Media models use `/api/v1/jobs/createTask`; a few models (chat, some Gemini paths) are synchronous endpoints that return the result directly — no task to poll.
+- `$ref` pointers are not inlined; resolve them in the same document's `components`. Key names are literal: URL-decode each path segment (`response%20not%20with%20recordId`), and don't trim trailing spaces (`#/components/responses/Error `).
+- When `input` is a `oneOf`, satisfy exactly one branch's `required` list; don't mix fields across branches.
+
+#### Check price, reliability and balance
+
+```bash
+curl -s -H "Authorization: Bearer $KIE_API_KEY" 'https://api.kie.ai/api/v1/models/veo-3-1/price'
+curl -s -H "Authorization: Bearer $KIE_API_KEY" 'https://api.kie.ai/api/v1/models/veo-3-1/success-rate'
+curl -s -H "Authorization: Bearer $KIE_API_KEY" 'https://api.kie.ai/api/v1/chat/credit'
+```
+
+- `price` returns `{model, pricingDesc}`.
+- `success-rate` returns the last 24h in 10-minute buckets (`successRate`, `errorRate`, `isNormal`). `null` rates mean no traffic in that bucket; an empty `points` list means no monitoring data, not zero success. Check it before expensive runs, and when a model keeps failing, before switching to the runner-up.
+- `chat/credit` returns the raw credit balance in `data`. Compare it with `pricingDesc` before submitting; insufficient credits come back as `code` 402.
+
+#### Docs site (fallback and human-readable reference)
+
+Use `https://docs.kie.ai` when the schema is `null`, or when you want the prose explanations that schemas lack. Send `Accept: text/markdown`; otherwise you get rendered HTML instead of readable OpenAPI YAML.
+
+**Don't derive a doc URL from a model ID** — the routes are irregular. Search the English entries (skip `/cn/` and `/cnmarket/`) in `https://docs.kie.ai/sitemap.xml` by provider, family and operation. Current examples:
+
+| Model ID | Doc URL |
 |----------|---------|
-| `flux-2/flex-text-to-image` | `https://docs.kie.ai/market/flux2/flex-text-to-image` |
-| `grok-imagine-video-1-5-preview` | `https://docs.kie.ai/market/grok-imagine/1-5-preview` |
 | `nano-banana-2-1` | `https://docs.kie.ai/market/google/nanobanana-2-1` |
 | `nano-banana-pro` | `https://docs.kie.ai/market/google/pro-image-to-image` |
 | `kling-3.0-omni/text-to-video` | `https://docs.kie.ai/market/kling/v3-omni-text-to-video` |
-| `qwen3/pro-text-to-image` | `https://docs.kie.ai/market/qwen3-pro/text-to-image` |
-| `pixverse-v6/reference-to-video` | `https://docs.kie.ai/market/pixverse/reference-to-video` |
+| `grok-imagine-video-1-5-preview` | `https://docs.kie.ai/market/grok-imagine/1-5-preview` |
+| `veo-3-1` | `https://docs.kie.ai/veo3-api/generate-veo-3-video` |
+| `ai-music-api/generate` (Suno) | `https://docs.kie.ai/suno-api/generate-music` |
+| `runway`, `runway/gen4-aleph` | `https://docs.kie.ai/runway-api/generate-ai-video`, `.../generate-aleph-video` |
 
-Also fetch the shared task detail endpoint docs for polling:
-
-```
-https://docs.kie.ai/market/common/get-task-detail
-```
-
-#### Families with their own doc sections
-
-These still live outside `/market/` in the docs, but now use the same `createTask` + `recordInfo` flow. The top-level `model` is a family ID; the variant is often in `input.model`.
-
-| Family | Create docs | Top-level `model` |
-|--------|-------------|-------------------|
-| Veo 3.1 | `https://docs.kie.ai/veo3-api/generate-veo-3-video` (also `extend-video`, `get-veo-3-1080-p-video`, `get-veo-3-4k-video`) | `veo-3-1` |
-| Runway | `https://docs.kie.ai/runway-api/generate-ai-video` (also `extend-ai-video`) | `runway` |
-| Runway Aleph | `https://docs.kie.ai/runway-api/generate-aleph-video` | `runway/gen4-aleph` |
-| Suno | `https://docs.kie.ai/suno-api/generate-music` (and the other `/suno-api/*` pages) | `ai-music-api/generate` |
-| Flux Kontext | `https://docs.kie.ai/flux-kontext-api/generate-or-edit-image` | `flux1-kontext` |
-| 4o Image | `https://docs.kie.ai/4o-image-api/generate-4-o-image` | `4o-image-api` |
+If neither the catalog nor the docs list a model, tell the user; don't guess IDs or parameters. If docs.kie.ai can't be fetched, use the `agent-browser` skill.
 
 #### Discovering new models
 
-The official sitemap is the primary current inventory:
-
-```
-https://docs.kie.ai/sitemap.xml
-```
-
-Search it every time rather than treating this skill's tables as exhaustive. Then fetch the exact English model page and use its OpenAPI `model` enum/default.
-
-For release dates, `https://kie.ai/changelog` loads its entries from `POST https://api.kie.ai/api/v1/common/pageApiAnnouncementList`; the HTML page itself may look empty.
-
-#### If you can't find a model's doc URL
-
-1. Search the English entries in `https://docs.kie.ai/sitemap.xml` by provider, family, and operation—not just the exact model ID
-2. Check `https://kie.ai/{model-slug}`; playground pages may appear before API docs
-3. Search Kie's official site for the model name plus `site:docs.kie.ai`
-4. If no current official page or OpenAPI schema can be found, tell the user and do not guess the model ID or parameters
-
-#### If web fetch is blocked
-
-If the available web fetch tool or `curl` cannot retrieve docs.kie.ai (for example because of rate limiting or network issues), use the `agent-browser` skill to browse the docs interactively.
+Fetch the catalog unfiltered and compare it with this skill's tables. For release dates, `https://kie.ai/changelog` loads its entries from `POST https://api.kie.ai/api/v1/common/pageApiAnnouncementList`; the HTML page itself looks empty.
 
 ### Step 3: Generate Content
 
-Use the **fetched docs** to construct the correct API call. General pattern:
+For models whose schema declares `/api/v1/jobs/createTask`:
 
 ```bash
 curl -s -X POST "https://api.kie.ai/api/v1/jobs/createTask" \
@@ -296,121 +286,140 @@ curl -s -X POST "https://api.kie.ai/api/v1/jobs/createTask" \
     "model": "<model-id>",
     "input": {
       "prompt": "...",
-      ...other params from fetched docs
+      ...fields from the schema
     }
   }'
 ```
 
-A few helper endpoints (Gemini Omni character/audio creation) use their own paths and respond synchronously — follow their docs.
+- `model` must match the catalog exactly. `input` is a nested object whose fields come from the schema and differ per model. `callBackUrl` is optional (required only where the schema says so, e.g. `kling-3.0/motion-control`).
+- The response is `{"code": 200, "data": {"taskId": "...", "recordId": "..."}}`. **Poll with `taskId`**, not `recordId`.
+- For family models (Veo, Suno, Runway), the top-level `model` is the family ID and the variant goes in `input.model` — see Step 1.
+- Helper endpoints such as Gemini Omni character/audio creation use their own paths and respond synchronously — follow their schema or docs.
 
 **Common aspect ratios:** `1:1`, `16:9`, `9:16`, `3:2`, `2:3`, `3:4`, `4:3`
 
 ### Step 4: Poll for Results
 
-Poll `GET https://api.kie.ai/api/v1/jobs/recordInfo?taskId=<taskId>`. `data.state` is one of `waiting`, `queuing`, `generating`, `success`, `fail`. On success, `data.resultJson` is a JSON string with the result URLs; on failure, read `data.failCode` and `data.failMsg`. If a fetched doc names a different poll endpoint or result shape, follow the doc.
+Poll `GET https://api.kie.ai/api/v1/jobs/recordInfo?taskId=<taskId>` until `data.state` is terminal:
+
+| `state` | `successFlag` | Terminal |
+|---------|---------------|----------|
+| `waiting`, `queuing`, `generating` | 0 | no |
+| `success` | 1 | yes |
+| `fail` | 3 | yes — read `failCode` and `failMsg` |
+
+**Never pipe a kie response through `echo`.** `recordInfo` includes JSON-inside-JSON; zsh, dash and busybox `echo` expand its `\\\"` escapes and `jq` then fails with `Invalid numeric literal`. Write responses to a file (as below) or use `printf '%s' "$r" | jq …`.
 
 ```bash
-poll_task() {
-  local task_id="$1"
-  local max_attempts=60
-  local interval=5
-
-  for i in $(seq 1 $max_attempts); do
-    local response state
-    response=$(curl -s "https://api.kie.ai/api/v1/jobs/recordInfo?taskId=$task_id" \
-      -H "Authorization: Bearer $KIE_API_KEY")
-    state=$(echo "$response" | jq -r '.data.state // empty')
-
-    case "$state" in
-      success)
-        echo "$response" | jq -r '.data.resultJson'
-        return 0
-        ;;
-      fail)
-        echo "FAILED: $(echo "$response" | jq -r '.data.failMsg // "unknown"')" >&2
-        return 1
-        ;;
-      *)
-        sleep $interval
-        ;;
+out=$(mktemp)
+deadline=$(( $(date +%s) + 300 ))  # 5 min for images; use 900+ for video and music
+while :; do
+  if curl -sf -H "Authorization: Bearer $KIE_API_KEY" \
+       "https://api.kie.ai/api/v1/jobs/recordInfo?taskId=$TASK_ID" -o "$out"; then
+    [ "$(jq -r .code "$out")" = 200 ] || { jq -r .msg "$out" >&2; break; }
+    case $(jq -r .data.state "$out") in
+      success) jq '.data.response' "$out"; break ;;
+      fail)    jq -r '.data.failMsg' "$out" >&2; break ;;
     esac
-  done
-
-  echo "Timed out" >&2
-  return 1
-}
+  fi
+  [ "$(date +%s)" -ge "$deadline" ] && { echo 'gave up waiting' >&2; break; }
+  sleep 3
+done
+rm -f "$out"
 ```
 
-**Poll intervals:** 3s for images, 5-10s for video/music. Increase to 15-30s after 2 min. Max poll: ~5 min images, ~10 min video/music (30s Wan/Seedance clips can take longer).
+- 3s is a good interval for images; use 5–10s for video and music. 30s Wan/Seedance clips can take well over 10 minutes.
+- `curl -sf` turns HTTP errors into a retry; a non-200 body `code` stops the loop instead of looking like "still running".
+- `progress` exists on `recordInfo` but is never filled in. Poll `state`.
+
+#### Reading the output
+
+- `data.response` is `data.resultJson` already parsed. Prefer it.
+- Most models put files at `response.resultUrls[]`.
+- **Suno is different:** generate, extend, sounds and upload-and-cover/extend return tracks at `response.data[].audio_url` (with `stream_audio_url`, cover `image_url`, `title`, `duration`). Lyrics and MIDI tasks return `response.resultObject` (lyrics at `resultObject.lyricsData[].text`). Suno file utilities (WAV, vocal separation, music video) use `resultUrls`.
+- If a successful task has no `resultUrls`, read the model's own structure in `response`.
+- `param.input` in the response is your input echoed back as a JSON *string*; parse it again to read it.
 
 ### Step 5: Download Results
 
-Result URLs expire (14 days for most). **Always download immediately.**
+Generated files are deleted after **14 days**, so always download immediately. Task records (the text `recordInfo` returns) are kept for 2 months.
 
 ```bash
 curl -sL "$RESULT_URL" -o "./generated-media.png"
 ```
 
-Use appropriate extension: `.png`/`.jpg`/`.webp` for images, `.mp4` for video, `.mp3`/`.wav` for audio.
+Use the right extension: `.png`/`.jpg`/`.webp` for images, `.mp4` for video, `.mp3`/`.wav` for audio.
 
-**Download URL helper** (solves cross-domain issues, valid 20 min):
+**Direct-download link** for browsers or downstream systems that can't stream the result URL:
 
 ```bash
 curl -s -X POST "https://api.kie.ai/api/v1/common/download-url" \
   -H "Authorization: Bearer $KIE_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "url": "https://..." }'
+  -d '{ "url": "https://tempfile.redpandaai.co/..." }'
 ```
 
-### Step 6: Upload Files (when needed)
+The input must be a kie-hosted URL (external URLs return `code` 422). `data` is the link as a bare string, valid for 20 minutes; it doesn't extend the 14-day retention.
 
-Some endpoints require publicly accessible URLs for input images/videos/audio. If the user has a local file, upload it first. For full upload API details, fetch: `https://docs.kie.ai/file-upload-api/quickstart`
+### Step 6: Upload Input Files (when needed)
 
-**Upload base URL:** `https://kieai.redpandaai.co`
+Many image-to-image and image/video-to-video models need a file URL inside `input`. The field name differs per model (`image_url`, `input_urls`, `image_input`, `video_url`, `first_frame_image`, …) — **read it from the schema; don't guess**. If the user already has a public HTTPS URL, use it directly.
+
+Uploads go to a **different host**, `https://kieai.redpandaai.co`, with the same bearer token. **Uploaded files are deleted after 24 hours**, so upload right before submitting.
+
+| Endpoint | When | Body |
+|----------|------|------|
+| `POST /api/file-stream-upload` | File on disk, any size | `multipart/form-data`: `file`, `uploadPath`, optional `fileName` |
+| `POST /api/file-base64-upload` | Small in-memory file (≤10MB) | JSON: `base64Data` (base64 or data URL), `uploadPath`, optional `fileName` |
+| `POST /api/file-url-upload` | Rehost a public URL | JSON: `fileUrl`, `uploadPath`, optional `fileName` |
+
+`uploadPath` is **required**, with no leading or trailing slash (e.g. `images/user-uploads`). **Put `data.downloadUrl` from the response into the model's `input`.**
 
 ```bash
-# Upload via URL
-curl -s -X POST "https://kieai.redpandaai.co/api/file-url-upload" \
+UPLOAD_URL=$(curl -s -X POST 'https://kieai.redpandaai.co/api/file-stream-upload' \
   -H "Authorization: Bearer $KIE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{ "fileUrl": "https://example.com/image.jpg" }'
-
-# Upload via base64
-curl -s -X POST "https://kieai.redpandaai.co/api/file-base64-upload" \
-  -H "Authorization: Bearer $KIE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{ "base64Data": "<base64_data>", "fileName": "image.jpg" }'
-
-# Upload via file stream
-curl -s -X POST "https://kieai.redpandaai.co/api/file-stream-upload" \
-  -H "Authorization: Bearer $KIE_API_KEY" \
-  -F "file=@/path/to/file.jpg"
+  -F "file=@/path/to/input.png" -F "uploadPath=images/user-uploads" \
+  | jq -r .data.downloadUrl)
 ```
 
-**Response:** `{ "code": 200, "data": { "fileUrl": "https://...", "downloadUrl": "https://..." } }`
+## Rate Limits
 
-Uploaded files expire after **3 days**. Use the returned `fileUrl` as input to generation endpoints.
+Over-limit requests are rejected with `code` 429 **in the body** (HTTP status may still be 200) and are not queued — retry them yourself.
+
+| Endpoints | Limit | Counted per |
+|-----------|-------|-------------|
+| `models`, `schema`, `price`, `success-rate` | 1 request/second, **one shared budget** | account |
+| `createTask` | 20 requests / 10 seconds | account |
+| `recordInfo` | 10 requests/second | taskId |
+
+Space discovery calls at least 1.1 seconds apart. `createTask` typically allows 100+ concurrent tasks.
 
 ## Error Handling
+
+Codes arrive in the response body's `code` field.
 
 | Code | Meaning | Action |
 |------|---------|--------|
 | 200 | Success | Parse result |
-| 401 | Unauthorized | Check KIE_API_KEY |
+| 401 | Unauthorized | Check `KIE_API_KEY`; only `Authorization: Bearer` is accepted |
 | 402 | Insufficient credits | Top up at https://kie.ai/pricing |
+| 404 | Not found | Model ID not in the catalog — search again |
 | 408 | Upstream timeout | Task took >10 min, retry |
-| 422 | Validation error | Check params against fetched docs |
-| 429 | Rate limited | Wait and retry (max 20 req/10s) |
+| 422 | Validation error | Check `input` against the schema's `required` and allowed values |
+| 429 | Rate limited | Wait and retry (limits above) |
 | 433 | Sub-key limit | API key usage cap exceeded |
 | 455 | Service unavailable | Maintenance, retry later |
 | 500 | Server error | Retry after a few seconds |
-| 501 | Generation failed | Check failMsg, adjust prompt |
+| 501 | Generation failed | Check `failMsg`, adjust prompt |
 | 505 | Feature disabled | Feature not available |
+
+Every call also shows up on https://kie.ai/logs with its error.
 
 ## Important Notes
 
-- **Always download results immediately** — URLs expire (14 days for most)
-- **Use `jq` to parse JSON** — install via `brew install jq` if needed
-- **Always fetch fresh docs** before API calls — models and params change frequently
-- **Full API docs:** https://docs.kie.ai
-- **Pricing:** https://kie.ai/pricing — doc pages don't list prices; use the live price lookup in Step 1 before comparing models on cost
+- **Look up the catalog and schema every time** — this skill's tables guide the choice; the catalog is the truth
+- **Download results immediately** — files expire after 14 days, uploads after 24 hours
+- **Use `jq`, never `echo`, to handle responses** — install with `brew install jq` or `apt install jq`
+- **Never put `KIE_API_KEY` in files, chat or commits**; it lives only in the environment
+- **Full API docs:** https://docs.kie.ai · **Official kie skill** (reference for API changes): `https://kie.ai/.well-known/agent-skills/index.json` → `kie-models.tar.gz`, English text in `references/en.md`
+
