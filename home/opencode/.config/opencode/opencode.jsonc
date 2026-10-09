@@ -105,7 +105,9 @@
   ],
   "mcp": {
     "servers": {
-      "executor": { "type": "remote", "url": "https://executor.magoz.is/mcp" }
+      "executor": { "type": "remote", "url": "https://executor.magoz.is/mcp" },
+      // Mobbin design refs (Pro plan). OAuth via `/mcps`. Prefer mode "standard"; "deep" costs AI credits.
+      "mobbin": { "type": "remote", "url": "https://api.mobbin.com/mcp" }
     }
   },
   // YOLO like Pi: allow everything; later rules (last match wins) still deny secrets.
