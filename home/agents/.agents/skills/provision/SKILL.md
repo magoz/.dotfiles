@@ -119,23 +119,62 @@ Release both leases before deleting a worktree. Branches expire on their own aft
 Prerequisites: the GitHub repository exists under the factory's GitHub owner, there is a local
 checkout with that `origin`, and the factory is registered (`provision config list`).
 
-Prepare these for the human, in order:
+### First, work out what the repository needs
+
+Don't assume a template: read the code, then compare with Vercel.
+
+1. **Variables the code reads.** Search for config reads (`Config.String('…')`,
+   `Config.Redacted('…')`, `process.env.…`), `.env.example`, and any production or setup doc in
+   the repo. Note how the docs say each secret is generated (for example `openssl rand -base64 32`).
+2. **What Vercel already has** (names only, from the linked checkout):
+   `vercel env ls development`, `vercel env ls preview`, `vercel env ls production`,
+   `vercel env ls test`. Existing values are reused; never regenerate what exists unless the
+   human asks to rotate.
+3. **Sort each missing variable:**
+
+   | The code reads…                                                        | Comes from                                                   |
+   | ---------------------------------------------------------------------- | ------------------------------------------------------------ |
+   | `DATABASE_URL*` (Neon)                                                 | `neon` step                                                  |
+   | `R2_*` (S3-compatible storage)                                         | `r2` step (needs `--domain` for the upload origin)           |
+   | `QSTASH_*`                                                             | `upstash` step (the human pastes the console's `.env` block) |
+   | `RESEND_API_KEY`                                                       | `resend` step                                                |
+   | `AUTH_EMAIL_FROM`                                                      | `--email-from` (domain verified in the factory's Resend)     |
+   | `REPORT_RECEIVER_*`                                                    | `reports` step (factories with a receiver)                   |
+   | a random secret the app generates itself (auth, cron, encryption keys) | `--secret NAME[=FORMAT]`                                     |
+   | a third-party key (AI Gateway, OAuth apps, data APIs)                  | the human, with `vercel env add`                             |
+   | plain config (URLs, limits, flags)                                     | you, with `vercel env add … --value … --yes`                 |
+
+   `--secret` formats: `NAME` (32 random bytes, base64), `NAME=base64-<bytes>`,
+   `NAME=hex-<bytes>`, `NAME=vapid` (web-push pair: `NAME_PUBLIC_KEY` + `NAME_PRIVATE_KEY`).
+   Match the format the code or docs expect (a key decoded as 32 bytes of base64 needs
+   `base64-32`).
+
+4. **Pick the steps** with `--only`: `vercel` always, plus the steps whose variables the code reads,
+   plus `domain` when the production host is known. Leave out steps the app doesn't use.
+5. **Check conflicts** before handing over: a step stops if one Vercel record of its variable spans
+   pre-production and production (`… has a record that also targets environments outside …`).
+   Tell the human which record to delete or split first.
+
+Then show the human what you found (variables, where each comes from, what already exists) and
+the commands, in order:
 
 ```bash
 # 1. Plan: reads providers, changes nothing
-/usr/local/bin/provision factory --checkout <checkout> --domain <production-host> --dry-run
-
-# 2. Apply
 /usr/local/bin/provision factory --checkout <checkout> --domain <production-host> \
-  --sender-name <App name> --email-from noreply@<verified-domain>
+  --only vercel,neon,resend,secrets,domain \
+  --sender-name <App name> --email-from login@<verified-domain> \
+  --secret BETTER_AUTH_SECRET --secret CRON_SECRET=hex-32 --dry-run
 
-# 3. Confirm idempotence: should print only "reusing" lines
-/usr/local/bin/provision factory --checkout <checkout> --domain <production-host> \
-  --sender-name <App name> --email-from noreply@<verified-domain> --on-existing reuse
+# 2. Apply: the same command without --dry-run
+
+# 3. Confirm idempotence: the same command with --on-existing reuse; only "reusing" lines
 
 # 4. Local checkout (you can run this one)
 provision env --repo <checkout> --database
 ```
+
+Keep `--only` and the `--secret` flags identical across the three runs. Afterwards, the
+third-party keys and plain settings from step 3 still need `vercel env add`.
 
 Reading the output: each step prints one block. `would …` is a dry-run plan, `exists:` /
 `reusing …` means nothing changed, `skipped:` means the factory lacks that provider, and
