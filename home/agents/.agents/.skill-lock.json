@@ -18,7 +18,33 @@
       "skillFolderHash": "585f9be899e09368f4e4da04a05cee9e7fc1b3c9",
       "installedAt": "2026-07-30T16:10:39.780Z",
       "updatedAt": "2026-07-30T16:10:39.780Z"
+    },
+    "provision": {
+      "source": "magoz/provision",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/magoz/provision.git",
+      "skillPath": "skills/provision/SKILL.md",
+      "skillFolderHash": "ce748644b035b13e7b23c838936f875526f39aff",
+      "installedAt": "2026-10-10T12:40:02.567Z",
+      "updatedAt": "2026-10-10T12:40:02.567Z"
     }
   },
-  "dismissed": {}
+  "dismissed": {
+    "findSkillsPrompt": true
+  },
+  "lastSelectedAgents": [
+    "amp",
+    "cline",
+    "codex",
+    "cursor",
+    "droid",
+    "gemini-cli",
+    "github-copilot",
+    "kilo",
+    "kimi-code-cli",
+    "opencode",
+    "pi",
+    "warp",
+    "zed"
+  ]
 }
