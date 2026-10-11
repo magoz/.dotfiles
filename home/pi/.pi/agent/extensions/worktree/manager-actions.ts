@@ -159,8 +159,8 @@ export class WorktreeActionService {
     }
     await this.requireSuccess(
       "provision environment",
-      "provision-env",
-      [
+      "provision",
+      ["env", 
         "--repo",
         target.path,
         "--source",
@@ -193,8 +193,8 @@ export class WorktreeActionService {
   ): Promise<ReadonlyArray<RenewedLease>> {
     for (const name of ["default", "test"] as const) {
       const status = await this.commands.run(
-        "sandbox-db",
-        ["status", "--worktree", target.path, "--json", "--lease", name],
+        "provision",
+        ["db", "status", "--worktree", target.path, "--json", "--lease", name],
         signal === undefined ? undefined : { signal },
       );
       const payload = parseStructuredOutput(status.stdout, `database lease ${name} status`) as { status?: string };
@@ -207,8 +207,8 @@ export class WorktreeActionService {
     for (const name of ["default", "test"] as const) {
       const result = await this.requireSuccess(
         `renew database lease ${name}`,
-        "sandbox-db",
-        ["renew", "--worktree", target.path, "--json", "--lease", name, "--ttl", ttl],
+        "provision",
+        ["db", "renew", "--worktree", target.path, "--json", "--lease", name, "--ttl", ttl],
         signal,
       );
       const payload = parseStructuredOutput(result.stdout, `database lease ${name} renewal`) as {
@@ -258,8 +258,8 @@ export class WorktreeActionService {
     const leaseNames: string[] = [];
     for (const name of ["test", "default"] as const) {
       const status = await this.commands.run(
-        "sandbox-db",
-        ["status", "--worktree", target.path, "--json", "--lease", name],
+        "provision",
+        ["db", "status", "--worktree", target.path, "--json", "--lease", name],
         signal === undefined ? undefined : { signal },
       );
       const payload = parseStructuredOutput(status.stdout, `database lease ${name} status`) as { status?: string };
@@ -276,8 +276,8 @@ export class WorktreeActionService {
       for (const name of leaseNames) {
         await this.requireSuccess(
           `release database lease ${name}`,
-          "sandbox-db",
-          ["release", "--worktree", target.path, "--json", "--lease", name],
+          "provision",
+          ["db", "release", "--worktree", target.path, "--json", "--lease", name],
           signal,
         );
         releasedLeases.push(name);

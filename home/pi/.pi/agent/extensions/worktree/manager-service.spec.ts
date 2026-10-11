@@ -94,7 +94,7 @@ describe("WorktreeManagerService inventory", () => {
           },
         }));
       }
-      if (command === "sandbox-db") {
+      if (command === "provision" && args[0] === "db") {
         return result(JSON.stringify([
           { version: 2, leaseName: "default", worktree: topic, branchName: "agent/topic-dev", expiresAt: "2026-08-17T12:00:00Z" },
           { version: 2, leaseName: "test", worktree: topic, branchName: "agent/topic-test", expiresAt: "2026-08-16T12:00:00Z" },

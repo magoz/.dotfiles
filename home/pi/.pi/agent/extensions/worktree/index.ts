@@ -234,7 +234,7 @@ export default function worktreeExtension(pi: ExtensionAPI): void {
         : `This session's directory ${source.recoveredFrom} no longer exists; using primary checkout ${source.repo}.`;
       if (recovery) onUpdate?.({ content: [{ type: "text", text: recovery }], details: {} });
       signal?.throwIfAborted();
-      const preflight = await pi.exec("provision-env", [
+      const preflight = await pi.exec("provision", ["env",
         "--repo", source.repo, "--check-vercel-link", "--non-interactive",
       ], { signal, timeout: 30_000, cwd: source.repo });
       signal?.throwIfAborted();

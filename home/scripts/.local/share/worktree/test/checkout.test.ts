@@ -7,8 +7,8 @@ import { NO_LOCKFILE_WARNING, NO_VERCEL_WARNING, planProvisioning } from "../src
 import { CheckoutError, checkoutFailureReport } from "../src/domain"
 import { MARKER_FILE, readMarker } from "../src/marker"
 
-// Real Git against a local bare "origin"; provision-env is a fake on PATH that
-// records argv. No Herdr, Vercel, sandbox-db or network is reachable.
+// Real Git against a local bare "origin"; provision is a fake on PATH that
+// records argv. No Herdr, Vercel, Neon or network is reachable.
 const roots: string[] = []
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
@@ -41,14 +41,14 @@ const fixture = (files: Record<string, string> = {}) => {
   const fresh = git(producer, "rev-parse", "HEAD")
   mkdirSync(bin)
   const log = join(root, "provision.jsonl")
-  writeFileSync(join(bin, "provision-env"), `#!/bin/sh
+  writeFileSync(join(bin, "provision"), `#!/bin/sh
 printf '%s\\n' "$*" >> ${JSON.stringify(log)}
 echo "provision stdout"
 echo "provision stderr" >&2
 [ "$FAKE_PROVISION_FAIL" = "1" ] && exit 2
 exit 0
 `)
-  chmodSync(join(bin, "provision-env"), 0o755)
+  chmodSync(join(bin, "provision"), 0o755)
   return { root, origin, producer, repo, bin, log, old, fresh }
 }
 
@@ -80,7 +80,7 @@ const run = async (f: Fixture, args: string[], env: Record<string, string> = {})
 const expectNoTempRefs = (repo: string) =>
   expect(git(repo, "for-each-ref", "--format=%(refname)", "refs/worktree-bases/")).toBe("")
 
-test("no-Vercel repo without a lockfile: fresh origin tip, sibling path, warnings, no provision-env", async () => {
+test("no-Vercel repo without a lockfile: fresh origin tip, sibling path, warnings, no provisioning", async () => {
   const f = fixture()
   const result = await run(f, ["--repo", f.repo, "--branch", "feat/x", "--json"])
   expect(result.exitCode).toBe(0)
@@ -113,18 +113,21 @@ test("no-Vercel repo with a lockfile installs dependencies only (no Vercel, no d
   expect(result.exitCode).toBe(0)
   const path = join(f.root, "repo-fix-y")
   expect(JSON.parse(result.stdout).warnings).toEqual([NO_VERCEL_WARNING])
-  expect(result.provisions).toEqual([`--repo ${path} --skip-vercel --non-interactive`])
+  expect(result.provisions).toEqual([`env --repo ${path} --skip-vercel --non-interactive`])
   // Child stdout never reaches the JSON channel.
   expect(result.stdout).not.toContain("provision stdout")
   expect(result.stderr).toContain("provision stdout")
 })
 
-for (const evidence of ["source link", "sibling link", "provisionEnv"] as const) {
+for (const evidence of ["source link", "sibling link", "provision", "provisionEnv"] as const) {
   test(`Vercel-configured repo (${evidence}) provisions exactly like worktree create`, async () => {
-    const f = fixture(evidence === "provisionEnv" ? { "package.json": '{"provisionEnv":{"appDir":"."}}' } : {})
+    const manifest: Record<string, string> = evidence === "provision" || evidence === "provisionEnv"
+      ? { "package.json": JSON.stringify({ [evidence]: { appDir: "." } }) }
+      : {}
+    const f = fixture(manifest)
     const linked = evidence === "sibling link" ? join(f.root, "repo-other") : f.repo
     if (evidence === "sibling link") git(f.repo, "worktree", "add", "-b", "other", linked)
-    if (evidence !== "provisionEnv") {
+    if (evidence !== "provision" && evidence !== "provisionEnv") {
       mkdirSync(join(linked, ".vercel"))
       writeFileSync(join(linked, ".vercel", "project.json"), '{"orgId":"o","projectId":"p"}')
     }
@@ -133,7 +136,7 @@ for (const evidence of ["source link", "sibling link", "provisionEnv"] as const)
     const path = join(f.root, "repo-feat-linked")
     expect(JSON.parse(result.stdout).warnings).toEqual([])
     expect(result.provisions).toEqual([
-      `--repo ${path} --source ${f.repo} --database --non-interactive --label lbl --ttl 3d`
+      `env --repo ${path} --source ${f.repo} --database --non-interactive --label lbl --ttl 3d`
     ])
   })
 }
@@ -180,9 +183,22 @@ test("package.json worktree.setup runs after provisioning, before caller --setup
   expect(result.exitCode).toBe(0)
   const path = join(f.root, "repo-feat-declared")
   expect(readFileSync(join(path, "setup.txt"), "utf8")).toBe(`${path}\ndeclared\ncaller\n`)
-  expect(result.provisions).toEqual([`--repo ${path} --skip-vercel --non-interactive`])
+  expect(result.provisions).toEqual([`env --repo ${path} --skip-vercel --non-interactive`])
   // Declaring setup is not Vercel configuration evidence.
   expect(JSON.parse(result.stdout).warnings).toEqual([NO_VERCEL_WARNING])
+})
+
+test("full provisioning leaves the declared setup to provision env; caller --setup still runs", async () => {
+  const f = fixture({
+    "package.json": JSON.stringify({ provision: { appDir: ".", setup: ["echo declared >> setup.txt"] } })
+  })
+  const result = await run(f, ["--repo", f.repo, "--branch", "feat/full", "--json", "--setup", "echo caller >> setup.txt"])
+  expect(result.exitCode).toBe(0)
+  const path = join(f.root, "repo-feat-full")
+  expect(readFileSync(join(path, "setup.txt"), "utf8")).toBe("caller\n")
+  expect(result.provisions).toEqual([
+    `env --repo ${path} --source ${f.repo} --database --non-interactive --label feat/full --ttl 7d`
+  ])
 })
 
 test("worktree.setup is read from the pinned base, not the source working tree", async () => {
@@ -212,9 +228,9 @@ const malformed = (setup: unknown) => (f: Fixture) => {
 }
 
 const preflightFailures: ReadonlyArray<readonly [string, (f: Fixture) => string[], string]> = [
-  ["a non-array worktree.setup", malformed("pnpm db:migrate"), "invalid package.json worktree.setup"],
+  ["a non-array worktree.setup", malformed("pnpm db:migrate"), "invalid package.json setup"],
   ["a blank worktree.setup command", malformed(["pnpm db:migrate", " "]), "setup commands must be non-empty strings"],
-  ["an invalid package.json", (f) => { publish(f, { "package.json": "{" }); return ["--branch", "feat/badjson"] }, "invalid package.json worktree.setup"],
+  ["an invalid package.json", (f) => { publish(f, { "package.json": "{" }); return ["--branch", "feat/badjson"] }, "invalid package.json setup"],
   ["an existing branch", (f) => { git(f.repo, "branch", "feat/taken"); return ["--branch", "feat/taken"] }, "branch already exists"],
   ["an existing branch with --base", (f) => { git(f.repo, "branch", "feat/taken"); return ["--branch", "feat/taken", "--base", "main"] }, "branch already exists"],
   ["an unreachable origin", (f) => { git(f.repo, "remote", "set-url", "origin", join(f.root, "missing.git")); return ["--branch", "feat/offline"] }, "refusing a stale local base"],

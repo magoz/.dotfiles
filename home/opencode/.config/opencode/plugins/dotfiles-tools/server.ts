@@ -59,7 +59,7 @@ export interface Host {
 }
 
 export interface Options {
-  /** Runs `git` and the `provision-env` preflight (tests inject a fake). */
+  /** Runs `git` and the `provision env` preflight (tests inject a fake). */
   readonly run?: typeof runProcess
   /** The service's environment; `HERDR_*` is always stripped. */
   readonly env?: NodeJS.ProcessEnv
@@ -115,7 +115,7 @@ export const setup = (host: Host, options: Options = {}) =>
     /** Vercel link check before anything is allocated. Only a strict exit-3 report is recoverable. */
     const preflight = (cwd: string) =>
       Effect.gen(function* () {
-        const result = yield* run("provision-env", ["--repo", cwd, "--check-vercel-link", "--non-interactive"], {
+        const result = yield* run("provision", ["env", "--repo", cwd, "--check-vercel-link", "--non-interactive"], {
           cwd,
           env,
           timeout: PREFLIGHT_TIMEOUT,

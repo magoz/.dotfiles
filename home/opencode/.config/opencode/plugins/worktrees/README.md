@@ -41,8 +41,8 @@ runs the project's `commands.start` (`bash -lc`, with `OPENCODE_WORKTREE_BASE` /
 
 ### Environment requirements (service PATH)
 
-`git`, `bun`, `worktree`, `worktree-manage`, `provision-env` (from `home/scripts`);
-`vercel` and `sandbox-db` for Vercel-configured repos. `git fetch` must work
+`git`, `bun`, `worktree`, `worktree-manage` (from `home/scripts`), `provision`
+(`@magoz/provision`); `vercel` for Vercel-configured repos. `git fetch` must work
 non-interactively: the service has no SSH agent, so origin access relies on the
 passphrase-less key in `~/.ssh/config`. Vercel/Neon credentials are whatever the
 service user already has; nothing is prompted (`--non-interactive`).
@@ -57,8 +57,9 @@ service user already has; nothing is prompted (`--non-interactive`).
 - **Base**: OpenCode's `branch` input is a *starting ref*, passed as `--base` (used
   without fetching). Omitted → the CLI fetches origin's live default tip (fail closed).
 - **Provisioning**: exactly `worktree checkout`'s rule (Vercel-configured repos get the
-  full `provision-env --database`; others install dependencies only or skip, with
-  warnings), then the repository's `package.json` `worktree.setup` (e.g. migrations).
+  full `provision env --database`, which also runs the repository's `package.json`
+  `provision.setup` (legacy `worktree.setup`, e.g. migrations); others install
+  dependencies only or skip, with warnings).
   The plugin passes no `--setup`. See `home/scripts/.local/share/worktree/README.md`. Warnings are logged
   to the service journal as `[worktrees] <path>: <warning>`.
 - **Failures** throw `Error`s built only from validated data (stage, branch, absolute
@@ -110,7 +111,7 @@ checkout's `.git` file (`gitdir: …`); `worktree-manage` checks it authoritativ
 - The primary checkout is derived from the target's Git common directory, then
   `worktree-manage plan-checkout` → `retire-checkout --confirm <dir> --expect-plan <token>`:
   refuses dirty/primary/current/locked/non-canonical checkouts, releases recorded
-  `sandbox-db` leases, then `git worktree remove` (never `--force`), keeps the branch,
+  `provision db` leases, then `git worktree remove` (never `--force`), keeps the branch,
   writes private receipts under `~/.local/state/worktree-manager`.
 - Errors include only worktree-manage's sanitized `worktree-manage: …` refusal line.
 - **No agent checks.** OpenCode/Fleet must not delete a worktree that still has working
@@ -163,4 +164,4 @@ npm run test:worktrees-integration   # node plugins/worktrees/test/integration.m
 Unit tests use real Git temp repos and fake `worktree` / `worktree-manage` CLIs on PATH.
 `integration.mjs` starts an isolated server (temp HOME/XDG, random port/password, dead
 proxy) that loads only this plugin, with this checkout's real CLIs and fake
-`provision-env`/`sandbox-db`, and drives `worktree.create` / `list` / `remove` over HTTP.
+`provision`, and drives `worktree.create` / `list` / `remove` over HTTP.

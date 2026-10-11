@@ -23,7 +23,11 @@ async function fixture() {
   const leases = new Map([ ["test", "live"], ["default", "live"] ])
   let mutate: (args: ReadonlyArray<string>) => void = () => {}
   let fail = "", malformed = ""
-  const runner: ManagerRunner = async (command, args) => {
+  const runner: ManagerRunner = async (provisionOrOther, provisionArgs) => {
+    // `provision db <sub> …` is recorded as "provision db" so <sub> stays at index 1.
+    const db = provisionOrOther === "provision" && provisionArgs[0] === "db"
+    const command = db ? "provision db" : provisionOrOther
+    const args = db ? provisionArgs.slice(1) : provisionArgs
     calls.push([command, ...args]); mutate(args)
     if ([command, ...args].join(" ").includes(fail) && fail) return { code: 2, stdout: 'secret https://token.invalid' }
     if (command === "git") return git(args)
@@ -38,7 +42,7 @@ async function fixture() {
       else if (args[0] === "workspace") payload = { result: { type: "workspace_list", workspaces: [{ workspace_id: "source-ws" }, { workspace_id: "target-ws" }] } }
       else if (args[0] === "agent") payload = { result: { type: "agent_list", agents } }
       else payload = { result: { type: "worktree_removed" } }
-    } else if (command === "sandbox-db") {
+    } else if (command === "provision db") {
       const name = args[args.indexOf("--lease") + 1] ?? ""
       const status = leases.get(name) ?? "none"
       if (args[0] === "list") payload = [...leases].map(([leaseName]) => ({ worktree: target, leaseName, branchId: `id-${leaseName}`, connection_url: 'https://SECRET.invalid', envFile: 'SECRET' }))
@@ -118,7 +122,7 @@ test("BOTH statuses checked before deletion; live protected second lease preserv
   const f = await fixture();
   const runner: ManagerRunner = async (command, args, signal) => {
     const result = await f.runner(command, args, signal)
-    return command === 'sandbox-db' && args[0] === 'status' && args.at(-1) === 'default'
+    return command === 'provision' && args[0] === 'db' && args[1] === 'status' && args.at(-1) === 'default'
       ? { ...result, stdout: result.stdout.replace('"releasable":true', '"releasable":false') } : result
   }
   await expect(new WorktreeManager(runner, f.receipts).retire(f.source, f.selected, f.target)).rejects.toThrow("releasable")

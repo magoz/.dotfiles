@@ -231,7 +231,7 @@ describe("worktree extension", () => {
     const ctx = { cwd: repo, shutdown };
     const signal = new AbortController().signal;
     const result = await tool.execute("preflight", input, signal, undefined, ctx);
-    expect(exec).toHaveBeenCalledExactlyOnceWith("provision-env", [
+    expect(exec).toHaveBeenCalledExactlyOnceWith("provision", ["env", 
       "--repo", repo, "--check-vercel-link", "--non-interactive",
     ], { signal, timeout: 30_000, cwd: repo });
     expect(shutdown).not.toHaveBeenCalled();
@@ -246,7 +246,7 @@ describe("worktree extension", () => {
     expect(tool.promptGuidelines.join(" ")).toContain("current Pi agent");
 
     const retried = await tool.execute("retry", result.details.retry, signal, undefined, ctx);
-    expect(exec.mock.calls.map(([command]) => command)).toEqual(["provision-env", "provision-env", "worktree"]);
+    expect(exec.mock.calls.map(([command]) => command)).toEqual(["provision", "provision", "worktree"]);
     expect(exec.mock.calls[2]?.[1]).toEqual(buildArgs(input, repo));
     expect(retried.terminate).toBe(true);
     expect(shutdown).toHaveBeenCalledOnce();
@@ -305,7 +305,7 @@ describe("worktree extension", () => {
       { cwd: removed, shutdown },
     );
 
-    expect(exec).toHaveBeenNthCalledWith(1, "provision-env", [
+    expect(exec).toHaveBeenNthCalledWith(1, "provision", ["env", 
       "--repo", primary, "--check-vercel-link", "--non-interactive",
     ], { signal, timeout: 30_000, cwd: primary });
     expect(exec).toHaveBeenNthCalledWith(

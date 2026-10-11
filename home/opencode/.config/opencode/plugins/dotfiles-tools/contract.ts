@@ -1,4 +1,4 @@
-// `create_worktree` contract: Effect Schemas for the tool and the `provision-env` preflight report.
+// `create_worktree` contract: Effect Schemas for the tool and the `provision env` preflight report.
 // The host validates with the `portable` forms (see ../shared/portable.ts).
 import { Schema } from "effect"
 
@@ -17,7 +17,7 @@ export type WorktreeInput = typeof WorktreeInput.Type
 /** Input after branch inference: `branch` is always present. */
 export type ResolvedInput = WorktreeInput & { readonly branch: string }
 
-/** `provision-env --check-vercel-link` exit-3 report. */
+/** `provision env --check-vercel-link` exit-3 report. */
 export const Link = Schema.Struct({ status: Schema.Literal("vercel_link_required"), directory: Text, reason: Text })
 export type Link = typeof Link.Type
 

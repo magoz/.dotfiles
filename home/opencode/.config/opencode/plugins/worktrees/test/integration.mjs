@@ -3,7 +3,7 @@
 // `opencode serve` (2.0.22 on PATH) that loads ONLY this plugin, then drives the
 // real worktree.create / worktree.list / worktree.remove HTTP API against a temp
 // repo with a local bare origin. The real `worktree` / `worktree-manage` CLIs come
-// from THIS checkout; provision-env and sandbox-db are fakes. Isolation copies
+// from THIS checkout; provision (env and db) is a fake. Isolation copies
 // fleet/lib/services/opencode/testing/opencode-server.ts: temp HOME/XDG/TMPDIR,
 // rebuilt env, random port + password, dead HTTP proxy (no model/provider calls).
 // Never touches the live opencode.service, ~/.config, ~/.local or real leases.
@@ -61,8 +61,7 @@ try {
   // Real CLIs from this checkout; fake provisioning/database tools.
   script('worktree', `exec ${JSON.stringify(bun)} ${JSON.stringify(path.join(worktreeSource, 'main.ts'))} "$@"`);
   script('worktree-manage', `exec ${JSON.stringify(bun)} ${JSON.stringify(path.join(worktreeSource, 'manage-main.ts'))} "$@"`);
-  script('provision-env', `printf '%s\\n' "$*" >> ${JSON.stringify(log)}; sleep ${PROVISION_DELAY_SECONDS}`);
-  script('sandbox-db', `case "$1" in list) echo '[]';; status) printf '{"status":"none","lease":"%s","worktree":"%s"}' "$6" "$3"; exit 1;; *) exit 2;; esac`);
+  script('provision', `case "$1" in env) printf '%s\\n' "$*" >> ${JSON.stringify(log)}; sleep ${PROVISION_DELAY_SECONDS};; db) case "$2" in list) echo '[]';; status) printf '{"status":"none","lease":"%s","worktree":"%s"}' "$7" "$4"; exit 1;; *) exit 2;; esac;; *) exit 2;; esac`);
 
   const configDirectory = path.join(dirs.config, 'opencode');
   mkdirSync(configDirectory, { recursive: true });
@@ -112,7 +111,7 @@ try {
   assert.equal(created.body.directory, destination);
   assert.equal(git(destination, 'branch', '--show-current'), 'feat/integration');
   assert.equal(git(destination, 'rev-parse', 'HEAD'), fresh);
-  assert.deepEqual(readFileSync(log, 'utf8').trim().split('\n'), [`--repo ${destination} --skip-vercel --non-interactive`]);
+  assert.deepEqual(readFileSync(log, 'utf8').trim().split('\n'), [`env --repo ${destination} --skip-vercel --non-interactive`]);
   const marker = JSON.parse(readFileSync(path.join(git(destination, 'rev-parse', '--absolute-git-dir'), 'dotfiles-worktree'), 'utf8'));
   assert.equal(marker.strategy, 'dotfiles'); assert.equal(marker.branch, 'feat/integration');
   step(`worktree.create -> ${destination} on feat/integration at fresh origin tip, install-only provisioning (${Math.round((Date.now() - started) / 1000)}s)`);

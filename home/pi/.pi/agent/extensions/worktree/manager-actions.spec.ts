@@ -134,8 +134,8 @@ describe("WorktreeActionService", () => {
 
     expect(run).toHaveBeenCalledWith("herdr", ["agent", "prompt", "p-topic", "Continue carefully"], undefined);
     expect(run).toHaveBeenCalledWith(
-      "provision-env",
-      ["--repo", incomplete.path, "--source", "/repos/repo", "--database", "--non-interactive", "--label", "topic", "--ttl", "3d"],
+      "provision",
+      ["env", "--repo", incomplete.path, "--source", "/repos/repo", "--database", "--non-interactive", "--label", "topic", "--ttl", "3d"],
       expect.objectContaining({ cwd: incomplete.path }),
     );
     await expect(actions.provision(inventory, managed(), "3d")).rejects.toThrow("already provisioned");
@@ -143,10 +143,10 @@ describe("WorktreeActionService", () => {
 
   it("preflights and renews both live database lease slots", async () => {
     const run = vi.fn<ManagerCommandRunner["run"]>(async (_command, args) => {
-      if (args[0] === "status") {
+      if (args[1] === "status") {
         return result(JSON.stringify({ status: "live", lease: args.at(-1) }));
       }
-      if (args[0] === "renew") {
+      if (args[1] === "renew") {
         return result(JSON.stringify({ status: "renewed", lease: args[args.indexOf("--lease") + 1], expires_at: "2026-08-21T00:00:00Z" }));
       }
       return result();
@@ -156,17 +156,17 @@ describe("WorktreeActionService", () => {
     const renewed = await actions.renewDatabases(managed(), "7d");
 
     expect(renewed.map((lease) => lease.name)).toEqual(["default", "test"]);
-    expect(run.mock.calls.filter(([, args]) => args[0] === "status")).toHaveLength(2);
-    expect(run.mock.calls.filter(([, args]) => args[0] === "renew")).toHaveLength(2);
+    expect(run.mock.calls.filter(([command, args]) => command === "provision" && args[1] === "status")).toHaveLength(2);
+    expect(run.mock.calls.filter(([command, args]) => command === "provision" && args[1] === "renew")).toHaveLength(2);
   });
 
   it("retires only clean non-current worktrees after lease preflight and reports partial failures", async () => {
     const run = vi.fn<ManagerCommandRunner["run"]>(async (command, args) => {
       if (command === "git" && args.includes("status")) return result("");
-      if (command === "sandbox-db" && args[0] === "status") {
+      if (command === "provision" && args[0] === "db" && args[1] === "status") {
         return result(JSON.stringify({ status: "live", lease: args.at(-1) }));
       }
-      if (command === "sandbox-db" && args[0] === "release") {
+      if (command === "provision" && args[0] === "db" && args[1] === "release") {
         return result(JSON.stringify({ status: "released", lease: args.at(-1) }));
       }
       if (command === "herdr" && args[0] === "worktree" && args[1] === "remove") {
@@ -195,10 +195,10 @@ describe("WorktreeActionService", () => {
   it("queries both lease slots during retirement even when the inventory snapshot has none", async () => {
     const run = vi.fn<ManagerCommandRunner["run"]>(async (command, args) => {
       if (command === "git" && args.includes("status")) return result("");
-      if (command === "sandbox-db" && args[0] === "status") {
+      if (command === "provision" && args[0] === "db" && args[1] === "status") {
         return result(JSON.stringify({ status: "live", lease: args.at(-1) }));
       }
-      if (command === "sandbox-db" && args[0] === "release") {
+      if (command === "provision" && args[0] === "db" && args[1] === "release") {
         return result(JSON.stringify({ status: "released", lease: args.at(-1) }));
       }
       return result();
@@ -209,6 +209,6 @@ describe("WorktreeActionService", () => {
     const outcome = await actions.retire(inventory, stale, false);
 
     expect(outcome.releasedLeases).toEqual(["test", "default"]);
-    expect(run.mock.calls.filter(([command, args]) => command === "sandbox-db" && args[0] === "status")).toHaveLength(2);
+    expect(run.mock.calls.filter(([command, args]) => command === "provision" && args[0] === "db" && args[1] === "status")).toHaveLength(2);
   });
 });

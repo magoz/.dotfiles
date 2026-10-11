@@ -187,11 +187,11 @@ const createFake = (
 
   const inherit: ProcessService["inherit"] = (command, args, runOptions = {}) => {
     calls.push({ mode: "inherit", command, args, cwd: runOptions.cwd })
-    if ((options.failProvision && command === "provision-env") ||
-        (options.failSetup && command !== "provision-env")) {
+    if ((options.failProvision && command === "provision") ||
+        (options.failSetup && command !== "provision")) {
       return Effect.fail(
         new ProcessError({
-          command: "provision-env",
+          command: "provision",
           exitCode: 2,
           stdout: "",
           stderr: "install failed"
@@ -268,7 +268,7 @@ test("creation from a linked checkout hands Herdr the primary root", async () =>
   )
   expect(createCall?.args[createCall.args.indexOf("--cwd") + 1]).toBe("/repo")
   // Provisioning still copies the app link from the invoking checkout.
-  const provisionCall = fake.calls.find((call) => call.command === "provision-env")
+  const provisionCall = fake.calls.find((call) => call.command === "provision")
   expect(provisionCall?.args).toContain("/repo-linked")
 })
 
@@ -329,16 +329,16 @@ test("the lifecycle provisions before setup and starts one fresh Pi", async () =
     (call) => call.command === "herdr" && call.args[0] === "worktree" && call.args[1] === "create"
   )
   expect(createCall?.args).toContain("/repo-feat-feature")
-  const provisionCall = fake.calls.find((call) => call.command === "provision-env")
+  const provisionCall = fake.calls.find((call) => call.command === "provision")
   expect(provisionCall?.args).toContain("--non-interactive")
 
   const meaningful = fake.calls.filter(
-    (call) => call.command === "provision-env" || call.command === shell || call.command === "herdr"
+    (call) => call.command === "provision" || call.command === shell || call.command === "herdr"
   )
   expect(meaningful.map((call) => [call.mode, call.command, call.args[0], call.args[1]])).toEqual([
     ["capture", "herdr", "worktree", "create"],
     ["capture", "herdr", "pane", "list"],
-    ["inherit", "provision-env", "--repo", "/worktrees/repo/feature"],
+    ["inherit", "provision", "env", "--repo"],
     ["inherit", shell, "-lc", "pnpm db:push"],
     ["capture", "herdr", "agent", "start"],
     ["capture", "herdr", "agent", "get"],
@@ -365,7 +365,7 @@ test("the lifecycle provisions before setup and starts one fresh Pi", async () =
   ])
 })
 
-test("package.json worktree.setup at the pinned base runs before caller setup", async () => {
+test("declared setup is left to provision env; only caller setup runs after it", async () => {
   const fake = createFake({ manifest: JSON.stringify({ worktree: { setup: ["pnpm db:migrate"] } }) })
   await Effect.runPromise(createEnvironment({
     repo: "/repo", branch: "feat/feature", ttl: "7d", prompt: "Go", setupCommands: ["pnpm db:seed"]
@@ -374,16 +374,16 @@ test("package.json worktree.setup at the pinned base runs before caller setup", 
   expect(show?.args.at(-1)).toBe("abc123:package.json")
   const shell = process.env.SHELL || "/bin/sh"
   const ordered = fake.calls
-    .filter((call) => call.command === "provision-env" || call.command === shell || (call.command === "herdr" && call.args[1] === "start"))
+    .filter((call) => call.command === "provision" || call.command === shell || (call.command === "herdr" && call.args[1] === "start"))
     .map((call) => call.command === shell ? call.args[1] : call.command)
-  expect(ordered).toEqual(["provision-env", "pnpm db:migrate", "pnpm db:seed", "herdr"])
+  expect(ordered).toEqual(["provision", "pnpm db:seed", "herdr"])
 })
 
-test("a malformed worktree.setup fails before allocating Herdr resources", async () => {
-  const fake = createFake({ manifest: JSON.stringify({ worktree: { setup: "pnpm db:migrate" } }) })
+test("a malformed declared setup fails before allocating Herdr resources", async () => {
+  const fake = createFake({ manifest: JSON.stringify({ provision: { setup: "pnpm db:migrate" } }) })
   await expect(Effect.runPromise(createEnvironment({
     repo: "/repo", branch: "feat/feature", ttl: "7d", setupCommands: []
-  }).pipe(Effect.provide(fake.layer)))).rejects.toThrow("invalid package.json worktree.setup")
+  }).pipe(Effect.provide(fake.layer)))).rejects.toThrow("invalid package.json setup")
   expect(fake.calls.every((call) => call.command === "git")).toBe(true)
 })
 
@@ -522,7 +522,7 @@ for (const agent of ["pi", "opencode"] as const) {
       ["agent", "prompt", "wA:p1", "Implement the feature"]
     ])
     expect(fake.calls.indexOf(agentCalls(fake, "get")[0]!)).toBeLessThan(fake.calls.indexOf(agentCalls(fake, "prompt")[0]!))
-    expect(fake.calls.findIndex((call) => call.command === "provision-env")).toBeLessThan(
+    expect(fake.calls.findIndex((call) => call.command === "provision")).toBeLessThan(
       fake.calls.indexOf(agentCalls(fake, "start")[0]!)
     )
   })

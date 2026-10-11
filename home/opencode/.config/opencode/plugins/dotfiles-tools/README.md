@@ -6,7 +6,7 @@ Herdr. It works the same from the web app, Fleet and the TUI.
 | File | Role |
 | --- | --- |
 | `server.ts` | `create_worktree` tool, `/worktree` command, source-session checks, preflight |
-| `contract.ts` | Effect Schemas: tool input/output, `provision-env` link report |
+| `contract.ts` | Effect Schemas: tool input/output, `provision env` link report |
 | `worktree.ts` | branch inference, agent guidance |
 
 ## Flow
@@ -19,7 +19,7 @@ Either way, the target is `git rev-parse --show-toplevel` of that directory. Onl
 sessions can call the tool. Host schemas are `portable(..., { exact: true })`, so unknown keys
 (such as the Herdr-era `setup`/`ttl`/`path`/`label`) are rejected.
 
-1. `provision-env --repo <repo> --check-vercel-link --non-interactive` (30s), run with the
+1. `provision env --repo <repo> --check-vercel-link --non-interactive` (30s), run with the
    service's environment minus `HERDR_*`. Nothing has been allocated at this point. Only exit 3
    with a strict `{status:'vercel_link_required',directory,reason}` report becomes a structured
    result containing the identical `retry` input. Any other failure stops the call, and

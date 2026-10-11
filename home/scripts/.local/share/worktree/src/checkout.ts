@@ -18,10 +18,11 @@ import { readDeclaredSetup, resolveBranchBase, resolveSource, runInstallOnly, ru
  * (no network, no env-file reads), so unlinked repositories never fail:
  *
  * - `full`: the repository is configured for Vercel provisioning. Runs
- *   `provision-env --database` exactly like `worktree create`; any failure fails.
- * - `install`: not configured for Vercel; a lockfile provision-env supports
+ *   `provision env --database` exactly like `worktree create` (it also runs the
+ *   declared setup); any failure fails.
+ * - `install`: not configured for Vercel; a lockfile `provision env` supports
  *   exists, so only dependencies are installed (`--skip-vercel`, no databases).
- * - `none`: not configured and no supported lockfile; provision-env is skipped.
+ * - `none`: not configured and no supported lockfile; provisioning is skipped.
  *
  * Skipping is always reported as a warning, never a failure.
  */
@@ -30,18 +31,18 @@ export type ProvisioningPlan =
   | { readonly kind: "install"; readonly lockfile: string }
   | { readonly kind: "none" }
 
-/** Must match provision-env's installDependencies() detection order. */
+/** Must match `provision env`'s installDependencies() detection order. */
 export const SUPPORTED_LOCKFILES = ["pnpm-lock.yaml", "bun.lock", "bun.lockb", "package-lock.json", "yarn.lock"] as const
 
 export const NO_VERCEL_WARNING =
-  "no Vercel configuration (no .vercel/project.json in any checkout, no package.json provisionEnv); " +
+  "no Vercel configuration (no .vercel/project.json in any checkout, no package.json provision or provisionEnv); " +
   "skipped Vercel environment pull and sandbox databases"
 export const NO_LOCKFILE_WARNING = "no supported lockfile; skipped dependency install"
 
-const declaresProvisionEnv = (checkout: string) => {
+const declaresProvisioning = (checkout: string) => {
   try {
     const manifest: unknown = JSON.parse(readFileSync(join(checkout, "package.json"), "utf8"))
-    return typeof manifest === "object" && manifest !== null && "provisionEnv" in manifest
+    return typeof manifest === "object" && manifest !== null && ("provision" in manifest || "provisionEnv" in manifest)
   } catch {
     // Missing or unreadable manifests are not configuration evidence.
     return false
@@ -50,13 +51,13 @@ const declaresProvisionEnv = (checkout: string) => {
 
 /**
  * A repository is "Vercel-configured" when its source package.json declares
- * `provisionEnv` (explicit opt-in, e.g. a monorepo appDir), or when any of its
- * checkouts has a root `.vercel/project.json` (the link provision-env reuses
- * from siblings). Configured-but-unlinked repos still fail in provision-env.
+ * `provision` (legacy: `provisionEnv`; explicit opt-in, e.g. a monorepo appDir), or
+ * when any of its checkouts has a root `.vercel/project.json` (the link `provision env`
+ * reuses from siblings). Configured-but-unlinked repos still fail in `provision env`.
  */
 export const isVercelConfigured = (source: string) =>
   Effect.gen(function* () {
-    if (declaresProvisionEnv(source)) return true
+    if (declaresProvisioning(source)) return true
     const process = yield* Process
     const listed = yield* process.capture("git", ["-C", source, "worktree", "list", "--porcelain", "-z"])
     const checkouts = listed.stdout.split("\0")
@@ -164,7 +165,9 @@ export const checkoutEnvironment = (options: CheckoutOptions) =>
         warnings.push(NO_VERCEL_WARNING, NO_LOCKFILE_WARNING)
         break
     }
-    yield* runSetupCommands(destination, [...declaredSetup, ...options.setupCommands]).pipe(preserved("setup"))
+    // `provision env` runs the declared setup after full provisioning; otherwise run it here.
+    const setup = plan.kind === "full" ? options.setupCommands : [...declaredSetup, ...options.setupCommands]
+    yield* runSetupCommands(destination, setup).pipe(preserved("setup"))
     for (const warning of warnings) yield* Console.error(`worktree: warning: ${warning}`)
 
     return { source, branch, base, path: destination, warnings } satisfies CheckedOutEnvironment

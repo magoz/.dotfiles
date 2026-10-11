@@ -116,7 +116,7 @@ export class WorktreeManager {
     const wt = await this.json(Worktrees, "herdr", ["worktree", "list", "--cwd", current], signal)
     const ws = await this.json(Workspaces, "herdr", ["workspace", "list"], signal)
     const agents = await this.json(Agents, "herdr", ["agent", "list"], signal)
-    const leases = await this.json(Leases, "sandbox-db", ["list", "--json"], signal)
+    const leases = await this.json(Leases, "provision", ["db", "list", "--json"], signal)
     unique(wt.result.worktrees.map((w) => w.path))
     unique(wt.result.worktrees.flatMap((w) => w.open_workspace_id ? [w.open_workspace_id] : []))
     unique(ws.result.workspaces.map((w) => w.workspace_id))
@@ -150,11 +150,11 @@ export class WorktreeManager {
     return { source, root, worktrees }
   }
 
-  /** Herdr-free inventory: Git's worktree list and sandbox-db leases only. No workspaces or agents. */
+  /** Herdr-free inventory: Git's worktree list and provision db leases only. No workspaces or agents. */
   private async checkouts(cwd: string, signal?: AbortSignal): Promise<Inventory> {
     const current = await canonical(cwd)
     const listed = parseWorktreePorcelain((await this.command("git", ["-C", current, "worktree", "list", "--porcelain", "-z"], signal)).stdout)
-    const leases = await this.json(Leases, "sandbox-db", ["list", "--json"], signal)
+    const leases = await this.json(Leases, "provision", ["db", "list", "--json"], signal)
     unique(leases.map((l) => JSON.stringify([l.worktree, l.leaseName])))
     const primary = listed[0]
     if (!primary || primary.bare) refuse("Primary checkout unavailable")
@@ -215,7 +215,7 @@ export class WorktreeManager {
     const statuses: Array<{ name: string; status: "live" | "missing" | "none"; id?: string }> = []
     // Query every lease before ANY release. Missing/none intentionally exit 1.
     for (const name of names) {
-      const result = await this.command("sandbox-db", ["status", "--worktree", selected.path, "--json", "--lease", name], signal, true)
+      const result = await this.command("provision", ["db", "status", "--worktree", selected.path, "--json", "--lease", name], signal, true)
       const status = decode(LeaseStatus, result.stdout)
       const recorded = selected.leases.find((l) => l.name === name)
       if (status.lease !== name || status.worktree !== selected.path ||
@@ -292,7 +292,7 @@ export class WorktreeManager {
     try {
       for (const status of statuses) {
         await receipt.append("pending-renew", [status.name])
-        const renewed = await this.json(Renewed, "sandbox-db", ["renew", "--worktree", target.path, "--json", "--lease", status.name, "--ttl", ttl], signal)
+        const renewed = await this.json(Renewed, "provision", ["db", "renew", "--worktree", target.path, "--json", "--lease", status.name, "--ttl", ttl], signal)
         if (renewed.lease !== status.name) refuse("Renewal identity mismatch")
         await receipt.append("renewed", [status.name])
       }
@@ -335,7 +335,7 @@ export class WorktreeManager {
         const expectedRemaining = fresh.selected.leases.filter((l) => !released.includes(l.name))
         if (before.head !== initial.head || before.selected.branch !== initial.selected.branch || JSON.stringify(before.selected.leases) !== JSON.stringify(expectedRemaining)) refuse("Lease/branch identity changed; inspect receipt")
         await receipt.append("pending-release", [lease.name, lease.id ?? 'unknown'])
-        const output = await this.json(Released, "sandbox-db", ["release", "--worktree", target.path, "--json", "--lease", lease.name], signal)
+        const output = await this.json(Released, "provision", ["db", "release", "--worktree", target.path, "--json", "--lease", lease.name], signal)
         if (output.lease !== lease.name || output.branch_id !== lease.id) refuse("Release identity mismatch; inspect receipt")
         released.push(lease.name)
         await receipt.append("released", [lease.name, lease.id ?? 'unknown'])

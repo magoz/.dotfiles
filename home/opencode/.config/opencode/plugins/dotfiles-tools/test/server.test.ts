@@ -99,7 +99,7 @@ test("no TUI or Herdr needed: preflight, native worktree, fresh session moved th
   const result = await f.call({ branch: "feat/task", prompt: "Implement the task\nwith details" })
   assert.deepEqual(f.calls.map((call) => [call.command, ...call.args]), [
     ["git", "-C", "/repo", "rev-parse", "--show-toplevel"],
-    ["provision-env", "--repo", "/repo", "--check-vercel-link", "--non-interactive"],
+    ["provision", "env", "--repo", "/repo", "--check-vercel-link", "--non-interactive"],
   ])
   for (const call of f.calls) assert.deepEqual(call.env, { PATH: "/bin" })
   // Untitled: OpenCode titles it from the task.
@@ -126,7 +126,8 @@ test("repo targets another repository's project from this session", async (t) =>
   const f = fixture()
   t.after(await f.start())
   await f.call({ repo: "/other/packages/x", branch: "feat/task", prompt: "task" })
-  assert.deepEqual(f.calls.map((call) => call.args[1]), ["/other/packages/x", "/other"])
+  // git -C <repo> …, then provision env --repo <checkout root> …
+  assert.deepEqual(f.calls.map((call) => call.args[call.args.indexOf(call.command === "git" ? "-C" : "--repo") + 1]), ["/other/packages/x", "/other"])
   assert.deepEqual(f.sessions, [{ location: { directory: "/other" } }])
   assert.deepEqual(f.worktrees, [{ projectID: "prj_other", name: "feat--task" }])
   await assert.rejects(f.call({ repo: "/nowhere", branch: "feat/task" }), /Not a Git checkout: \/nowhere/)

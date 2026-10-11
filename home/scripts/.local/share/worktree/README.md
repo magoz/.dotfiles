@@ -45,10 +45,10 @@ explicit user security decision.
 ## Requirements
 
 - a running Herdr server with the selected harness integration installed;
-- `git`, `bun`, `herdr`, `vercel`, `provision-env`, and `sandbox-db` in `PATH`, plus `pi` (default) or `opencode` for the selected harness;
+- `git`, `bun`, `herdr`, `vercel`, and `provision` (`@magoz/provision`) in `PATH`, plus `pi` (default) or `opencode` for the selected harness;
 - a source Git checkout linked to Vercel, or sibling checkouts sharing one Vercel identity (Pi can resolve a missing link before creation);
 - ignored `.env.local`, `.env.test`, and `.vercel/` paths in the repository;
-- the project-local sandbox database profile expected by `provision-env`, or valid global `sandbox-db` authentication.
+- the project-local sandbox database profile expected by `provision env`, or valid global `provision db auth`.
 
 ## CLI reference
 
@@ -144,7 +144,7 @@ destination Pi, the extension gracefully shuts down the source Pi. If creation o
 provisioning fails, the source stays alive.
 
 Before calling the CLI, `create_worktree` preflights the source app's Vercel
-identity through `provision-env --check-vercel-link --non-interactive`. When a
+identity through `provision env --check-vercel-link --non-interactive`. When a
 link is missing, the tool returns the app directory and retry arguments to the
 current Pi agent **before allocating anything**. The agent investigates and links
 an unambiguous existing project/team proactively, then retries the same tool
@@ -173,11 +173,11 @@ Keybindings:
 
 Starting or focusing Pi closes the manager after Herdr focuses the destination.
 When multiple Pi agents share a workspace, the manager asks which pane to target.
-Provisioning delegates to `provision-env` in non-interactive, fail-closed mode.
+Provisioning delegates to `provision env` in non-interactive, fail-closed mode.
 
 Retirement refuses the current or primary checkout, dirty Git state, and
 working, blocked, or unknown Pi agents. It rechecks Git status and both database
-lease slots, then runs `sandbox-db release` for each managed lease before Herdr
+lease slots, then runs `provision db release` for each managed lease before Herdr
 removes the checkout. Each release deletes the provisioned Neon branch, removes
 its leased database URL keys, and removes the local lease record. Cleanup fails
 closed if a lease cannot be safely released. Retirement may optionally run safe
@@ -187,14 +187,18 @@ all irreversible steps that completed so recovery remains explicit.
 
 ## Repository setup
 
-`provision-env` deliberately does not prepare a repository schema: fresh sandbox
-leases clone a baseline that lags the checked-out code. A repository declares its
-own bootstrap in its root `package.json`, so every entry point (Pi, OpenCode,
-Fleet, the `worktrees` strategy) applies it:
+Fresh sandbox leases clone a baseline that lags the checked-out code, so a
+repository declares its own bootstrap in its root `package.json`, and every entry
+point (Pi, OpenCode, Fleet, the `worktrees` strategy) applies it:
 
 ```json
-"worktree": { "setup": ["pnpm db:migrate", "NODE_ENV=test pnpm db:migrate"] }
+"provision": { "setup": ["pnpm db:migrate", "NODE_ENV=test pnpm db:migrate"] }
 ```
+
+The legacy `"worktree": { "setup": [...] }` is still read when `provision.setup` is
+absent. After full provisioning, `provision env` itself runs these commands; for
+repositories without Vercel configuration (install only, or nothing), `worktree` runs
+them.
 
 Callers may append more with `--setup`:
 
@@ -204,10 +208,11 @@ worktree create \
   --setup "pnpm db:seed"
 ```
 
-`worktree.setup` is read from the pinned base (the code the checkout will contain)
+The declared setup is read from the pinned base (the code the checkout will contain)
 before anything is allocated; a value that is not an array of non-empty strings, or
 an unparsable `package.json`, fails preflight. No `package.json` or no key means no
-declared commands. It is not Vercel-configuration evidence (`provisionEnv` is).
+declared commands. Declaring setup is not Vercel-configuration evidence (`provision`
+or `provisionEnv` with an `appDir` is).
 
 After provisioning, declared commands run first, then `--setup` commands, in order,
 from the new checkout root through the user's login shell (`$SHELL -lc`). A monorepo
@@ -220,11 +225,11 @@ The CLI never guesses repository-specific schema or seed operations.
 
 In order, `worktree create`:
 
-1. resolves the source Git checkout, requires a new destination branch and fetches/pins origin's current default tip unless `--base` is explicit, resolves the sibling checkout path, and reads the base's `package.json` `worktree.setup`;
+1. resolves the source Git checkout, requires a new destination branch and fetches/pins origin's current default tip unless `--base` is explicit, resolves the sibling checkout path, and reads (validates) the base's declared `package.json` setup;
 2. calls `herdr worktree create --path ...`, which creates both the checkout and its grouped Herdr workspace;
 3. resolves the workspace's initial root pane;
-4. runs `provision-env --database --non-interactive`, failing safely on unexpected existing env files, pulling Development and `test` Vercel variables, removing deployment-only metadata and integration database URLs, and creating independent database leases for both;
-5. runs the declared `worktree.setup` commands, then every explicit `--setup` command;
+4. runs `provision env --database --non-interactive`, failing safely on unexpected existing env files, pulling Development and `test` Vercel variables, removing deployment-only metadata and integration database URLs, and creating independent database leases for both, then the declared setup commands;
+5. runs every explicit `--setup` command;
 6. starts a fresh selected agent (Pi by default) without a task attached;
 7. verifies the agent's kind, alias, destination pane, and explicit interactive readiness;
 8. submits the kickoff task as the fresh session's first prompt;
@@ -236,7 +241,7 @@ worktree.
 
 ## Failure and recovery
 
-`provision-env` owns rollback of newly pulled `.env.local` and `.env.test` files
+`provision env` owns rollback of newly pulled `.env.local` and `.env.test` files
 and database leases created by that invocation. After Herdr has created the checkout, this CLI preserves the
 worktree, branch, and workspace on later failure so the exact state can be
 inspected and resumed. It never force-removes a checkout or deletes a branch.
@@ -282,12 +287,13 @@ pane. In order, it:
    unique temporary ref, fail closed; explicit `--base` used without fetching),
    resolves the sibling path `<primary>-<branch-slug>` (or `--path`), refuses an
    existing destination, decides the provisioning plan and reads the base's
-   `worktree.setup` — all before allocating;
+   declared setup — all before allocating;
 2. runs `git -C <primary> worktree add -b <branch> -- <path> <base>`, then writes the
    ownership marker (below) before provisioning;
 3. provisions (rule below);
-4. runs the declared `worktree.setup` commands, then every `--setup` command, through
-   `$SHELL -lc` in the checkout (see [Repository setup](#repository-setup)).
+4. runs the declared setup commands (unless `provision env` already ran them), then
+   every `--setup` command, through `$SHELL -lc` in the checkout (see
+   [Repository setup](#repository-setup)).
 
 `--json` prints exactly one object on stdout. Success:
 `{source, branch, base, path, warnings}`. Failure exits 2 and prints a report with no
@@ -307,18 +313,18 @@ provisioning steps (`src/steps.ts`).
 
 Decided from local evidence only (no network, no env-file reads):
 
-- **Vercel-configured** — the source `package.json` declares `provisionEnv`, or any
-  checkout of the repository (`git worktree list`) has a root `.vercel/project.json`
-  (the link `provision-env` reuses from siblings): run the full
-  `provision-env --repo <path> --source <source> --database --non-interactive --label --ttl`,
+- **Vercel-configured** — the source `package.json` declares `provision` or
+  `provisionEnv`, or any checkout of the repository (`git worktree list`) has a root
+  `.vercel/project.json` (the link `provision env` reuses from siblings): run the full
+  `provision env --repo <path> --source <source> --database --non-interactive --label --ttl`,
   exactly like `create`. Any failure fails (checkout preserved). A configured repo that
-  is not linked anywhere fails in `provision-env` — link it; that is a real problem.
+  is not linked anywhere fails in `provision env` — link it; that is a real problem.
 - **Not configured, supported lockfile** (`pnpm-lock.yaml`, `bun.lock`, `bun.lockb`,
-  `package-lock.json`, `yarn.lock` at the checkout root, mirroring `provision-env`):
-  `provision-env --repo <path> --skip-vercel --non-interactive` installs dependencies
-  only. No env files, no databases (a repo without Vercel has no sandbox-db profile and
+  `package-lock.json`, `yarn.lock` at the checkout root, mirroring `provision env`):
+  `provision env --repo <path> --skip-vercel --non-interactive` installs dependencies
+  only. No env files, no databases (a repo without Vercel has no sandbox profile and
   must not consume the global sandbox). Warning: no Vercel configuration.
-- **Not configured, no lockfile** (e.g. `~/.dotfiles`): `provision-env` is skipped.
+- **Not configured, no lockfile** (e.g. `~/.dotfiles`): provisioning is skipped.
   Warnings: no Vercel configuration, no supported lockfile.
 
 `--check-vercel-link` is deliberately not used for this decision: it fails (exit 2,
@@ -354,7 +360,7 @@ marker for its current branch, or whose git dir is not under `<common>/worktrees
 refused (`Not a worktree checkout (no dotfiles-worktree ownership marker)`) by
 `plan-checkout` and by every re-check in `retire-checkout`. Needs no
 `HERDR_ENV` and never calls Herdr; `--cwd` is required. Inventory comes from
-`git worktree list --porcelain -z` plus `sandbox-db` leases. Same guarantees as the Herdr
+`git worktree list --porcelain -z` plus `provision db` leases. Same guarantees as the Herdr
 path: canonical exact target, primary/current/detached/locked/prunable/dirty refused,
 token pins repository, branch, HEAD and lease IDs (separate token domain from Herdr
 plans), every lease checked before any release, full re-checks before each release
@@ -389,13 +395,13 @@ The existing **Pi dashboard cannot see OpenCode agents**. Use this manager (or
 OpenCode `/worktrees`) for mixed assessment worktrees. Pi defaults/files unchanged.
 
 Inventory uses explicit Herdr `worktree list --cwd`, workspace/agent lists, Git
-status, and sandbox-db lease records. It never reads environment files or prints
+status, and `provision db` lease records. It never reads environment files or prints
 raw command responses/errors. Unknown identities/statuses fail closed. Retirement
 requires the canonical exact linked checkout and workspace; primary, detached,
 prunable, current/subdirectory, dirty, unavailable and active/blocked/unknown-agent
 targets are refused. All agent kinds are considered. Both default/test plus any
 extra recorded leases are checked before deletion; live/missing leases are released
-through sandbox-db before Herdr removes the workspace and checkout. Full checks
+through `provision db` before Herdr removes the workspace and checkout. Full checks
 repeat before each release and immediately before removal. Commands have bounded
 60-second deadlines; cancellation waits for descendant SIGKILL cleanup.
 
@@ -403,7 +409,7 @@ Mutation journals live in `~/.local/state/worktree-manager`: private directory,
 mode-0600 append-only receipts synced **before** irreversible commands. Completed
 receipts are archived as `*.complete.jsonl`, permitting later operations. An active
 receipt blocks another mutation of that target. On failure/interruption, inspect
-its pending/completed steps and independently reconcile Git, Herdr and sandbox-db
+its pending/completed steps and independently reconcile Git, Herdr and `provision db`
 state before manually archiving the receipt. **Never blindly retry or delete a
 receipt to bypass an unknown outcome.** No automatic rollback or force-reset helper.
 Read-only inspection remains available. Prior successful releases cannot be undone.

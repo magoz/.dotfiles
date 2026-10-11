@@ -9,7 +9,7 @@ afterEach(() => {
 })
 
 // All external lifecycle commands are fake executables. PATH has no fallback to
-// real Git/Herdr/provision-env; only the explicit shell's builtin echo runs.
+// real Git/Herdr/provision; only the explicit shell's builtin echo runs.
 const fixture = () => {
   const root = mkdtempSync(join(tmpdir(), "worktree-cli-test-"))
   roots.push(root)
@@ -28,7 +28,7 @@ if (command === "git") {
   else if (args.includes("--git-common-dir")) console.log("/repo/.git")
   else if (args.at(-1)?.startsWith("refs/heads/")) process.exit(1)
   else if (args.includes("--verify")) console.log("abc123")
-} else if (command === "provision-env") {
+} else if (command === "provision") {
   console.log("provision stdout")
   console.error("provision stderr")
   if (process.env.WORKTREE_TEST_FAIL === "provision") process.exit(2)
@@ -46,7 +46,7 @@ if (command === "git") {
   else emit({})
 } else process.exit(99)
 `
-  for (const command of ["git", "herdr", "provision-env"]) {
+  for (const command of ["git", "herdr", "provision"]) {
     const path = join(root, command)
     writeFileSync(path, script)
     chmodSync(path, 0o755)
@@ -89,8 +89,8 @@ for (const agent of ["pi", "opencode"] as const) {
       expect(result.stderr).toContain(progress)
     }
     expect(result.calls.filter((call) => call.command === "herdr" && call.args[1] === "prompt")).toHaveLength(1)
-    expect(result.calls.find((call) => call.command === "provision-env")?.args).toEqual([
-      "--repo", result.destination, "--source", "/repo", "--database", "--non-interactive", "--label", "feat/feature", "--ttl", "7d"
+    expect(result.calls.find((call) => call.command === "provision")?.args).toEqual([
+      "env", "--repo", result.destination, "--source", "/repo", "--database", "--non-interactive", "--label", "feat/feature", "--ttl", "7d"
     ])
   })
 }

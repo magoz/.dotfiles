@@ -6,7 +6,7 @@ import { tmpdir } from "node:os"
 import { WorktreeManager, parseWorktreePorcelain, type ManagerRunner } from "../src/manager"
 import { MARKER_FILE, writeMarker } from "../src/marker"
 
-// Herdr-free retirement of `worktree checkout` checkouts: real Git, fake sandbox-db.
+// Herdr-free retirement of `worktree checkout` checkouts: real Git, fake `provision db`.
 const directories: string[] = []
 afterEach(async () => { for (const dir of directories.splice(0)) await rm(dir, { recursive: true, force: true }) })
 
@@ -30,10 +30,13 @@ async function fixture(leaseState: ReadonlyArray<readonly [string, "live" | "mis
   if (marked) writeMarker(await gitDir(target), "feat/x")
   const calls: string[][] = []
   const leases = new Map<string, "live" | "missing">(leaseState)
-  const runner: ManagerRunner = async (command, args) => {
+  const runner: ManagerRunner = async (provisionOrOther, provisionArgs) => {
+    const db = provisionOrOther === "provision" && provisionArgs[0] === "db"
+    const command = db ? "provision db" : provisionOrOther
+    const args = db ? provisionArgs.slice(1) : provisionArgs
     calls.push([command, ...args])
     if (command === "git") return git(args)
-    if (command !== "sandbox-db") return { code: 127, stdout: "" }
+    if (command !== "provision db") return { code: 127, stdout: "" }
     const name = args[args.indexOf("--lease") + 1] ?? ""
     const status = leases.get(name) ?? "none"
     if (args[0] === "list") return { code: 0, stdout: JSON.stringify([...leases.keys()].map((leaseName) => ({ worktree: target, leaseName, branchId: `id-${leaseName}`, connection_url: "https://SECRET.invalid" }))) }
@@ -153,8 +156,8 @@ test("git worktree remove failure is recorded and blocks a blind retry", async (
 test("worktree-manage CLI: Herdr-free commands need no HERDR_ENV and refuse Herdr-only options", async () => {
   const f = await fixture([])
   const bin = join(f.dir, "bin"); await mkdir(bin)
-  await writeFile(join(bin, "sandbox-db"), `#!/bin/sh\ncase "$1" in list) echo '[]';; status) printf '{"status":"none","lease":"%s","worktree":"%s"}' "$6" "$3"; exit 1;; *) exit 2;; esac\n`)
-  await chmod(join(bin, "sandbox-db"), 0o755)
+  await writeFile(join(bin, "provision"), `#!/bin/sh\n[ "$1" = db ] || exit 2\ncase "$2" in list) echo '[]';; status) printf '{"status":"none","lease":"%s","worktree":"%s"}' "$7" "$4"; exit 1;; *) exit 2;; esac\n`)
+  await chmod(join(bin, "provision"), 0o755)
   const home = join(f.dir, "home"); await mkdir(home)
   const cli = async (...args: string[]) => {
     const child = Bun.spawn([process.execPath, resolve(import.meta.dir, "../src/manage-main.ts"), ...args], {
@@ -200,8 +203,8 @@ test("a marker removed after planning stops retirement before any release", asyn
 test("worktree-manage CLI plan-checkout refuses an unmarked worktree", async () => {
   const f = await fixture([], false)
   const bin = join(f.dir, "bin"); await mkdir(bin)
-  await writeFile(join(bin, "sandbox-db"), `#!/bin/sh\ncase "$1" in list) echo '[]';; *) exit 2;; esac\n`)
-  await chmod(join(bin, "sandbox-db"), 0o755)
+  await writeFile(join(bin, "provision"), `#!/bin/sh\n[ "$1" = db ] || exit 2\ncase "$2" in list) echo '[]';; *) exit 2;; esac\n`)
+  await chmod(join(bin, "provision"), 0o755)
   const child = Bun.spawn([process.execPath, resolve(import.meta.dir, "../src/manage-main.ts"), "plan-checkout", "--cwd", f.source, "--path", f.target], {
     env: { PATH: `${bin}:${process.env.PATH}`, HOME: f.dir }, stdout: "pipe", stderr: "pipe"
   })

@@ -33,7 +33,7 @@ keeps a deleted working directory. `create_worktree` then recovers the source
 from the shared CLI's naming policy: the longest sibling `<name>` of the nearest
 existing ancestor for which the removed checkout is `<name>-…` and whose `.git`
 is a directory (a primary checkout, never another linked worktree). Both
-`provision-env` and `worktree create` receive that primary as `--repo` and run
+`provision env` and `worktree create` receive that primary as `--repo` and run
 with it as their working directory, and the recovery is reported to the agent.
 Without a matching primary, the tool fails before running any command and asks
 for Pi to be started in the primary checkout. Never recreate the deleted
@@ -42,7 +42,7 @@ directory as a workaround.
 ## Agent-owned Vercel linking
 
 Before allocating a worktree, `create_worktree` runs
-`provision-env --check-vercel-link --non-interactive` against the source checkout.
+`provision env --check-vercel-link --non-interactive` against the source checkout.
 This only validates/reuses local app identity; it does not install dependencies,
 pull env files, allocate databases, query Vercel, or choose a remote project.
 
@@ -77,14 +77,14 @@ removing anything, it refuses the current or primary checkout, dirty Git state,
 and working, blocked, or unknown Pi agents. It then rechecks the worktree and
 both authoritative sandbox database slots (`default` and `test`).
 
-For every recorded sandbox database, retirement runs `sandbox-db release`
+For every recorded sandbox database, retirement runs `provision db release`
 **before** removing the Herdr workspace and Git worktree. A release deletes the
 provisioned Neon branch, removes its leased database URL keys from the worktree's
 environment file, and removes the local lease record. If database cleanup cannot
 be authenticated or safely completed, retirement stops and preserves the
 worktree.
 
-`sandbox-db` independently refuses to delete a project default branch, a
+`provision db` independently refuses to delete a project default branch, a
 protected branch, a branch in another project, or a branch without its guarded
 `agent/` prefix. Expiration remains a cleanup backstop for an inaccessible lease.
 

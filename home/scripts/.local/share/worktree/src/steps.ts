@@ -40,7 +40,10 @@ export const resolveBranchBase = (
     return { base, path } as const
   })
 
-/** Full provisioning: Vercel Development/test env pull plus two sandbox database leases. */
+/**
+ * Full provisioning through `provision env`: Vercel Development/test env pull, two sandbox
+ * database leases, then the repository's declared setup (run by provision itself).
+ */
 export const runProvisioning = (
   source: string,
   destination: string,
@@ -50,7 +53,8 @@ export const runProvisioning = (
   Effect.gen(function* () {
     const process = yield* Process
     yield* Console.log(`worktree: provisioning ${destination}`)
-    yield* process.inherit("provision-env", [
+    yield* process.inherit("provision", [
+      "env",
       "--repo",
       destination,
       "--source",
@@ -69,7 +73,8 @@ export const runInstallOnly = (destination: string) =>
   Effect.gen(function* () {
     const process = yield* Process
     yield* Console.log(`worktree: installing dependencies in ${destination}`)
-    yield* process.inherit("provision-env", [
+    yield* process.inherit("provision", [
+      "env",
       "--repo",
       destination,
       "--skip-vercel",
@@ -80,12 +85,11 @@ export const runInstallOnly = (destination: string) =>
 const SetupCommand = Schema.String.pipe(
   Schema.filter((command) => command.trim().length > 0, { message: () => "setup commands must be non-empty strings" })
 )
-const Manifest = Schema.Struct({
-  worktree: Schema.optional(Schema.Struct({ setup: Schema.optional(Schema.Array(SetupCommand)) }))
-})
+const Setup = Schema.optional(Schema.Struct({ setup: Schema.optional(Schema.Array(SetupCommand)) }))
+const Manifest = Schema.Struct({ provision: Setup, worktree: Setup })
 
 /**
- * Repository-declared setup: root package.json `worktree.setup` (e.g. migrations
+ * Repository-declared setup: root package.json `provision.setup` (legacy: `worktree.setup`; e.g. migrations
  * for freshly leased sandbox databases), read from the pinned base, i.e. the code
  * the new checkout will contain. Read before allocating anything, so a malformed
  * declaration fails preflight. No package.json or no key means no commands.
@@ -98,9 +102,9 @@ export const readDeclaredSetup = (repo: string, base: string) =>
     if (listed.stdout.trim() !== "package.json") return []
     const manifest = yield* process.capture("git", ["-C", repo, "show", "--end-of-options", `${base}:package.json`])
     const decoded = yield* Schema.decodeUnknown(Schema.parseJson(Manifest))(manifest.stdout).pipe(
-      Effect.mapError((error) => new WorktreeError({ message: `invalid package.json worktree.setup at ${base}: ${error.message}` }))
+      Effect.mapError((error) => new WorktreeError({ message: `invalid package.json setup at ${base}: ${error.message}` }))
     )
-    return decoded.worktree?.setup ?? []
+    return decoded.provision?.setup ?? decoded.worktree?.setup ?? []
   })
 
 export const runSetupCommands = (destination: string, commands: ReadonlyArray<string>) =>

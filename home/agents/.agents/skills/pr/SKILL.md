@@ -791,9 +791,9 @@ another merge.
      release every sandbox database lease recorded for that exact canonical checkout path, while its
      ignored environment files still hold the credentials the release needs. After the worktree is
      gone, the lease tool cannot authenticate and the databases wait for their expiry instead. When
-     the repository or host provides a lease tool (for example `sandbox-db`), enumerate leases from
-     its own records (`sandbox-db list`), match on the exact recorded canonical path, and release
-     each one with `sandbox-db release --worktree <path> --lease <name>`, covering `default`, `test`,
+     the repository or host provides a lease tool (for example `provision db`), enumerate leases from
+     its own records (`provision db list --json`), match on the exact recorded canonical path, and
+     release each one with `provision db release --worktree <path> --lease <name>`, covering `default`, `test`,
      and any extra named leases. Never read, print, or copy environment values. Release only leases
      whose recorded path equals the target; never release by label or name pattern alone. Persist
      `leases-released` with the released lease names before worktree removal, or `leases-skipped`

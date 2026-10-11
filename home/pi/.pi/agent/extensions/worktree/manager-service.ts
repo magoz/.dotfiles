@@ -90,7 +90,7 @@ export class WorktreeManagerService {
       this.commands.run("herdr", ["worktree", "list", "--cwd", cwd], execOptions),
       this.commands.run("herdr", ["workspace", "list"], execOptions),
       this.commands.run("herdr", ["agent", "list"], execOptions),
-      this.commands.run("sandbox-db", ["list", "--json"], execOptions),
+      this.commands.run("provision", ["db", "list", "--json"], execOptions),
     ]);
 
     const worktreePayload = parseCommandJson<WorktreeListPayload>(worktreeResult, "Herdr worktree list");
