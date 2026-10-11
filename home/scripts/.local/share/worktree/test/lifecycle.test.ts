@@ -366,7 +366,7 @@ test("the lifecycle provisions before setup and starts one fresh Pi", async () =
 })
 
 test("declared setup is left to provision env; only caller setup runs after it", async () => {
-  const fake = createFake({ manifest: JSON.stringify({ worktree: { setup: ["pnpm db:migrate"] } }) })
+  const fake = createFake({ manifest: JSON.stringify({ provision: { setup: ["pnpm db:migrate"] } }) })
   await Effect.runPromise(createEnvironment({
     repo: "/repo", branch: "feat/feature", ttl: "7d", prompt: "Go", setupCommands: ["pnpm db:seed"]
   }).pipe(Effect.provide(fake.layer)))
@@ -377,6 +377,14 @@ test("declared setup is left to provision env; only caller setup runs after it",
     .filter((call) => call.command === "provision" || call.command === shell || (call.command === "herdr" && call.args[1] === "start"))
     .map((call) => call.command === shell ? call.args[1] : call.command)
   expect(ordered).toEqual(["provision", "pnpm db:seed", "herdr"])
+})
+
+test("removed worktree/provisionEnv keys fail before allocating Herdr resources", async () => {
+  const fake = createFake({ manifest: JSON.stringify({ worktree: { setup: ["pnpm db:migrate"] } }) })
+  await expect(Effect.runPromise(createEnvironment({
+    repo: "/repo", branch: "feat/feature", ttl: "7d", setupCommands: []
+  }).pipe(Effect.provide(fake.layer)))).rejects.toThrow('move them to "provision.setup"')
+  expect(fake.calls.every((call) => call.command === "git")).toBe(true)
 })
 
 test("a malformed declared setup fails before allocating Herdr resources", async () => {

@@ -195,8 +195,7 @@ point (Pi, OpenCode, Fleet, the `worktrees` strategy) applies it:
 "provision": { "setup": ["pnpm db:migrate", "NODE_ENV=test pnpm db:migrate"] }
 ```
 
-The legacy `"worktree": { "setup": [...] }` is still read when `provision.setup` is
-absent. After full provisioning, `provision env` itself runs these commands; for
+After full provisioning, `provision env` itself runs these commands; for
 repositories without Vercel configuration (install only, or nothing), `worktree` runs
 them.
 
@@ -210,9 +209,9 @@ worktree create \
 
 The declared setup is read from the pinned base (the code the checkout will contain)
 before anything is allocated; a value that is not an array of non-empty strings, or
-an unparsable `package.json`, fails preflight. No `package.json` or no key means no
-declared commands. Declaring setup is not Vercel-configuration evidence (`provision`
-or `provisionEnv` with an `appDir` is).
+an unparsable `package.json`, fails preflight, as do the removed `worktree` and
+`provisionEnv` keys. No `package.json` or no key means no declared commands. Declaring
+setup is not Vercel-configuration evidence (`provision.appDir` is).
 
 After provisioning, declared commands run first, then `--setup` commands, in order,
 from the new checkout root through the user's login shell (`$SHELL -lc`). A monorepo
@@ -313,8 +312,8 @@ provisioning steps (`src/steps.ts`).
 
 Decided from local evidence only (no network, no env-file reads):
 
-- **Vercel-configured** — the source `package.json` declares `provision` or
-  `provisionEnv`, or any checkout of the repository (`git worktree list`) has a root
+- **Vercel-configured** — the source `package.json` declares `provision.appDir`, or any
+  checkout of the repository (`git worktree list`) has a root
   `.vercel/project.json` (the link `provision env` reuses from siblings): run the full
   `provision env --repo <path> --source <source> --database --non-interactive --label --ttl`,
   exactly like `create`. Any failure fails (checkout preserved). A configured repo that

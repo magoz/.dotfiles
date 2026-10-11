@@ -35,14 +35,15 @@ export type ProvisioningPlan =
 export const SUPPORTED_LOCKFILES = ["pnpm-lock.yaml", "bun.lock", "bun.lockb", "package-lock.json", "yarn.lock"] as const
 
 export const NO_VERCEL_WARNING =
-  "no Vercel configuration (no .vercel/project.json in any checkout, no package.json provision or provisionEnv); " +
+  "no Vercel configuration (no .vercel/project.json in any checkout, no package.json provision.appDir); " +
   "skipped Vercel environment pull and sandbox databases"
 export const NO_LOCKFILE_WARNING = "no supported lockfile; skipped dependency install"
 
 const declaresProvisioning = (checkout: string) => {
   try {
     const manifest: unknown = JSON.parse(readFileSync(join(checkout, "package.json"), "utf8"))
-    return typeof manifest === "object" && manifest !== null && ("provision" in manifest || "provisionEnv" in manifest)
+    return typeof manifest === "object" && manifest !== null && "provision" in manifest &&
+      typeof manifest.provision === "object" && manifest.provision !== null && "appDir" in manifest.provision
   } catch {
     // Missing or unreadable manifests are not configuration evidence.
     return false
@@ -51,7 +52,7 @@ const declaresProvisioning = (checkout: string) => {
 
 /**
  * A repository is "Vercel-configured" when its source package.json declares
- * `provision` (legacy: `provisionEnv`; explicit opt-in, e.g. a monorepo appDir), or
+ * `provision.appDir` (explicit opt-in, e.g. a monorepo app directory), or
  * when any of its checkouts has a root `.vercel/project.json` (the link `provision env`
  * reuses from siblings). Configured-but-unlinked repos still fail in `provision env`.
  */

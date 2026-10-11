@@ -62,7 +62,7 @@ const publish = (f: Fixture, files: Record<string, string>) => {
   git(f.producer, "push", "origin", "main")
 }
 
-const declaring = (setup: unknown) => JSON.stringify({ name: "app", worktree: { setup } })
+const declaring = (setup: unknown) => JSON.stringify({ name: "app", provision: { setup } })
 
 const run = async (f: Fixture, args: string[], env: Record<string, string> = {}) => {
   const child = Bun.spawn([process.execPath, resolve(import.meta.dir, "../src/main.ts"), "checkout", ...args], {
@@ -119,15 +119,15 @@ test("no-Vercel repo with a lockfile installs dependencies only (no Vercel, no d
   expect(result.stderr).toContain("provision stdout")
 })
 
-for (const evidence of ["source link", "sibling link", "provision", "provisionEnv"] as const) {
+for (const evidence of ["source link", "sibling link", "provision"] as const) {
   test(`Vercel-configured repo (${evidence}) provisions exactly like worktree create`, async () => {
-    const manifest: Record<string, string> = evidence === "provision" || evidence === "provisionEnv"
-      ? { "package.json": JSON.stringify({ [evidence]: { appDir: "." } }) }
+    const manifest: Record<string, string> = evidence === "provision"
+      ? { "package.json": JSON.stringify({ provision: { appDir: "." } }) }
       : {}
     const f = fixture(manifest)
     const linked = evidence === "sibling link" ? join(f.root, "repo-other") : f.repo
     if (evidence === "sibling link") git(f.repo, "worktree", "add", "-b", "other", linked)
-    if (evidence !== "provision" && evidence !== "provisionEnv") {
+    if (evidence !== "provision") {
       mkdirSync(join(linked, ".vercel"))
       writeFileSync(join(linked, ".vercel", "project.json"), '{"orgId":"o","projectId":"p"}')
     }
@@ -174,7 +174,7 @@ test("setup commands run in order in the new checkout through the login shell", 
   expect(result.stdout).not.toContain("setup-stdout")
 })
 
-test("package.json worktree.setup runs after provisioning, before caller --setup", async () => {
+test("declared setup runs after install-only provisioning, before caller --setup", async () => {
   const f = fixture({
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
     "package.json": declaring(["pwd > setup.txt", "echo declared >> setup.txt"])
@@ -201,7 +201,7 @@ test("full provisioning leaves the declared setup to provision env; caller --set
   ])
 })
 
-test("worktree.setup is read from the pinned base, not the source working tree", async () => {
+test("declared setup is read from the pinned base, not the source working tree", async () => {
   const f = fixture()
   publish(f, { "package.json": declaring(["echo fresh > setup.txt"]) })
   const fresh = await run(f, ["--repo", f.repo, "--branch", "feat/fresh", "--json"])
@@ -228,8 +228,8 @@ const malformed = (setup: unknown) => (f: Fixture) => {
 }
 
 const preflightFailures: ReadonlyArray<readonly [string, (f: Fixture) => string[], string]> = [
-  ["a non-array worktree.setup", malformed("pnpm db:migrate"), "invalid package.json setup"],
-  ["a blank worktree.setup command", malformed(["pnpm db:migrate", " "]), "setup commands must be non-empty strings"],
+  ["a non-array provision.setup", malformed("pnpm db:migrate"), "invalid package.json setup"],
+  ["a blank provision.setup command", malformed(["pnpm db:migrate", " "]), "setup commands must be non-empty strings"],
   ["an invalid package.json", (f) => { publish(f, { "package.json": "{" }); return ["--branch", "feat/badjson"] }, "invalid package.json setup"],
   ["an existing branch", (f) => { git(f.repo, "branch", "feat/taken"); return ["--branch", "feat/taken"] }, "branch already exists"],
   ["an existing branch with --base", (f) => { git(f.repo, "branch", "feat/taken"); return ["--branch", "feat/taken", "--base", "main"] }, "branch already exists"],

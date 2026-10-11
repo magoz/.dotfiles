@@ -85,11 +85,14 @@ export const runInstallOnly = (destination: string) =>
 const SetupCommand = Schema.String.pipe(
   Schema.filter((command) => command.trim().length > 0, { message: () => "setup commands must be non-empty strings" })
 )
-const Setup = Schema.optional(Schema.Struct({ setup: Schema.optional(Schema.Array(SetupCommand)) }))
-const Manifest = Schema.Struct({ provision: Setup, worktree: Setup })
+const Manifest = Schema.Struct({
+  provision: Schema.optional(Schema.Struct({ setup: Schema.optional(Schema.Array(SetupCommand)) })),
+  worktree: Schema.optional(Schema.Unknown),
+  provisionEnv: Schema.optional(Schema.Unknown)
+})
 
 /**
- * Repository-declared setup: root package.json `provision.setup` (legacy: `worktree.setup`; e.g. migrations
+ * Repository-declared setup: root package.json `provision.setup` (e.g. migrations
  * for freshly leased sandbox databases), read from the pinned base, i.e. the code
  * the new checkout will contain. Read before allocating anything, so a malformed
  * declaration fails preflight. No package.json or no key means no commands.
@@ -104,7 +107,12 @@ export const readDeclaredSetup = (repo: string, base: string) =>
     const decoded = yield* Schema.decodeUnknown(Schema.parseJson(Manifest))(manifest.stdout).pipe(
       Effect.mapError((error) => new WorktreeError({ message: `invalid package.json setup at ${base}: ${error.message}` }))
     )
-    return decoded.provision?.setup ?? decoded.worktree?.setup ?? []
+    if (decoded.worktree !== undefined || decoded.provisionEnv !== undefined) {
+      return yield* Effect.fail(new WorktreeError({
+        message: `package.json at ${base} uses the removed "worktree"/"provisionEnv" keys; move them to "provision.setup"/"provision.appDir"`
+      }))
+    }
+    return decoded.provision?.setup ?? []
   })
 
 export const runSetupCommands = (destination: string, commands: ReadonlyArray<string>) =>
