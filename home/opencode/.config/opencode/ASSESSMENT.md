@@ -102,8 +102,6 @@ npm test --prefix home/opencode/.config/opencode
 npm run test:native --prefix home/opencode/.config/opencode  # installed 2.0.3, isolated HOME
 bun run --cwd home/scripts/.local/share/worktree test
 bun run --cwd home/scripts/.local/share/worktree typecheck
-bun run --cwd home/scripts/.local/share/sandbox-db test
-bun run --cwd home/scripts/.local/share/sandbox-db typecheck
 bash arch/tests/run
 bash macos/tests/run
 ```

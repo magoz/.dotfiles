@@ -285,8 +285,7 @@ Most edits take effect immediately because the destination is a symlink into thi
 
 The `home/scripts` package installs command launchers and their source under `~/.local`:
 
-- [`sandbox-db` and `provision-env`](home/scripts/.local/share/sandbox-db/README.md) manage Vercel-backed environments and expiring Neon database branches.
-- [`worktree`](home/scripts/.local/share/worktree/README.md) creates provisioned Herdr worktrees and hands off to fresh Pi sessions.
+- [`worktree`](home/scripts/.local/share/worktree/README.md) creates provisioned Herdr worktrees and hands off to fresh Pi sessions. Provisioning (env files, Vercel, expiring Neon databases) is [`provision`](https://github.com/magoz/provision), installed root-owned at `/usr/local/bin/provision`.
 
 ## Validation
 

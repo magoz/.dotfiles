@@ -187,7 +187,10 @@ configure_leader_key
 # -------- CONFIG DEPENDENCIES ----------
 # --------------------------------------
 echo "📦 Installing local script dependencies"
-bun install --cwd "$HOME_PACKAGES/scripts/.local/share/sandbox-db"
+# provision (env, db, factory) is installed root-owned, outside this script:
+# https://github.com/magoz/provision#install
+command -v provision >/dev/null 2>&1 ||
+  echo "⚠️  provision is missing: sudo npm install -g --prefix /usr/local @magoz/provision"
 bun install --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 
 echo "📦 Installing OpenCode dependencies"
