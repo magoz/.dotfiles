@@ -1,6 +1,6 @@
 ---
 name: pr
-description: Prepare, create, update, ready, audit, and squash-merge pull requests using the current repository's own policies, tooling, and validation commands. Use for draft synchronization, readiness gates, pre-merge audits, and guarded merge cleanup.
+description: Prepare, create, update, ready, audit, and squash-merge pull requests using the current repository's own policies, tooling, and validation commands. Default runs the full ship (draft → ready → merge → cleanup, stopping at blockers); `draft`, `ready`, `pre-merge`, and `merge` run single stages.
 compatibility: Requires git, GitHub CLI authentication, and subagent support.
 metadata:
   opencode/slash: 'true'
@@ -19,18 +19,22 @@ commands, branch conventions, deployment providers, or quality gates.
 
 | Invocation                | Behavior                                                                   |
 | ------------------------- | -------------------------------------------------------------------------- |
-| Load skill `pr`               | Prepare, commit, push, and create/update; new PRs start as drafts             |
-| Load skill `pr` with `ready`         | Prepare, validate, push, review, and mark the PR ready                       |
+| Load skill `pr`               | Full ship: prepare, create/update, validate, review, mark ready, squash-merge, clean up; stop at the first blocker |
+| Load skill `pr` with `draft`         | Prepare, commit, push, and create/update; new PRs start as drafts             |
+| Load skill `pr` with `ready`         | Prepare, validate, push, review, and mark the PR ready; never merge          |
 | Load skill `pr` with `pre-merge [PR]` | Audit an exact remote PR head; never merge                                   |
 | Load skill `pr` with `merge`         | Squash-merge if still open, delete the remote branch, clean up a matching worktree if present |
 
+Natural-language requests that name no stage (for example "create a pr" or "open a pr") mean full
+ship. Use a single-stage mode only when the request names it (draft, ready, pre-merge/audit, merge).
+
 A pre-merge PR argument may be a number or URL. With no argument, resolve the PR for the current
-branch. In merge mode, infer the intended PR and repository from the conversation, supplied PR identity,
+branch. In merge and full-ship modes, infer the intended PR and repository from the conversation, supplied PR identity,
 branch/remotes, and known checkout paths; the current directory may belong to a different repository.
 Infer worktree cleanup separately: remove only a verified matching linked worktree, skip deletion when
 none exists, and ask the user when the repository, PR, or cleanup target remains unclear. Never delete
-an unrelated worktree or a primary checkout. Merge is the final, explicitly invoked step after
-preparation/review; other modes never merge or clean up automatically. If the PR is already merged, skip Ready, Pre-merge, and the merge
+an unrelated worktree or a primary checkout. Only full-ship (default) and `merge` modes merge or clean
+up; `draft`, `ready`, and `pre-merge` never do. If the PR is already merged, skip Ready, Pre-merge, and the merge
 request, then perform only guarded cleanup. A closed-but-unmerged PR is not eligible for cleanup.
 
 ## Authority
@@ -51,11 +55,15 @@ is a gap to report, not permission to invent policy.
 Invoking a mode authorizes its routine actions. Follow the obvious happy path without asking for
 confirmation, narrating every Git step, or treating draft state as a problem.
 
-- Loading skill `pr` authorizes the always-on Conform/Learn/Tidy preparation pass, staging task-owned files,
+- Loading skill `pr` (full ship) authorizes everything `draft`, `ready`, and `merge` authorize, run
+  in sequence without pausing between stages. Invoking it is the user's explicit authorization to
+  mark ready, squash-merge, and perform guarded cleanup once every gate passes. It stops at the first
+  real blocker and reports where it stopped; it never weakens a gate to keep going.
+- Loading skill `pr` with `draft` authorizes the always-on Conform/Learn/Tidy preparation pass, staging task-owned files,
   committing, pushing, safely updating a rewritten PR branch with an explicit-SHA force lease, and
   creating or updating a PR. A new PR is a draft; an existing draft remains a draft. Do not publish an
-  unvalidated new head to a ready PR in this mode; require `ready` mode unless the remote head is
-  unchanged and only managed metadata is updated.
+  unvalidated new head to a ready PR in this mode; require `ready` or full-ship mode unless the remote
+  head is unchanged and only managed metadata is updated.
 - Loading skill `pr` with `ready` runs the same preparation pass and additionally authorizes full repository-defined
   validation, independent readiness review, PR body updates, and `gh pr ready` after all gates pass.
 - Loading skill `pr` with `pre-merge` authorizes read-only Git/GitHub inspection plus an isolated temporary clone and
@@ -80,7 +88,7 @@ disclosure or environment attestation; follow the Visual proof authentication po
 ## Invariants
 
 - Never commit PR work directly to the remote default branch or operate from a detached HEAD,
-  ambiguous repository, or unexpected remote. In default or `ready` mode, create a conventional branch
+  ambiguous repository, or unexpected remote. In full-ship, `draft`, or `ready` mode, create a conventional branch
   automatically when intent is clear on the default branch; ask only when its name or scope is
   genuinely ambiguous.
 - Protect the default branch. On the current non-default PR branch, rewrite history when needed to
@@ -88,8 +96,8 @@ disclosure or environment attestation; follow the Visual proof authentication po
   `--force-with-lease=<ref>:<sha>` with an explicit remote and refspec. Never weaken the lease by
   refreshing its expected SHA and blindly retrying; inspect newly discovered remote-only commits and
   ask before dropping any whose ownership or intent is unclear. Do not merge, close/reopen a PR,
-  change its base, or delete a branch unless requested. Mark a draft ready only in `ready` mode after
-  all gates pass.
+  change its base, or delete a branch unless requested (full-ship and `merge` modes are that request).
+  Mark a draft ready only in full-ship, `ready`, or `merge` mode after all gates pass.
 - Never run destructive database, production-data, deployment, publish, migration-application,
   infrastructure-apply, or environment-reset commands as ordinary PR preparation. Follow stricter
   repository safety contracts when present.
@@ -101,10 +109,10 @@ run` or `blocked`, never `passed`.
   ownership is ambiguous.
 - Keep one writer: the parent session. Review subagents never edit.
 - Bind every review and validation claim to an unchanged patch digest or commit SHA.
-- Preserve draft state except in `ready` mode. Never push an incompletely validated new head to an
+- Preserve draft state in `draft` mode and whenever readiness gates have not passed. Never push an incompletely validated new head to an
   existing ready PR, and always preserve human-authored PR content.
 - Stop for unapproved product, architecture, access-control, data, migration, or scope decisions.
-- Merge only in `pr`'s `merge` mode, only by squash, and only after applicable readiness evidence and
+- Merge only in `pr`'s full-ship (default) or `merge` mode, only by squash, and only after applicable readiness evidence and
   the final remote-state gate pass. Existing evidence can satisfy these gates under Evidence reuse. Never use administrator bypass, enable auto-merge, enter a merge queue, or fall back to
   merge-commit or rebase strategies.
 - Never remove a primary checkout, dirty worktree, mismatched worktree, or branch/ref that moved after
@@ -244,7 +252,7 @@ verify GitHub identity and the source push URL directly instead.
 5. Establish intent from the conversation, linked issue, supplied plan/specification, commits, and
    repository guidance. If intent remains ambiguous, ask before reviewing or writing a PR summary.
 
-## Always-on preparation (load skill `pr`, default and `ready` modes)
+## Always-on preparation (load skill `pr`: full-ship, `draft`, and `ready` modes)
 
 Run this pass for new or changed work before staging or committing in either mutation mode. Reuse
 completed preparation for unchanged content; do not rerun Conform/Learn/Tidy solely for a lifecycle
@@ -386,11 +394,42 @@ captures or publishes new assets.
    never imply screenshots were attached. A draft may still be created with that disclosure. Missing
    visual evidence blocks Ready when repository-required or change-critical, like other missing checks.
 
-## Draft synchronization (load skill `pr`, default mode)
+## Full-ship workflow (load skill `pr`, default)
+
+One invocation takes the work from local changes to a merged, cleaned-up PR. Run the existing
+workflows in order within the same session, carrying evidence forward instead of repeating it:
+
+1. **Draft:** Draft synchronization. Create or update the PR as a draft.
+2. **Ready:** the Ready workflow in full. Run all repository-required validation, independent review
+   and review fixes, the documentation pass, and the final gate, then `gh pr ready`.
+3. **Merge:** the Merge workflow from step 1, with Evidence reuse satisfying step 2 directly from stage 2.
+   Then do the remote-state gate, wait for required remote checks, squash-merge, and guarded cleanup.
+
+Rules:
+
+- Do not stop between stages to report progress or ask for confirmation. The invocation already
+  authorizes every stage.
+- Wait for repository-required remote checks that are still pending, within a bounded time, before
+  the merge request. Arm a background watch rather than sleep-polling. Required checks that fail,
+  were never reported, or are still pending at the deadline are blockers.
+- A blocker is anything that a single-stage mode would refuse on: a failed or missing required check,
+  an unresolved blocker/high finding, an undispositioned medium finding, reviewer disagreement on a
+  blocker, base drift or conflicts, required human review or unresolved mandatory threads, a merge
+  queue, disallowed squash merge, or any question the Interaction model requires asking. Fix blockers
+  the parent can safely resolve within scope (for example lint failures or accepted review findings)
+  and continue. Otherwise stop.
+- On stopping, leave the PR in the furthest state its evidence supports: a draft if Ready gates did
+  not pass, or ready but unmerged if only merge gates failed. Never merge or clean up past a blocker.
+  Report the stage reached, the exact blocker, and what to run next (usually plain `pr` again once
+  it is resolved; Evidence reuse picks up where this run stopped).
+- The final report combines the Ready acceptance report with the Merge workflow report.
+
+## Draft synchronization (load skill `pr` with `draft`; full-ship stage 1)
 
 Draft synchronization publishes work in progress; it does not claim merge readiness. Draft state is
-normal and should not produce warnings or extra confirmation prompts. If the existing PR is ready and
-the operation would change its remote head, stop and require `ready` mode; do not silently retain
+normal and should not produce warnings or extra confirmation prompts. In `draft` mode, if the existing
+PR is ready and the operation would change its remote head, stop and require `ready` or full-ship mode
+(full ship handles this through the Ready workflow instead of stopping); do not silently retain
 ready or auto-merge eligibility for an incompletely validated commit.
 
 1. Complete the Always-on preparation pass, then inspect staged, unstaged, and untracked paths. Infer
@@ -486,7 +525,7 @@ presentation guidelines do not replace validation, review evidence, or safety ga
   mobile layout regressions or API incompatibility. Record uncertainty instead of claiming risk-free
   operation; do not turn this into an exhaustive hypothetical checklist.
 
-## Ready workflow (load skill `pr` with `ready`)
+## Ready workflow (load skill `pr` with `ready`; full-ship stage 2)
 
 A ready run may create the draft if necessary, but it must not mark the PR ready until all gates pass.
 
@@ -584,8 +623,8 @@ Before marking ready:
   embeds and uploaded assets after publication; report attachment failures as blocked, not complete.
 - Inspect required remote checks, review state, conflicts, and deployment status defined by repository
   or branch policy. Do not substitute remote checks for missing local evidence.
-- If all gates pass, run `gh pr ready` without another confirmation; invoking `ready` already granted
-  that authority. If the PR is already ready, update evidence without toggling state.
+- If all gates pass, run `gh pr ready` without another confirmation; invoking `ready` or full ship
+  already granted that authority. If the PR is already ready, update evidence without toggling state.
 
 ## Pre-merge workflow (load skill `pr` with `pre-merge [PR]`)
 
@@ -614,7 +653,7 @@ Git state, or GitHub state.
 6. Report `ready`, `not ready`, or `blocked by missing evidence`, bound to exact base/head SHAs,
    distinguishing reused evidence from newly executed checks. Never merge.
 
-## Merge workflow (load skill `pr` with `merge`)
+## Merge workflow (load skill `pr` with `merge`; full-ship stage 3)
 
 This mode is intentionally destructive after merge, but it must fail closed before the irreversible
 step. Resolve the intended PR and its repository independently of the launch directory. Prefer explicit
@@ -894,7 +933,8 @@ and residual risks. Do not claim that draft creation implies readiness.
 - Broad staging, hiding unrelated work, or silently discarding changes
 - Claiming review or validation against content that changed afterward
 - Marking a PR ready when required evidence is missing
-- Merging outside `pr`'s `merge` mode or cleaning up before GitHub confirms the merge
+- Merging outside `pr`'s full-ship or `merge` mode, or cleaning up before GitHub confirms the merge
+- Pausing full ship between stages for confirmation, or pushing past a blocker to finish the merge
 - Removing a worktree while its dev servers still run, or stopping shared services such as the
   Portless proxy during cleanup
 - Reusing a pre-deletion remote-ref predicate after the `remote-deleted` milestone
