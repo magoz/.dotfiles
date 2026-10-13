@@ -107,7 +107,18 @@
     "servers": {
       "executor": { "type": "remote", "url": "https://executor.magoz.is/mcp" },
       // Mobbin design refs (Pro plan). OAuth via `/mcps`. Prefer mode "standard"; "deep" costs AI credits.
-      "mobbin": { "type": "remote", "url": "https://api.mobbin.com/mcp" }
+      "mobbin": { "type": "remote", "url": "https://api.mobbin.com/mcp" },
+      // Refero design refs (Pro plan). OAuth via `/mcps`.
+      "refero": { "type": "remote", "url": "https://api.refero.design/mcp" },
+      // Eat (../eat docs/mcp.md): protocol 2026-07-28 only, no OAuth. Owner API key in
+      // EAT_MCP_KEY, exported from ~/.env by opencode.service (restart after changing it).
+      "eat": {
+        "type": "remote",
+        "url": "https://eat.oox.sh/mcp",
+        "protocol": "2026-07-28",
+        "oauth": false,
+        "headers": { "Authorization": "Bearer {env:EAT_MCP_KEY}" }
+      }
     }
   },
   // YOLO like Pi: allow everything; later rules (last match wins) still deny secrets.
