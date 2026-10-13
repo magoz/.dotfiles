@@ -43,7 +43,7 @@ test('reads: launcher list and run summaries are plain GETs without Origin', asy
   net.respond('GET', '/api/fleet/launcher', 200, payloads.launcher);
   net.respond('GET', '/api/fleet/sessions/ses_done_new/summary', 200, payloads.summary);
   const api = createFleetApi({ baseURL: BASE, fetch: net.fetch, timers: fakeTimers() });
-  assert.deepEqual((await api.launcher()).value.map((e) => e.name), ['fleet', 'box', 'anvil']);
+  assert.deepEqual((await api.launcher()).value.map((e) => e.name), ['fleet', 'box', 'subs', 'anvil']);
   assert.equal((await api.summary('ses_done_new', 123)).value.answer, 'Added the palette.\nAll tests pass.');
   assert.deepEqual(net.requests().map((r) => [r.method, r.path, r.headers]), [
     ['GET', '/api/fleet/launcher', { accept: 'application/json' }],

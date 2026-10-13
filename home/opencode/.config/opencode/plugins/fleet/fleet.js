@@ -401,7 +401,7 @@ export function parseLauncher(v) {
   if (!object(v) || !Array.isArray(v.entries)) return undefined;
   return v.entries.flatMap((e) => {
     if (!object(e) || !string(e.name) || !string(e.directory) || !Array.isArray(e.worktrees) || !optional(e.latestSession, string)) return [];
-    return [{ name: clean(e.name, 80), directory: e.directory, sessions: parseTally(e.sessions), latestSession: e.latestSession, worktrees: list(e.worktrees, parseLauncherWorktree) }];
+    return [{ kind: e.kind === 'folder' ? 'folder' : 'repo', name: clean(e.name, 80), directory: e.directory, sessions: parseTally(e.sessions), latestSession: e.latestSession, worktrees: list(e.worktrees, parseLauncherWorktree) }];
   });
 }
 
@@ -413,7 +413,8 @@ const prText = (pr) => !pr || ['unknown', 'none'].includes(pr.state) ? '' : `${p
 
 /**
  * Launcher dialog options, one category per repository in Fleet's order (most recent agent
- * activity first): the repository, its worktrees, then `+ New worktree in <repo>…`. The dialog's
+ * activity first): the repository, its worktrees, then `+ New worktree in <repo>…` (none for a
+ * plain folder, which has no worktrees). The dialog's
  * fuzzy filter matches titles and categories, so typing a repo name keeps all of its rows.
  */
 export function launcherOptions(entries, formatPath = (p) => p) {
@@ -425,7 +426,7 @@ export function launcherOptions(entries, formatPath = (p) => p) {
       description: [w.owner === 'dotfiles' ? undefined : 'pi', prText(w.pr), tallyText(w.sessions)].filter(Boolean).join(' · ') || formatPath(w.directory),
       value: { kind: 'open', directory: w.directory, latestSession: w.latestSession, name: `${entry.name} · ${worktreeName(w)}` },
     })),
-    { title: `+ New worktree in ${entry.name}…`, category: entry.name, value: { kind: 'new', repoDir: entry.directory, repoName: entry.name } },
+    ...(entry.kind === 'folder' ? [] : [{ title: `+ New worktree in ${entry.name}…`, category: entry.name, value: { kind: 'new', repoDir: entry.directory, repoName: entry.name } }]),
   ]);
 }
 

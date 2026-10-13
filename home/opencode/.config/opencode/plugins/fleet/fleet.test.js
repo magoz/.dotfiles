@@ -24,7 +24,7 @@ test('real Fleet payloads validate: every row, child, launch and the launcher li
   assert.match(live.rows.get('ses_busy').web, /^https:\/\//);
   const change = parseChange(payloads.change);
   assert.deepEqual([ids(change.rows), change.removed, change.launches.length], [['ses_busy'], ['ses_tmp'], 3]);
-  assert.deepEqual(parseLauncher(payloads.launcher).map((e) => [e.name, e.worktrees.length]), [['fleet', 2], ['box', 0], ['anvil', 0]]);
+  assert.deepEqual(parseLauncher(payloads.launcher).map((e) => [e.name, e.worktrees.length]), [['fleet', 2], ['box', 0], ['subs', 0], ['anvil', 0]]);
 });
 
 test('ordering mirrors Fleet: blocked longest wait first, then finished oldest first; working stuck first, then newest', () => {
@@ -177,7 +177,9 @@ test('launcher options: one category per repo in Fleet order, worktrees, then + 
   ]);
   assert.deepEqual(options[1].value, { kind: 'open', directory: '/home/magoz/dev/repos/fleet-feat-x', latestSession: 'ses_retry', name: 'fleet · feat/x' });
   assert.deepEqual(options[3].value, { kind: 'new', repoDir: '/home/magoz/dev/repos/fleet', repoName: 'fleet' });
-  assert.deepEqual(options.map((o) => o.category).filter((c, i, all) => all.indexOf(c) === i), ['fleet', 'box', 'anvil']);
+  assert.deepEqual(options.map((o) => o.category).filter((c, i, all) => all.indexOf(c) === i), ['fleet', 'box', 'subs', 'anvil']);
+  // A plain folder: open only, no + New worktree.
+  assert.deepEqual(options.filter((o) => o.category === 'subs').map((o) => [o.title, o.value.kind]), [['subs', 'open']]);
   assert.equal(parseLauncher({ entries: 'x' }), undefined);
 });
 

@@ -206,6 +206,7 @@ const launcher = Schema.decodeUnknownSync(LauncherList)({
   generatedAt: now,
   entries: [
     {
+      kind: 'repo',
       name: 'fleet',
       directory: fleet,
       projectID: 'prj_fleet',
@@ -233,6 +234,7 @@ const launcher = Schema.decodeUnknownSync(LauncherList)({
       ]
     },
     {
+      kind: 'repo',
       name: 'box',
       directory: box,
       projectID: 'prj_box',
@@ -242,7 +244,23 @@ const launcher = Schema.decodeUnknownSync(LauncherList)({
       lastActivity: now - 5 * hour,
       worktrees: []
     },
-    { name: 'anvil', directory: '/home/magoz/dev/repos/anvil', sessions: tally({}), worktrees: [] }
+    {
+      kind: 'folder',
+      name: 'subs',
+      directory: '/home/magoz/subs',
+      sessions: tally({ finished: 1 }),
+      latestSession: 'ses_subs',
+      activeAt: now - 6 * hour,
+      lastActivity: now - 6 * hour,
+      worktrees: []
+    },
+    {
+      kind: 'repo',
+      name: 'anvil',
+      directory: '/home/magoz/dev/repos/anvil',
+      sessions: tally({}),
+      worktrees: []
+    }
   ]
 })
 

@@ -158,6 +158,9 @@ repository in Fleet's order (most recent agent activity first). Each category li
 - its worktrees (`branch`, `pi` for non-dotfiles worktrees, the PR state);
 - `+ New worktree in <repo>…`.
 
+A launcher root that is a plain folder (`kind: 'folder'`, e.g. `~/subs`) is a category with just
+the folder: no worktrees and no `+ New worktree`.
+
 The dialog's own fuzzy filter matches titles and categories, so typing a repository name keeps
 all of its rows.
 
