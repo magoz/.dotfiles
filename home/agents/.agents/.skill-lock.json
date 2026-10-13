@@ -27,6 +27,15 @@
       "skillFolderHash": "a957b5616d8cd3852763bc307c2aa60128665ac1",
       "installedAt": "2026-10-10T12:40:02.567Z",
       "updatedAt": "2026-10-11T19:14:39.212Z"
+    },
+    "refero-design": {
+      "source": "referodesign/refero_skill",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/referodesign/refero_skill.git",
+      "skillPath": "skills/refero-design/SKILL.md",
+      "skillFolderHash": "4c2d358faf71cae46b3d084c4915f2ae0ebad379",
+      "installedAt": "2026-10-12T14:27:18.556Z",
+      "updatedAt": "2026-10-12T14:27:18.556Z"
     }
   },
   "dismissed": {
