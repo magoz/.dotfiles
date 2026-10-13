@@ -37,7 +37,7 @@ Gateway-side differences you will notice:
 - upstream tool names disguised as `mcp__<random>__<random>_<tool>` aliases
 - 1h cache TTL on the injected identity block
 
-`subs-claude` sets `compat.supportsMidConvoToolChanges: false` in `models.json`. CLIProxyAPI (checked through 7.3.20 and 8.0.3) renames tools to MCP aliases in `tools`, `tool_use`, and `tool_reference`, but not the `tool.name` inside Pi's native `tool_addition`/`tool_removal` blocks, so a tool added mid-session fails with `400 … tool_addition/tool_removal references unknown tool '<name>'`. With the flag off Pi sends the current tool list each request instead; the cost is a prompt-cache miss on the request after a mid-session tool change. Re-enable it once the gateway remaps those blocks.
+`subs-claude` sets `compat.supportsMidConvoToolChanges: true` in `models.json`. CLIProxyAPI renames tools to MCP aliases; before 8.0.4 it missed the `tool.name` inside Pi's native `tool_addition`/`tool_removal` blocks, so a tool added mid-session failed with `400 … tool_addition/tool_removal references unknown tool '<name>'`, and the flag was off. 8.0.4 remaps those blocks (router-for-me/CLIProxyAPI#6175); verified on 8.0.27 with a raw `/v1/messages` request carrying `tool_addition`/`tool_removal` for declared tools. If that error returns, set the flag to `false`: Pi then resends the full tool list instead, at the cost of a prompt-cache miss after each mid-session tool change.
 
 ## Scope
 
