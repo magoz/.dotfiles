@@ -22,6 +22,9 @@ The argument is the issue URL (or `owner/repo#N`, or `#N` for the current reposi
   say; use the issue to understand the problem.
 - **Stay in this checkout and branch.** You start in a fresh worktree on a branch made for this
   issue. Do not create other worktrees, check out other branches, or edit other repositories.
+- **The issue may live in another repository** (reports collected in one place for several
+  deployments). The checkout you were started in is where the fix goes; the issue's repository
+  is only where it was reported.
 - **Never** push to the default branch, merge, mark a PR ready, publish packages, deploy, or change
   CI, secrets or repository settings. Some of these are denied outright; do not look for ways
   around a denial.
@@ -31,8 +34,9 @@ The argument is the issue URL (or `owner/repo#N`, or `#N` for the current reposi
 ## Workflow
 
 1. **Read the issue**: `gh issue view <issue> --json number,title,body,labels,state,author,comments,url`.
-   If it is closed, or an open pull request already references it
-   (`gh pr list --search "<number> in:body" --state open`), stop: outcome `already-handled`.
+   If it is closed, or an open pull request already references it (`gh search prs --state open
+   "<owner>/<repo>#<number>"` and the issue URL, plus `gh pr list --state open --search
+   "<number> in:body"` in this repository), stop: outcome `already-handled`.
 2. **Understand and locate.** Read the repository guidance, then find the code involved. Reproduce
    the problem when it can be reproduced locally (a failing test is the best reproduction).
 3. **Decide**, and say which in one sentence before acting:
@@ -46,7 +50,9 @@ The argument is the issue URL (or `owner/repo#N`, or `#N` for the current reposi
       and passes after.
    2. Run the repository's verification commands (the ones its guidance names; never a deploy).
    3. Open the pull request with the `pr` skill in `draft` mode: a conventional title, a body with
-      the cause, the fix, how it was verified, and `Closes #<number>`. Stop at the draft.
+      the cause, the fix, how it was verified, and `Closes <owner>/<repo>#<number>` (the full
+      reference links and closes an issue in another repository; `Closes #<number>` only when the
+      issue is in this one). Stop at the draft.
 5. **If you are blocked** on one answer that would let you finish (a choice between two valid
    fixes, a missing fact), ask the operator one question with your question tool, then continue
    with the answer. Asking keeps a launch slot busy: only ask when the answer unblocks you; for
