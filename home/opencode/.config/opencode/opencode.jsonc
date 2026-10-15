@@ -133,16 +133,6 @@
     { "action": "read", "resource": "secrets/*", "effect": "deny" },
     // Nested figma/skills/figma-* leaves are indexed by OpenCode's **/SKILL.md scan and
     // loadable by id despite disable-model-invocation; only the `figma` router may load them.
-    { "action": "skill", "resource": "figma-*", "effect": "deny" },
-    // Watcher (~/dev/repos/watcher): reads and pausing are free; commands that resume, re-fire or
-    // re-arm launches ask. Sessions Watcher launches get its own deny rules on top of these.
-    { "action": "shell", "resource": "watcher resume *", "effect": "ask" },
-    { "action": "shell", "resource": "watcher watch resume *", "effect": "ask" },
-    { "action": "shell", "resource": "watcher watch run *", "effect": "ask" },
-    { "action": "shell", "resource": "watcher watch baseline *", "effect": "ask" },
-    { "action": "shell", "resource": "watcher run retry *", "effect": "ask" },
-    { "action": "shell", "resource": "watcher key forget *", "effect": "ask" },
-    { "action": "shell", "resource": "watcher reload *", "effect": "ask" },
-    { "action": "shell", "resource": "watcher launch *", "effect": "ask" }
+    { "action": "skill", "resource": "figma-*", "effect": "deny" }
   ]
 }
