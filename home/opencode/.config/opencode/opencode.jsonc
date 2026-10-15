@@ -142,6 +142,7 @@
     { "action": "shell", "resource": "watcher watch baseline *", "effect": "ask" },
     { "action": "shell", "resource": "watcher run retry *", "effect": "ask" },
     { "action": "shell", "resource": "watcher key forget *", "effect": "ask" },
-    { "action": "shell", "resource": "watcher reload *", "effect": "ask" }
+    { "action": "shell", "resource": "watcher reload *", "effect": "ask" },
+    { "action": "shell", "resource": "watcher launch *", "effect": "ask" }
   ]
 }
