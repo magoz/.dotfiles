@@ -1,8 +1,8 @@
 // The launcher (DESIGN.md "Launcher and worktrees"), in OpenCode's own dialogs: pick a repository
-// or worktree (fuzzy select over `GET /api/fleet/launcher`) to open its latest root session, or
-// `+ New worktree in <repo>…` → task → editable suggested branch → `POST /api/fleet/launches`.
+// or worktree (fuzzy select over `GET /api/vltra/launcher`) to open its latest root session, or
+// `+ New worktree in <repo>…` → task → editable suggested branch → `POST /api/vltra/launches`.
 // The launch's progress shows in the sidebar; `createLaunchWatch` lands in its session when ready.
-import { launcherOptions } from './fleet.js';
+import { launcherOptions } from './vltra.js';
 
 /** Route identity for "has the user navigated since". */
 export const routeKey = (route) => route.type === 'session' ? `session:${route.sessionID}`
@@ -16,10 +16,10 @@ export async function runLauncher({ ctx, api, openSession, onLaunched, alive = (
   const toast = (variant, message) => { if (alive()) ctx.ui.toast.show({ variant, message }); };
   const list = await api.launcher();
   if (!alive()) return;
-  if (!list.ok) return toast('error', `Fleet launcher unavailable: ${list.error}`);
-  if (!list.value.length) return toast('info', 'Fleet lists no repositories');
+  if (!list.ok) return toast('error', `Vltra launcher unavailable: ${list.error}`);
+  if (!list.value.length) return toast('info', 'Vltra lists no repositories');
   const choice = await ctx.ui.dialog.select({
-    title: 'Fleet: New / open', placeholder: 'Repositories and worktrees',
+    title: 'Vltra: New / open', placeholder: 'Repositories and worktrees',
     options: launcherOptions(list.value, (p) => ctx.ui.format?.path?.(p) ?? p),
   });
   if (!alive() || !choice) return;
@@ -31,13 +31,13 @@ export async function runLauncher({ ctx, api, openSession, onLaunched, alive = (
       if (opened.value.created) toast('info', `New session in ${choice.name}`);
       return openSession(opened.value.sessionID);
     }
-    // A Fleet without the open route: resume the checkout's latest root session from the list.
+    // A Vltra without the open route: resume the checkout's latest root session from the list.
     if (opened.missing && choice.latestSession) return openSession(choice.latestSession);
     return toast('error', `Could not open ${choice.name}: ${opened.error}`);
   }
 
   const task = (await ctx.ui.dialog.prompt({
-    title: `New worktree in ${choice.repoName}`, description: 'Describe the task; Fleet suggests a branch next', placeholder: 'Task',
+    title: `New worktree in ${choice.repoName}`, description: 'Describe the task; Vltra suggests a branch next', placeholder: 'Task',
   }))?.trim();
   if (!alive() || !task) return;
   toast('info', 'Suggesting a branch…');
@@ -59,7 +59,7 @@ export async function runLauncher({ ctx, api, openSession, onLaunched, alive = (
 }
 
 /**
- * Follows the launches started here through Fleet's `launches`: when one is ready, opens its
+ * Follows the launches started here through Vltra's `launches`: when one is ready, opens its
  * session if the user is still on the route they launched from, else offers it in a toast (with
  * OpenCode's Open action); a failure toasts.
  */
@@ -69,7 +69,7 @@ export function createLaunchWatch({ ctx, openSession }) {
     const watch = watched.get(launchID);
     const launch = live.launches.find((l) => l.id === launchID);
     if (!launch) {
-      // Listed once, then gone: dismissed (or Fleet restarted). Never seen yet: not arrived.
+      // Listed once, then gone: dismissed (or Vltra restarted). Never seen yet: not arrived.
       if (watch.seen) watched.delete(launchID);
       return;
     }

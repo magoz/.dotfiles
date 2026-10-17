@@ -4,7 +4,7 @@
 // real worktree.create / worktree.list / worktree.remove HTTP API against a temp
 // repo with a local bare origin. The real `worktree` / `worktree-manage` CLIs come
 // from THIS checkout; provision (env and db) is a fake. Isolation copies
-// fleet/lib/services/opencode/testing/opencode-server.ts: temp HOME/XDG/TMPDIR,
+// vltra/lib/services/opencode/testing/opencode-server.ts: temp HOME/XDG/TMPDIR,
 // rebuilt env, random port + password, dead HTTP proxy (no model/provider calls).
 // Never touches the live opencode.service, ~/.config, ~/.local or real leases.
 //
@@ -103,7 +103,7 @@ try {
   assert.ok(projectID, 'project id');
   const step = (message) => console.log(`ok - ${message}`);
 
-  // 1. Fleet-style create: name = encoded branch, slow provisioning (> idle timeouts).
+  // 1. Vltra-style create: name = encoded branch, slow provisioning (> idle timeouts).
   let started = Date.now();
   const created = await request('POST', '/api/worktree', { projectID, name: 'feat--integration' });
   assert.equal(created.status, 200, JSON.stringify(created.body));

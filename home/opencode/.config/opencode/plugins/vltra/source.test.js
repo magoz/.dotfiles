@@ -1,23 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createFleetSource, createSseParser } from './source.js';
-import { reconnectDelay } from './fleet.js';
+import { createVltraSource, createSseParser } from './source.js';
+import { reconnectDelay } from './vltra.js';
 import { NOW, change, fakeFetch, fakeTimers, flush, wireLaunch, wireRow, wireSnapshot } from './fixtures.js';
 
 test('SSE parser: split chunks, CRLF, comments, multi-line data, default event', () => {
   const events = [];
   const parser = createSseParser((e) => events.push(e));
-  parser.push(': heartbeat\n\nevent: fleet.cha');
+  parser.push(': heartbeat\n\nevent: vltra.cha');
   parser.push('nged\r\ndata: {"a":\r\ndata: 1}\r\n\r\ndata: x\n');
   parser.push('\n');
-  assert.deepEqual(events, [{ event: 'fleet.changed', data: '{"a":\n1}' }, { event: 'message', data: 'x' }]);
+  assert.deepEqual(events, [{ event: 'vltra.changed', data: '{"a":\n1}' }, { event: 'message', data: 'x' }]);
 });
 
 test('snapshot on start, refetch on initial, apply changes, no credentials sent', async () => {
   const f = fakeFetch(), timers = fakeTimers(), updates = [];
-  const source = createFleetSource({ baseURL: 'https://fleet.test', fetch: f.fetch, timers, onUpdate: (u) => updates.push(u) });
+  const source = createVltraSource({ baseURL: 'https://vltra.test', fetch: f.fetch, timers, onUpdate: (u) => updates.push(u) });
   source.start(); await flush();
-  assert.deepEqual(f.calls.map((c) => c.url), ['https://fleet.test/api/fleet', 'https://fleet.test/api/fleet/events']);
+  assert.deepEqual(f.calls.map((c) => c.url), ['https://vltra.test/api/vltra', 'https://vltra.test/api/vltra/events']);
   assert.ok(f.calls.every((c) => c.options.credentials === 'omit' && !('authorization' in c.options.headers)));
   assert.equal(source.status, 'connecting');
   assert.equal(source.live.rows.get('w').state, 'working');
@@ -36,7 +36,7 @@ test('snapshot on start, refetch on initial, apply changes, no credentials sent'
 
 test('reconnect with backoff, unreachable after 3 failures, recovers on initial', async () => {
   const f = fakeFetch(), timers = fakeTimers();
-  const source = createFleetSource({ baseURL: 'https://fleet.test', fetch: f.fetch, timers, onUpdate: () => {} });
+  const source = createVltraSource({ baseURL: 'https://vltra.test', fetch: f.fetch, timers, onUpdate: () => {} });
   source.start(); await flush();
   f.streams[0].send(change({ initial: true })); await flush();
   assert.equal(source.status, 'live');
@@ -57,7 +57,7 @@ test('reconnect with backoff, unreachable after 3 failures, recovers on initial'
 test('heartbeat watchdog aborts a silent stream; stop aborts everything and never throws', async () => {
   const f = fakeFetch(), timers = fakeTimers();
   let updates = 0;
-  const source = createFleetSource({ baseURL: 'https://fleet.test', fetch: f.fetch, timers, idleTimeoutMs: 45_000,
+  const source = createVltraSource({ baseURL: 'https://vltra.test', fetch: f.fetch, timers, idleTimeoutMs: 45_000,
     onUpdate: () => { updates++; throw new Error('host bug'); } });
   source.start(); await flush();
   f.streams[0].send(': heartbeat\n\n'); await flush();
@@ -77,9 +77,9 @@ test('heartbeat watchdog aborts a silent stream; stop aborts everything and neve
 
 test('bad JSON or wrong shapes are ignored', async () => {
   const f = fakeFetch(), timers = fakeTimers();
-  const source = createFleetSource({ baseURL: 'https://fleet.test', fetch: f.fetch, timers, onUpdate: () => {} });
+  const source = createVltraSource({ baseURL: 'https://vltra.test', fetch: f.fetch, timers, onUpdate: () => {} });
   source.start(); await flush();
-  f.streams[0].send('event: fleet.changed\ndata: {nope\n\n');
+  f.streams[0].send('event: vltra.changed\ndata: {nope\n\n');
   f.streams[0].send(change({ initial: false, rows: 'x' }));
   f.streams[0].send('event: other\ndata: {}\n\n'); await flush();
   assert.equal(source.live.rows.get('w').state, 'working');

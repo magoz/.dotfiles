@@ -1,7 +1,7 @@
 # dotfiles-tools — `create_worktree` and `/worktree`
 
 **Effect server** plugin (shared deps in `../package.json`). It has no TUI half and does not use
-Herdr. It works the same from the web app, Fleet and the TUI.
+Herdr. It works the same from the web app, Vltra and the TUI.
 
 | File | Role |
 | --- | --- |
@@ -30,15 +30,15 @@ sessions can call the tool. Host schemas are `portable(..., { exact: true })`, s
    task.
 3. `ctx.worktree.create({ projectID, name, branch: base })`: OpenCode's native worktree API,
    which goes through the dotfiles `worktrees` strategy. That creates a provisioned sibling
-   checkout and an ownership marker, and the checkout can be retired from OpenCode and Fleet.
+   checkout and an ownership marker, and the checkout can be retired from OpenCode and Vltra.
    `name` is `branchToName(branch)` (`feat/x` → `feat--x`). Branches without an exact encoding
    are refused before anything is allocated.
    OpenCode runs the target project's own strategy, so this works across repositories.
 4. `ctx.session.move` into the worktree, then `ctx.session.prompt` with `prompt`. The move is
    queued before the task, so the task runs in the worktree.
 
-Apart from the session being created first and then moved, this matches Fleet's launcher
-(`worktree.create` → `session.create` → `session.prompt`), so the new session shows up in Fleet
+Apart from the session being created first and then moved, this matches Vltra's launcher
+(`worktree.create` → `session.create` → `session.prompt`), so the new session shows up in Vltra
 like any launch.
 
 If a later step fails, or the tool call is interrupted, everything allocated after the
@@ -65,7 +65,7 @@ never calls the tool itself.
 
 Before this change, the TUI claimed a request over plugin RPC, confirmed it in a dialog and ran
 `worktree create --agent opencode` in its own Herdr pane. That needed exactly one live TUI on
-the root session, so sessions driven from the web app or Fleet always failed ("Exactly one live
+the root session, so sessions driven from the web app or Vltra always failed ("Exactly one live
 TUI on the root session is required"). Herdr worktrees remain available through
 `worktree create` and Pi.
 

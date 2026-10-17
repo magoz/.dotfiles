@@ -188,10 +188,10 @@ handoff is not requested. If a saved machine shows Attention, run `box` from a
 local terminal, follow Herdr's prompts, then restart the combined client.
 
 It then sets up `ocb`, the OpenCode 2 client for Box's tailnet-only OpenCode
-server, published by Fleet at `https://fleet.oox.sh`: it reads the server password over `ssh box` into the Keychain item
+server, published by Vltra at `https://fleet.oox.sh`: it reads the server password over `ssh box` into the Keychain item
 `opencode-box` (never printed), verifies the server with `ocb --check`, and
 installs the `@opencode/cli` version the server runs if this Mac differs, and
-registers `OCB Link.app` for `ocb://session/<id>` links (Fleet's "Open in terminal"), which
+registers `OCB Link.app` for `ocb://session/<id>` links (Vltra's "Open in terminal"), which
 open a new Ghostty window running `ocb -s <id>`. Rerun
 `./macos/setup-box` after a password rotation or an OpenCode upgrade on Box.
 Daily use: `ocb` (UI on the Mac, agents on Box; both Macs see the same

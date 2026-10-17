@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build and register "OCB Link.app", the handler for ocb://session/<id> links
-# (Fleet's "Open in terminal"). It opens a new Ghostty window running ocb.
+# (Vltra's "Open in terminal"). It opens a new Ghostty window running ocb.
 # Idempotent; run by ./macos/setup-box.
 set -euo pipefail
 

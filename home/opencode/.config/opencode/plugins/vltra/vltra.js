@@ -1,9 +1,9 @@
-// Pure Fleet model for the ocb terminal view: wire shape checks, the live row map, the needs-me
+// Pure Vltra model for the ocb terminal view: wire shape checks, the live row map, the needs-me
 // list, counts, badge, row reasons, notification transitions and the launcher list. No host,
 // network or clock access.
-// Wire schema: fleet repo `lib/data/fleet/types.ts` (FleetSnapshot, FleetChange, FleetRow, Launch,
+// Wire schema: vltra repo `lib/data/vltra/types.ts` (VltraSnapshot, VltraChange, VltraRow, Launch,
 // LauncherList). Rules mirror `state.ts` (stuck, counts), `board.ts` (needs-me and working order,
-// optimistic overrides) and `app/fleet-format.ts` (labels).
+// optimistic overrides) and `app/vltra-format.ts` (labels).
 
 export const STATES = ['blocked', 'working', 'finished', 'handled'];
 const OUTCOMES = ['succeeded', 'failed', 'interrupted'];
@@ -54,7 +54,7 @@ function parseChild(v) {
   };
 }
 
-/** One root row (Fleet's `FleetRow`), or undefined when the shape is not a Fleet row. */
+/** One root row (Vltra's `VltraRow`), or undefined when the shape is not a Vltra row. */
 export function parseRow(v) {
   if (!core(v) || !string(v.projectID) || !string(v.directory) || !number(v.created) || !number(v.activeAt) ||
       !boolean(v.gone) || !optional(v.handled, number) || !object(v.pending) || !number(v.pending.permissions) ||
@@ -70,7 +70,7 @@ export function parseRow(v) {
   };
 }
 
-/** One launcher launch (Fleet's `Launch`), or undefined. */
+/** One launcher launch (Vltra's `Launch`), or undefined. */
 export function parseLaunch(v) {
   if (!object(v) || !string(v.id) || !v.id || !string(v.repo) || !string(v.repoName) || !string(v.branch) || !string(v.task) ||
       !LAUNCH_STATUSES.includes(v.status) || !number(v.startedAt) || !number(v.updatedAt) || !optional(v.sessionID, string) ||
@@ -86,7 +86,7 @@ function parseConnection(v) {
   return object(v) && ['connecting', 'connected', 'disconnected'].includes(v.status) ? v.status : 'disconnected';
 }
 
-/** `GET /api/fleet` body → live model, or undefined when the top-level shape is wrong. */
+/** `GET /api/vltra` body → live model, or undefined when the top-level shape is wrong. */
 export function parseSnapshot(v) {
   if (!object(v) || !Array.isArray(v.projects)) return undefined;
   const rows = new Map(), projects = new Map(), worktrees = new Map();
@@ -103,7 +103,7 @@ export function parseSnapshot(v) {
   return { connection: parseConnection(v.connection), rows, projects, worktrees, launches };
 }
 
-/** `fleet.changed` payload → change, or undefined. Invalid rows are dropped, not fatal. */
+/** `vltra.changed` payload → change, or undefined. Invalid rows are dropped, not fatal. */
 export function parseChange(v) {
   if (!object(v) || typeof v.initial !== 'boolean' || !Array.isArray(v.rows) || !Array.isArray(v.removed)) return undefined;
   return {
@@ -189,7 +189,7 @@ export function isQuiet(row, now) {
 /** Stuck is not a state: a working row that is retrying or quiet. */
 export const isStuck = (row, now) => row.state === 'working' && (pendingRetry(row) !== undefined || isQuiet(row, now));
 
-/** Root rows by rolled-up state, plus the stuck working ones (Fleet's `countRows`). */
+/** Root rows by rolled-up state, plus the stuck working ones (Vltra's `countRows`). */
 export function countRows(rows, now) {
   const counts = { blocked: 0, finished: 0, working: 0, stuck: 0, handled: 0 };
   for (const row of rows) {
@@ -243,8 +243,8 @@ export const badgeText = (counts) => {
 };
 
 /**
- * What the footer shows: hidden without data, when Fleet is unreachable, or when nothing needs me
- * and nothing works; `subtle` while reconnecting or while Fleet itself lost OpenCode.
+ * What the footer shows: hidden without data, when Vltra is unreachable, or when nothing needs me
+ * and nothing works; `subtle` while reconnecting or while Vltra itself lost OpenCode.
  */
 export function badgeView(status, live, now) {
   if (!live || status === 'unreachable') return { visible: false };
@@ -256,7 +256,7 @@ export function badgeView(status, live, now) {
 
 const minute = 60 * 1000, hour = 60 * minute, day = 24 * hour;
 
-/** Compact age (Fleet's `relativeTime`): now, 4m, 3h, 2d. */
+/** Compact age (Vltra's `relativeTime`): now, 4m, 3h, 2d. */
 export function relativeTime(at, now) {
   const age = Math.max(0, now - at);
   if (age < minute) return 'now';
@@ -381,9 +381,9 @@ export function notification(live, batch) {
   if (!batch.length) return undefined;
   const blocked = batch.filter((t) => t.kind === 'blocked'), finished = batch.filter((t) => t.kind === 'finished');
   const first = blocked[0] ?? finished[0];
-  if (batch.length === 1) return { title: 'Fleet', message: `${rowLabel(live, first.row)} ${first.kind === 'finished' ? 'finished' : 'needs you'}` };
+  if (batch.length === 1) return { title: 'Vltra', message: `${rowLabel(live, first.row)} ${first.kind === 'finished' ? 'finished' : 'needs you'}` };
   const parts = [blocked.length && `${blocked.length} ${blocked.length === 1 ? 'needs' : 'need'} you`, finished.length && `${finished.length} finished`].filter(Boolean);
-  return { title: 'Fleet', message: `${parts.join(' · ')} — ${rowLabel(live, first.row)}` };
+  return { title: 'Vltra', message: `${parts.join(' · ')} — ${rowLabel(live, first.row)}` };
 }
 
 const parseTally = (v) => object(v) && ['blocked', 'working', 'finished', 'handled'].every((k) => number(v[k]))
@@ -396,7 +396,7 @@ function parseLauncherWorktree(v) {
   return { directory: v.directory, branch: clean(v.branch, 120), owner: v.owner === 'dotfiles' ? 'dotfiles' : 'other', pr, sessions: parseTally(v.sessions), latestSession: v.latestSession };
 }
 
-/** `GET /api/fleet/launcher` body (`LauncherList`) → entries, or undefined. Bad entries are dropped. */
+/** `GET /api/vltra/launcher` body (`LauncherList`) → entries, or undefined. Bad entries are dropped. */
 export function parseLauncher(v) {
   if (!object(v) || !Array.isArray(v.entries)) return undefined;
   return v.entries.flatMap((e) => {
@@ -412,7 +412,7 @@ const tallyText = (t) => t ? ['blocked', 'finished', 'working'].filter((k) => t[
 const prText = (pr) => !pr || ['unknown', 'none'].includes(pr.state) ? '' : `${pr.number !== undefined ? `#${pr.number} ` : ''}${pr.state}`;
 
 /**
- * Launcher dialog options, one category per repository in Fleet's order (most recent agent
+ * Launcher dialog options, one category per repository in Vltra's order (most recent agent
  * activity first): the repository, its worktrees, then `+ New worktree in <repo>…` (none for a
  * plain folder, which has no worktrees). The dialog's
  * fuzzy filter matches titles and categories, so typing a repo name keeps all of its rows.

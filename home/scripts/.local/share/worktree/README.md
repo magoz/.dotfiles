@@ -189,7 +189,7 @@ all irreversible steps that completed so recovery remains explicit.
 
 Fresh sandbox leases clone a baseline that lags the checked-out code, so a
 repository declares its own bootstrap in its root `package.json`, and every entry
-point (Pi, OpenCode, Fleet, the `worktrees` strategy) applies it:
+point (Pi, OpenCode, Vltra, the `worktrees` strategy) applies it:
 
 ```json
 "provision": { "setup": ["pnpm db:migrate", "NODE_ENV=test pnpm db:migrate"] }
@@ -327,7 +327,7 @@ Decided from local evidence only (no network, no env-file reads):
   Warnings: no Vercel configuration, no supported lockfile.
 
 `--check-vercel-link` is deliberately not used for this decision: it fails (exit 2,
-not 3) in repos whose `.vercel`/env paths are not ignored, such as `~/dev/repos/fleet`.
+not 3) in repos whose `.vercel`/env paths are not ignored, such as `~/dev/repos/vltra`.
 
 ### Ownership marker
 
@@ -368,7 +368,7 @@ and before removal, private receipts. It then runs `git worktree remove` **witho
 `.env.local` are removed with the checkout). The branch is kept; `--delete-branch` uses
 only `git branch -d`.
 
-**No agent checks.** Herdr is not consulted, so the caller (OpenCode, Fleet) must not
+**No agent checks.** Herdr is not consulted, so the caller (OpenCode, Vltra) must not
 retire a checkout that still has working sessions. Herdr-created worktrees carry no
 marker and are refused; retire them with `plan`/`retire` and `--workspace`.
 

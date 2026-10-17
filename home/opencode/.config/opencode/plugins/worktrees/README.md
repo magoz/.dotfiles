@@ -8,7 +8,7 @@ agent launch:
 
 - TUI: `ctrl+a` move dialog → new worktree;
 - web app: "new workspace";
-- Fleet launcher: `worktree.create` → `session.create` (in the returned directory) →
+- Vltra launcher: `worktree.create` → `session.create` (in the returned directory) →
   `session.prompt`.
 
 Removal always goes through the Herdr-free safe retirement path. No TUI plugin.
@@ -52,7 +52,7 @@ service user already has; nothing is prompted (`--non-interactive`).
 - **Branch**: decoded from OpenCode's `name`, which core turns into the last segment of
   the suggested directory (`path.join(<configured parent>, name)`). See encoding below.
 - **Directory**: the suggested parent is **ignored**. The CLI always uses the sibling
-  default `<primary-repo>-<branch-slug>` (e.g. `~/dev/repos/fleet-feat-x`) and the
+  default `<primary-repo>-<branch-slug>` (e.g. `~/dev/repos/vltra-feat-x`) and the
   plugin returns the CLI's real path. OpenCode never creates `<parent>/<name>`.
 - **Base**: OpenCode's `branch` input is a *starting ref*, passed as `--base` (used
   without fetching). Omitted → the CLI fetches origin's live default tip (fail closed).
@@ -68,7 +68,7 @@ service user already has; nothing is prompted (`--non-interactive`).
   failures preserve the checkout and say where it is. Run `worktree checkout` by hand
   for full diagnostics.
 
-### Name → branch encoding (Fleet contract)
+### Name → branch encoding (Vltra contract)
 
 A worktree `name` cannot contain `/` usefully: core joins it into a path, and the
 plugin only sees the final segment. Rules, in order:
@@ -84,7 +84,7 @@ plugin only sees the final segment. Rules, in order:
 Names must match `^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$`; `--` segments must be non-empty
 and must not start or end with `-`. The CLI then checks `git check-ref-format --branch`.
 
-**Fleet must send `name = branch.replaceAll('/', '--')`** — for branch `feat/x`, send
+**Vltra must send `name = branch.replaceAll('/', '--')`** — for branch `feat/x`, send
 `name: "feat--x"`. Reference implementation: `branchToName` in `naming.ts`, which throws
 for branches with no exact encoding (no `/`, a segment containing `--`, or a segment
 starting/ending with `-`). Never send `/` in `name`. Never rely on rules 2–3 for an
@@ -114,7 +114,7 @@ checkout's `.git` file (`gitdir: …`); `worktree-manage` checks it authoritativ
   `provision db` leases, then `git worktree remove` (never `--force`), keeps the branch,
   writes private receipts under `~/.local/state/worktree-manager`.
 - Errors include only worktree-manage's sanitized `worktree-manage: …` refusal line.
-- **No agent checks.** OpenCode/Fleet must not delete a worktree that still has working
+- **No agent checks.** OpenCode/Vltra must not delete a worktree that still has working
   sessions; that is the caller's responsibility.
 
 ## `list` and discovery

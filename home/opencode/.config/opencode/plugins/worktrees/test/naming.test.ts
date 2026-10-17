@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { branchFromName, branchToName } from '../naming.ts';
 
-test('`--` is the exact, reversible branch separator Fleet uses', () => {
+test('`--` is the exact, reversible branch separator Vltra uses', () => {
   const pairs: ReadonlyArray<readonly [string, string]> = [
     ['feat--x', 'feat/x'],
     ['fix--api--retry-2', 'fix/api/retry-2'],

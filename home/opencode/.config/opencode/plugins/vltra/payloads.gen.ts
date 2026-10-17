@@ -1,32 +1,32 @@
-// Generates payloads.json: real Fleet wire payloads built by Fleet's own projection
-// (`buildSnapshot`, the same code behind `GET /api/fleet`) and checked against Fleet's schemas.
-// Not part of the plugin or its tests; rerun when Fleet's wire types change:
-//   cd ~/dev/repos/fleet && node_modules/.bin/tsx <this file> > <plugin dir>/payloads.json
-// `@/` resolves through the Fleet checkout's tsconfig (run from its root).
+// Generates payloads.json: real Vltra wire payloads built by Vltra's own projection
+// (`buildSnapshot`, the same code behind `GET /api/vltra`) and checked against Vltra's schemas.
+// Not part of the plugin or its tests; rerun when Vltra's wire types change:
+//   cd ~/dev/repos/vltra && node_modules/.bin/tsx <this file> > <plugin dir>/payloads.json
+// `@/` resolves through the Vltra checkout's tsconfig (run from its root).
 import { Schema } from '@/node_modules/effect/dist/index.js'
-import { fromSnapshot } from '@/lib/data/fleet/model'
-import type { TrackedSession } from '@/lib/data/fleet/model'
-import { buildRows, buildSnapshot } from '@/lib/data/fleet/snapshot'
-import { countRows } from '@/lib/data/fleet/state'
-import { baseTime, sessionRecord, webUrl } from '@/lib/data/fleet/testing/fixtures'
+import { fromSnapshot } from '@/lib/data/vltra/model'
+import type { TrackedSession } from '@/lib/data/vltra/model'
+import { buildRows, buildSnapshot } from '@/lib/data/vltra/snapshot'
+import { countRows } from '@/lib/data/vltra/state'
+import { baseTime, sessionRecord, webUrl } from '@/lib/data/vltra/testing/fixtures'
 import {
-  FleetChange,
-  FleetSnapshot,
+  VltraChange,
+  VltraSnapshot,
   HandledResult,
   LaunchStarted,
   LauncherList,
   OpenedCheckout,
   ReopenResult,
   SessionSummary
-} from '@/lib/data/fleet/types'
-import type { Launch, SessionRecord } from '@/lib/data/fleet/types'
+} from '@/lib/data/vltra/types'
+import type { Launch, SessionRecord } from '@/lib/data/vltra/types'
 
 const minute = 60_000
 const hour = 60 * minute
 const now = baseTime + 48 * hour
 
-const fleet = '/home/magoz/dev/repos/fleet'
-const featX = '/home/magoz/dev/repos/fleet-feat-x'
+const vltra = '/home/magoz/dev/repos/vltra'
+const featX = '/home/magoz/dev/repos/vltra-feat-x'
 const box = '/home/magoz/dev/repos/box'
 
 const finished = (at: number, outcome: 'succeeded' | 'failed' | 'interrupted' = 'succeeded') => ({
@@ -124,11 +124,11 @@ const base = fromSnapshot(
       }
     ],
     projects: [
-      { id: 'prj_fleet', name: 'fleet', directory: fleet },
+      { id: 'prj_vltra', name: 'vltra', directory: vltra },
       { id: 'prj_box', name: 'box', directory: box },
       { id: 'global', directory: '/' }
     ],
-    worktrees: [{ projectID: 'prj_fleet', directories: [featX] }]
+    worktrees: [{ projectID: 'prj_vltra', directories: [featX] }]
   },
   now,
   new Map([['/tmp/tmp.gone', true]])
@@ -145,8 +145,8 @@ for (const [id, facts] of live) {
 const model = { ...base, sessions: tracked }
 
 const launch = (overrides: Partial<Launch> & Pick<Launch, 'id' | 'status'>): Launch => ({
-  repo: fleet,
-  repoName: 'fleet',
+  repo: vltra,
+  repoName: 'vltra',
   branch: 'feat/palette',
   task: 'Add the launcher palette',
   startedAt: now - 42_000,
@@ -178,14 +178,14 @@ const launches: ReadonlyArray<Launch> = [
 
 const connection = { status: 'connected' as const, since: now, failures: 0, version: '2.0.20' }
 
-const snapshot = Schema.decodeUnknownSync(FleetSnapshot)(
+const snapshot = Schema.decodeUnknownSync(VltraSnapshot)(
   buildSnapshot(model, { connection, webUrl, now, launches })
 )
 
 const rows = buildRows(model, webUrl)
 const changed = rows.filter(row => row.id === 'ses_busy')
 
-const change = Schema.decodeUnknownSync(FleetChange)({
+const change = Schema.decodeUnknownSync(VltraChange)({
   initial: false,
   connection,
   counts: countRows(rows, now),
@@ -207,9 +207,9 @@ const launcher = Schema.decodeUnknownSync(LauncherList)({
   entries: [
     {
       kind: 'repo',
-      name: 'fleet',
-      directory: fleet,
-      projectID: 'prj_fleet',
+      name: 'vltra',
+      directory: vltra,
+      projectID: 'prj_vltra',
       sessions: tally({ blocked: 2, working: 2, finished: 2, handled: 1 }),
       latestSession: 'ses_busy',
       activeAt: now - minute,
@@ -219,13 +219,13 @@ const launcher = Schema.decodeUnknownSync(LauncherList)({
           directory: featX,
           branch: 'feat/x',
           owner: 'dotfiles',
-          pr: { state: 'open', number: 7, url: 'https://github.com/o/fleet/pull/7' },
+          pr: { state: 'open', number: 7, url: 'https://github.com/o/vltra/pull/7' },
           sessions: tally({ blocked: 1, working: 1, finished: 1 }),
           latestSession: 'ses_retry',
           activeAt: now - minute
         },
         {
-          directory: '/home/magoz/dev/repos/fleet-pi-thing',
+          directory: '/home/magoz/dev/repos/vltra-pi-thing',
           branch: 'pi/thing',
           owner: 'other',
           pr: { state: 'closed', number: 3 },

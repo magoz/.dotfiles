@@ -1,16 +1,16 @@
-// Fleet terminal view: focus sidebar, footer badge, full-page route, commands, handled/undo,
+// Vltra terminal view: focus sidebar, footer badge, full-page route, commands, handled/undo,
 // launcher and notifications. The OpenTUI Solid runtime is injected (see tui.js), so this module
 // builds elements without a JSX build step and runs under node --test with a fake runtime.
 import { spawn } from 'node:child_process';
 import {
   BADGE_MARK, askKind, askText, badgeView, buildBoard, elapsedText, launchRunning, names, nextNeedsMe, notification, notifyMode,
   relativeTime, resolveBaseURL, resolveKeys, rowLabel, rowReason, titleOf, transitions, withOverrides,
-} from './fleet.js';
-import { createFleetApi } from './api.js';
+} from './vltra.js';
+import { createVltraApi } from './api.js';
 import { createLaunchWatch, runLauncher } from './launcher.js';
-import { createFleetSource } from './source.js';
+import { createVltraSource } from './source.js';
 
-export const ROUTE = 'fleet';
+export const ROUTE = 'vltra';
 /**
  * Content width of OpenCode's session sidebar: `SESSION_SIDEBAR_WIDTH` 42 minus its 2+2 padding,
  * minus the 1 column the `sidebar.content` box keeps for the scrollbar (`routes/session/sidebar.tsx`).
@@ -18,7 +18,7 @@ export const ROUTE = 'fleet';
 export const SIDEBAR_COLS = 37;
 /** The sidebar offers undo for this long after a handled. */
 export const UNDO_WINDOW = 5 * 60 * 1000;
-/** Footer badge part tones: `N need you` is Fleet's green, never OpenCode's warning orange. */
+/** Footer badge part tones: `N need you` is Vltra's green, never OpenCode's warning orange. */
 export const BADGE_TONES = { need: 'attention', working: 'base', stuck: 'error' };
 /** Session rows the sidebar shows before `+N more`; launches do not count. */
 export const SIDEBAR_ROWS = 6;
@@ -77,7 +77,7 @@ function spread(left, right, cols) {
 /** Header status label. */
 export function statusLabel(status, live) {
   if (status === 'unreachable') return { text: 'unreachable', tone: 'error' };
-  if (live && live.connection !== 'connected') return { text: 'Fleet lost OpenCode', tone: 'muted' };
+  if (live && live.connection !== 'connected') return { text: 'Vltra lost OpenCode', tone: 'muted' };
   if (status === 'live') return { text: 'live', tone: 'muted' };
   return { text: status === 'reconnecting' ? 'reconnecting…' : 'connecting…', tone: 'muted' };
 }
@@ -139,8 +139,8 @@ function capRows(rows, currentID, max) {
 const dimmed = (entry) => ({ ...entry, lines: entry.lines.map((parts) => parts.map((p) => ({ ...p, tone: 'muted' }))) });
 
 /**
- * The Fleet section of the session sidebar (Option C of the sidebar redesign), prepended above
- * OpenCode's own sections: a "Fleet" title with the working/stuck counts, then one line per
+ * The Vltra section of the session sidebar (Option C of the sidebar redesign), prepended above
+ * OpenCode's own sections: a "Vltra" title with the working/stuck counts, then one line per
  * entry: launches, then blocked (with the ask on a second line), then finished. The current
  * session reads `this session` behind a blue `▌`. At most `max` session rows, then `+N more`.
  *
@@ -150,7 +150,7 @@ const dimmed = (entry) => ({ ...entry, lines: entry.lines.map((parts) => parts.m
  */
 export function sidebarLines({ live, status, baseURL, now, currentID, lastHandled, pageKey, cols = SIDEBAR_COLS, max = SIDEBAR_ROWS }) {
   const label = statusLabel(status, live);
-  const title = { text: 'Fleet', tone: 'base', bold: true };
+  const title = { text: 'Vltra', tone: 'base', bold: true };
   if (!live) {
     const host = baseURL.replace(/^https?:\/\//, '');
     return [
@@ -175,7 +175,7 @@ export function sidebarLines({ live, status, baseURL, now, currentID, lastHandle
   const more = board.needsMe.length - rows.length;
   if (more > 0) body.push({ key: 'more', action: page, lines: [[gutter(false), { text: fit(`+${more} more${pageKey ? ` · ${pageKey}` : ''}`, cols - 1), tone: 'muted' }]] });
   if (!board.needsMe.length) body.push({ key: 'empty', lines: [[{ text: 'Nothing needs you', tone: 'muted' }]] });
-  // Unreachable, or Fleet lost OpenCode: the list is kept but may be stale.
+  // Unreachable, or Vltra lost OpenCode: the list is kept but may be stale.
   const stale = status === 'unreachable' || live.connection !== 'connected';
   return [...entries, ...(stale ? body.map(dimmed) : body)];
 }
@@ -186,7 +186,7 @@ export function sidebarLines({ live, status, baseURL, now, currentID, lastHandle
  */
 export function pageLines({ live, status, baseURL, now, cols, selectedID, answer = () => undefined }) {
   if (!live) {
-    return [{ parts: [{ text: status === 'unreachable' ? `Fleet unreachable at ${baseURL}` : `Connecting to ${baseURL}…`, tone: 'muted' }] }];
+    return [{ parts: [{ text: status === 'unreachable' ? `Vltra unreachable at ${baseURL}` : `Connecting to ${baseURL}…`, tone: 'muted' }] }];
   }
   const board = buildBoard(live, now);
   const lines = [];
@@ -279,7 +279,7 @@ export function createNotifier({ send, live, timers = globalThis, now = Date.now
 }
 
 /**
- * Answer excerpts for finished rows, fetched lazily from Fleet's per-run summary route (Fleet
+ * Answer excerpts for finished rows, fetched lazily from Vltra's per-run summary route (Vltra
  * caches it by run), at most `concurrency` at a time; a failed lookup is not retried for that run.
  */
 export function createAnswers({ api, onChange, concurrency = 2, max = 200 }) {
@@ -314,16 +314,16 @@ const routeOf = (route) => ({ ...route, ...(route.data ? { data: { ...route.data
  * Wires the plugin into the host. `runtime`: OpenTUI Solid (`createElement`, `insert`, `setProp`,
  * `effect`, `createComponent`, `useTerminalDimensions`) plus Solid's `createSignal`.
  */
-export function setupFleet(ctx, runtime, deps = {}) {
+export function setupVltra(ctx, runtime, deps = {}) {
   const env = deps.env ?? process.env;
   const clock = deps.now ?? Date.now;
   const timers = deps.timers ?? globalThis;
-  const baseURL = resolveBaseURL(ctx.options?.url, env.FLEET_URL);
+  const baseURL = resolveBaseURL(ctx.options?.url, env.VLTRA_URL);
   const mode = notifyMode(ctx.options?.notify);
   const keys = resolveKeys(ctx.options?.keys);
   const lifetime = new AbortController();
   const alive = () => !lifetime.signal.aborted;
-  const api = createFleetApi({ baseURL, fetch: deps.fetch, timers, signal: lifetime.signal });
+  const api = createVltraApi({ baseURL, fetch: deps.fetch, timers, signal: lifetime.signal });
   const h = createH(runtime);
   const [version, setVersion] = runtime.createSignal(0);
   const [tick, setTick] = runtime.createSignal(0);
@@ -364,7 +364,7 @@ export function setupFleet(ctx, runtime, deps = {}) {
     if (running && launchClock === undefined) launchClock = timers.setInterval(() => setClockTick((v) => v + 1), 1000);
     if (!running && launchClock !== undefined) { timers.clearInterval(launchClock); launchClock = undefined; }
   };
-  const source = createFleetSource({
+  const source = createVltraSource({
     baseURL, fetch: deps.fetch, timers,
     onUpdate: ({ live: next, reason }) => {
       // Baseline: the first data never notifies; afterwards every model update is diffed.
@@ -383,10 +383,10 @@ export function setupFleet(ctx, runtime, deps = {}) {
   };
   const unavailable = () => {
     if (source.live && source.status !== 'unreachable') return false;
-    toast('error', `Fleet unavailable (${baseURL})`);
+    toast('error', `Vltra unavailable (${baseURL})`);
     return true;
   };
-  const undoHint = () => { const s = shortcut('fleet.undo', keys.undo); return s ? ` · ${s} to undo` : ''; };
+  const undoHint = () => { const s = shortcut('vltra.undo', keys.undo); return s ? ` · ${s} to undo` : ''; };
 
   /** Marks a finished root session handled (optimistically, like the web), then offers undo. */
   const markHandled = async (rowID) => {
@@ -411,7 +411,7 @@ export function setupFleet(ctx, runtime, deps = {}) {
     toast('success', `Handled ${titleOf(row)}${undoHint()}`);
   };
 
-  /** Reopens the last session handled here (removes Fleet's handled marker). */
+  /** Reopens the last session handled here (removes Vltra's handled marker). */
   const undo = async () => {
     const last = lastHandled;
     if (!last) return toast('info', 'Nothing to undo');
@@ -444,7 +444,7 @@ export function setupFleet(ctx, runtime, deps = {}) {
     launching = true;
     try {
       await runLauncher({ ctx, api, openSession, alive, onLaunched: (launch) => { watch.start(launch); watch.check(source.live); } });
-    } catch { toast('error', 'Fleet launcher failed'); } finally { launching = false; }
+    } catch { toast('error', 'Vltra launcher failed'); } finally { launching = false; }
   };
 
   const openPage = () => {
@@ -463,7 +463,7 @@ export function setupFleet(ctx, runtime, deps = {}) {
   };
 
   const theme = () => ctx.theme;
-  // Green is Fleet's "needs you", red a failure, blue where you are or what is running; never
+  // Green is Vltra's "needs you", red a failure, blue where you are or what is running; never
   // OpenCode's warning/accent (orange in most themes).
   const TONES = {
     base: (t) => t.text.base, muted: (t) => t.text.muted, error: (t) => t.text.feedback.error.base,
@@ -526,21 +526,21 @@ export function setupFleet(ctx, runtime, deps = {}) {
   }, ...entry.lines.map(lineBox(entry.key)));
 
   /**
-   * The Fleet section, prepended inside `sidebar.content`: OpenCode's own sections (Context, MCP,
+   * The Vltra section, prepended inside `sidebar.content`: OpenCode's own sections (Context, MCP,
    * LSP, todos) stay below it, and the slot's `gap={1}` puts one blank row between them.
    */
-  function FleetSidebar(input) {
+  function VltraSidebar(input) {
     return h('box', { flexDirection: 'column', flexShrink: 0 }, () => {
       version(); tick(); clockTick();
       const current = input.sessionID ? ctx.data.session.root(input.sessionID) : undefined;
       return sidebarLines({
         live: live(), status: source.status, baseURL, now: clock(), currentID: current, lastHandled,
-        pageKey: shortcut('fleet.open', keys.open),
+        pageKey: shortcut('vltra.open', keys.open),
       }).map(entryBox);
     });
   }
 
-  function FleetPage() {
+  function VltraPage() {
     const dimensions = runtime.useTerminalDimensions();
     const cols = () => Math.max(20, dimensions().width - 4);
     const linesFor = (selectedID) => pageLines({ live: live(), status: source.status, baseURL, now: clock(), cols: cols(), selectedID, answer: answers.get });
@@ -559,21 +559,21 @@ export function setupFleet(ctx, runtime, deps = {}) {
     };
     const row = () => live()?.rows.get(currentSelection());
     ctx.keymap.layer(() => ({ commands: [
-      { bind: 'escape,q', title: 'Back', group: 'Fleet', run: back },
-      { bind: 'down,j', title: 'Next session', group: 'Fleet', run: () => move(1) },
-      { bind: 'up,k', title: 'Previous session', group: 'Fleet', run: () => move(-1) },
-      { bind: 'return', title: 'Open session', group: 'Fleet', run: () => { const r = row(); if (r) openSession(r.id); } },
-      { bind: 'h', title: 'Mark handled', group: 'Fleet', run: () => { const r = row(); if (r) void markHandled(r.id); } },
-      { bind: 'o', title: 'Open in web', group: 'Fleet', run: () => {
+      { bind: 'escape,q', title: 'Back', group: 'Vltra', run: back },
+      { bind: 'down,j', title: 'Next session', group: 'Vltra', run: () => move(1) },
+      { bind: 'up,k', title: 'Previous session', group: 'Vltra', run: () => move(-1) },
+      { bind: 'return', title: 'Open session', group: 'Vltra', run: () => { const r = row(); if (r) openSession(r.id); } },
+      { bind: 'h', title: 'Mark handled', group: 'Vltra', run: () => { const r = row(); if (r) void markHandled(r.id); } },
+      { bind: 'o', title: 'Open in web', group: 'Vltra', run: () => {
         const r = row();
         if (!r?.web) return;
-        void (deps.openURL ?? openURL)(r.web).then((ok) => { if (!ok) toast('info', 'No URL opener here; use the Fleet web view'); }, () => {});
+        void (deps.openURL ?? openURL)(r.web).then((ok) => { if (!ok) toast('info', 'No URL opener here; use the Vltra web view'); }, () => {});
       } },
     ] }));
     const header = () => {
       version();
       const status = statusLabel(source.status, source.live);
-      return textLine(spread([{ text: 'Fleet', tone: 'base', bold: true }], [status], cols()));
+      return textLine(spread([{ text: 'Vltra', tone: 'base', bold: true }], [status], cols()));
     };
     const body = () => {
       const all = lines();
@@ -595,23 +595,23 @@ export function setupFleet(ctx, runtime, deps = {}) {
   }
 
   // Global leader commands (also in the palette): OpenCode 2.0.22's sidebar cannot take keyboard
-  // focus, so Fleet's keys cannot live inside it. CLI plugins must create layers inside a slot.
+  // focus, so Vltra's keys cannot live inside it. CLI plugins must create layers inside a slot.
   function Commands() {
     ctx.keymap.layer(() => ({ mode: 'global', commands: [
-      { id: 'fleet.open', title: 'Fleet', description: 'Needs-me and working sessions (Fleet)', group: 'Fleet', bind: keys.open, palette: true, slash: { name: 'fleet' }, run: openPage },
-      { id: 'fleet.next', title: 'Fleet: Next needs-me session', description: 'Jump to the next session waiting on you', group: 'Fleet', bind: keys.next, palette: true, run: nextSession },
-      { id: 'fleet.launcher', title: 'Fleet: New / open', description: 'Open a repository or worktree, or start a new worktree', group: 'Fleet', bind: keys.launcher, palette: true, run: launcher },
-      { id: 'fleet.handled', title: 'Fleet: Mark handled', description: "Mark this finished session's latest run handled", group: 'Fleet', bind: keys.handled, palette: true, run: () => markHandled(currentRoot()) },
-      { id: 'fleet.undo', title: 'Fleet: Undo handled', description: 'Reopen the last session marked handled here', group: 'Fleet', bind: keys.undo, palette: true, run: undo },
+      { id: 'vltra.open', title: 'Vltra', description: 'Needs-me and working sessions (Vltra)', group: 'Vltra', bind: keys.open, palette: true, slash: { name: 'vltra' }, run: openPage },
+      { id: 'vltra.next', title: 'Vltra: Next needs-me session', description: 'Jump to the next session waiting on you', group: 'Vltra', bind: keys.next, palette: true, run: nextSession },
+      { id: 'vltra.launcher', title: 'Vltra: New / open', description: 'Open a repository or worktree, or start a new worktree', group: 'Vltra', bind: keys.launcher, palette: true, run: launcher },
+      { id: 'vltra.handled', title: 'Vltra: Mark handled', description: "Mark this finished session's latest run handled", group: 'Vltra', bind: keys.handled, palette: true, run: () => markHandled(currentRoot()) },
+      { id: 'vltra.undo', title: 'Vltra: Undo handled', description: 'Reopen the last session marked handled here', group: 'Vltra', bind: keys.undo, palette: true, run: undo },
     ] }));
     return null;
   }
 
   const cleanups = [
-    ctx.ui.router.register({ name: ROUTE, render: () => runtime.createComponent(FleetPage, {}) }),
+    ctx.ui.router.register({ name: ROUTE, render: () => runtime.createComponent(VltraPage, {}) }),
     ctx.ui.slot({ append: 'app', render: () => runtime.createComponent(Commands, {}) }),
     // Prepend, not replace: OpenCode's Context/MCP/LSP/todos (all `append` claims) stay below.
-    ctx.ui.slot({ prepend: 'sidebar.content', render: (input) => runtime.createComponent(FleetSidebar, input) }),
+    ctx.ui.slot({ prepend: 'sidebar.content', render: (input) => runtime.createComponent(VltraSidebar, input) }),
     ctx.ui.slot({ append: 'home.footer.status', render: () => badge }),
     // The home route has a prompt too; its footer badge would repeat the home footer's.
     ctx.ui.slot({ append: 'prompt.footer.status', render: (input) => () => (input.sessionID ? badge() : null) }),

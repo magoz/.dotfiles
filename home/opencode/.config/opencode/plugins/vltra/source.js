@@ -1,7 +1,7 @@
-// Fleet network source: GET /api/fleet snapshot plus the /api/fleet/events SSE stream, with
-// timeouts, a heartbeat watchdog and capped exponential reconnect. Fleet has no auth: requests
+// Vltra network source: GET /api/vltra snapshot plus the /api/vltra/events SSE stream, with
+// timeouts, a heartbeat watchdog and capped exponential reconnect. Vltra has no auth: requests
 // carry no credentials. Every failure is reported as status, never thrown into the host.
-import { applyChange, parseChange, parseSnapshot, reconnectDelay } from './fleet.js';
+import { applyChange, parseChange, parseSnapshot, reconnectDelay } from './vltra.js';
 
 /** Incremental `text/event-stream` parser; `push` takes decoded text chunks. */
 export function createSseParser(onEvent) {
@@ -35,12 +35,12 @@ export function createSseParser(onEvent) {
 }
 
 /**
- * Keeps a live Fleet model. Status: `connecting` (never connected yet), `live` (stream up and
+ * Keeps a live Vltra model. Status: `connecting` (never connected yet), `live` (stream up and
  * snapshot loaded), `reconnecting` (stream lost, retrying), `unreachable` (3+ failures in a row).
  * `onUpdate({ live, status, reason })` fires on every model or status change; `reason` is
  * `snapshot`, `change` or `status`.
  */
-export function createFleetSource({
+export function createVltraSource({
   baseURL, onUpdate, fetch = globalThis.fetch, timers = globalThis,
   requestTimeoutMs = 10_000, idleTimeoutMs = 45_000, unreachableAfter = 3,
 }) {
@@ -63,7 +63,7 @@ export function createFleetSource({
     const request = withTimeout(lifetime.signal, requestTimeoutMs);
     snapshotRequest = request;
     try {
-      const response = await fetch(`${baseURL}/api/fleet`, { signal: request.signal, headers: { accept: 'application/json' }, redirect: 'error', credentials: 'omit' });
+      const response = await fetch(`${baseURL}/api/vltra`, { signal: request.signal, headers: { accept: 'application/json' }, redirect: 'error', credentials: 'omit' });
       if (!response.ok) return false;
       const next = parseSnapshot(await response.json());
       if (!next || snapshotRequest !== request || lifetime.signal.aborted) return false;
@@ -75,7 +75,7 @@ export function createFleetSource({
   }
 
   function handle(message) {
-    if (message.event !== 'fleet.changed') return;
+    if (message.event !== 'vltra.changed') return;
     let change;
     try { change = parseChange(JSON.parse(message.data)); } catch { return; }
     if (!change) return;
@@ -99,8 +99,8 @@ export function createFleetSource({
     let watchdog;
     const touch = () => { timers.clearTimeout(watchdog); watchdog = timers.setTimeout(request.abort, idleTimeoutMs); };
     try {
-      const response = await fetch(`${baseURL}/api/fleet/events`, { signal: request.signal, headers: { accept: 'text/event-stream' }, redirect: 'error', credentials: 'omit' });
-      if (!response.ok || !response.body) throw new Error('Fleet stream unavailable');
+      const response = await fetch(`${baseURL}/api/vltra/events`, { signal: request.signal, headers: { accept: 'text/event-stream' }, redirect: 'error', credentials: 'omit' });
+      if (!response.ok || !response.body) throw new Error('Vltra stream unavailable');
       request.done();
       // `done` detached the lifetime link; re-link it for the streaming phase.
       lifetime.signal.addEventListener('abort', request.abort, { once: true });

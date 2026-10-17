@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BADGE_TONES, ROUTE, SIDEBAR_COLS, cells, createNotifier, fit, openURL, pageLines, scrollTop, selectableIDs, setupFleet, sidebarLines } from './view.js';
-import { parseSnapshot } from './fleet.js';
+import { BADGE_TONES, ROUTE, SIDEBAR_COLS, cells, createNotifier, fit, openURL, pageLines, scrollTop, selectableIDs, setupVltra, sidebarLines } from './view.js';
+import { parseSnapshot } from './vltra.js';
 import { NOW, change, fakeFetch, fakeTimers, flush, payloads, wireLaunch, wireRow, wireSnapshot } from './fixtures.js';
 
 const ORIGIN = 'https://fleet.oox.sh';
@@ -49,7 +49,7 @@ const lineText = (entries) => entries.flatMap((e) => e.lines.map((parts) => part
 const click = () => { const event = { stopped: false, stopPropagation() { event.stopped = true; } }; return event; };
 
 const color = (name) => `#${name}`;
-/** Theme tokens the Fleet UI must never read: OpenCode's warning and accent (orange in Tokyonight). */
+/** Theme tokens the Vltra UI must never read: OpenCode's warning and accent (orange in Tokyonight). */
 const forbidden = [];
 const watched = (name, value) => ({ get() { forbidden.push(name); return value; }, enumerable: true });
 const theme = {
@@ -89,7 +89,7 @@ function fixture({ options = {}, snapshot = payloads.snapshot, route: initial = 
     },
   };
   const opened = [];
-  const dispose = setupFleet(ctx, fakeRuntime(), { fetch: net.fetch, timers, env: {}, now: () => NOW, openURL: async (u) => { opened.push(u); return true; } });
+  const dispose = setupVltra(ctx, fakeRuntime(), { fetch: net.fetch, timers, env: {}, now: () => NOW, openURL: async (u) => { opened.push(u); return true; } });
   const commands = () => layers.flatMap((fn) => fn().commands);
   const run = (bind) => commands().find((c) => c.bind?.split?.(',').includes(bind) || c.id === bind).run();
   const slot = (kind, path) => slots.find((s) => s[kind] === path);
@@ -106,11 +106,11 @@ test('registers the sidebar section (prepended), page, footer badges and leader 
   ]);
   f.slot('append', 'app').render();
   assert.deepEqual(f.commands().map((c) => [c.id, c.title, c.bind, c.palette]), [
-    ['fleet.open', 'Fleet', '<leader>f', true],
-    ['fleet.next', 'Fleet: Next needs-me session', '<leader>j', true],
-    ['fleet.launcher', 'Fleet: New / open', '<leader>o', true],
-    ['fleet.handled', 'Fleet: Mark handled', '<leader>h', true],
-    ['fleet.undo', 'Fleet: Undo handled', '<leader>z', true],
+    ['vltra.open', 'Vltra', '<leader>f', true],
+    ['vltra.next', 'Vltra: Next needs-me session', '<leader>j', true],
+    ['vltra.launcher', 'Vltra: New / open', '<leader>o', true],
+    ['vltra.handled', 'Vltra: Mark handled', '<leader>h', true],
+    ['vltra.undo', 'Vltra: Undo handled', '<leader>z', true],
   ]);
   assert.equal(f.layers[0]().mode, 'global');
   assert.equal(text(f.slot('append', 'home.footer.status').render()), '⚑ 7 need you · 3 working · 2 stuck');
@@ -123,7 +123,7 @@ test('registers the sidebar section (prepended), page, footer badges and leader 
   g.dispose();
 });
 
-test('badge: ⚑ and "N need you" in Fleet green (success), working base, stuck red; muted when subtle', async () => {
+test('badge: ⚑ and "N need you" in Vltra green (success), working base, stuck red; muted when subtle', async () => {
   assert.deepEqual(BADGE_TONES, { need: 'attention', working: 'base', stuck: 'error' });
   const f = fixture();
   await flush();
@@ -138,23 +138,23 @@ test('badge: ⚑ and "N need you" in Fleet green (success), working base, stuck 
   g.dispose();
 });
 
-test('sidebar: one Fleet title with counts, then one line per entry: launches, blocked (with the ask), finished, +N more', async () => {
+test('sidebar: one Vltra title with counts, then one line per entry: launches, blocked (with the ask), finished, +N more', async () => {
   const f = fixture();
-  assert.deepEqual(sidebarText(f.sidebar()), [`Fleet${' '.repeat(21)}connecting…`, 'fleet.oox.sh']);
+  assert.deepEqual(sidebarText(f.sidebar()), [`Vltra${' '.repeat(21)}connecting…`, 'fleet.oox.sh']);
   await flush();
   f.net.streams[0].send(change({ initial: true })); await flush();
   const entries = sidebarEntries(f.sidebar('ses_done_new'));
   assert.deepEqual(entries.map((e) => e.lines.map((l) => l.trimEnd())), [
-    ['Fleet             3 working · 2 stuck'],
-    [' ◌ feat/palette · fleet          0:42'],
-    [' • fix/broken · fleet        failed ✕'],
-    [' • feat/x · fleet             ready ✕'],
-    [' ! fleet Wait old                  3h', '   bash: pnpm db:push'],
-    [' ? fleet Wait new                  1h', '   Ship it?'],
-    [' ? fleet Wait on subagent         50m', '   explore asks: Which database?'],
-    [' • fleet Done old              failed'],
-    [' • fleet Stopped run          stopped'],
-    ['▌• fleet this session             30m'],
+    ['Vltra             3 working · 2 stuck'],
+    [' ◌ feat/palette · vltra          0:42'],
+    [' • fix/broken · vltra        failed ✕'],
+    [' • feat/x · vltra             ready ✕'],
+    [' ! vltra Wait old                  3h', '   bash: pnpm db:push'],
+    [' ? vltra Wait new                  1h', '   Ship it?'],
+    [' ? vltra Wait on subagent         50m', '   explore asks: Which database?'],
+    [' • vltra Done old              failed'],
+    [' • vltra Stopped run          stopped'],
+    ['▌• vltra this session             30m'],
     [' +1 more · ctrl+x f'],
   ]);
   for (const line of entries.flatMap((e) => e.lines)) assert.ok(cells(line) <= SIDEBAR_COLS, line);
@@ -162,11 +162,11 @@ test('sidebar: one Fleet title with counts, then one line per entry: launches, b
 
   // Colours: green markers, red failures, blue running launch and current session; muted meta.
   const fg = (entry, str) => entry.spans.find((s) => s.text === str)?.fg;
-  assert.equal(fg(entries[0], 'Fleet'), '#base');
+  assert.equal(fg(entries[0], 'Vltra'), '#base');
   assert.deepEqual(entries[0].spans.filter((s) => /working|stuck/.test(s.text)).map((s) => s.fg), ['#muted', '#error']);
   assert.deepEqual([fg(entries[1], '◌'), fg(entries[2], '•'), fg(entries[2], 'failed'), fg(entries[3], '•'), fg(entries[3], 'ready')],
     ['#running', '#error', '#error', '#success', '#success']);
-  assert.deepEqual([fg(entries[4], '!'), fg(entries[4], 'fleet '), fg(entries[4], 'Wait old'), fg(entries[4], '3h'), fg(entries[4], '  bash: pnpm db:push')],
+  assert.deepEqual([fg(entries[4], '!'), fg(entries[4], 'vltra '), fg(entries[4], 'Wait old'), fg(entries[4], '3h'), fg(entries[4], '  bash: pnpm db:push')],
     ['#success', '#muted', '#base', '#muted', '#muted']);
   assert.deepEqual([fg(entries[5], '?'), fg(entries[7], '•'), fg(entries[7], 'failed'), fg(entries[8], '•'), fg(entries[8], 'stopped')],
     ['#success', '#error', '#error', '#success', '#base']);
@@ -190,12 +190,12 @@ test('sidebar: one Fleet title with counts, then one line per entry: launches, b
   entries[4].click();
   entries[3].click();
   assert.deepEqual(f.navigations, [{ type: 'session', sessionID: 'ses_wait_old' }, { type: 'session', sessionID: 'ses_busy' }]);
-  f.net.respond('POST', '/api/fleet/launches/launch-2/dismiss', 200, { launchID: 'launch-2' });
+  f.net.respond('POST', '/api/vltra/launches/launch-2/dismiss', 200, { launchID: 'launch-2' });
   assert.deepEqual(entries[2].targets.map((t) => t.text), ['✕']);
   const event = click();
   entries[2].targets[0].click(event); await flush();
   assert.equal(event.stopped, true, '✕ does not also click its entry');
-  assert.deepEqual(f.net.requests().filter((r) => r.method === 'POST').map((r) => [r.path, r.body, r.headers.origin]), [['/api/fleet/launches/launch-2/dismiss', {}, ORIGIN]]);
+  assert.deepEqual(f.net.requests().filter((r) => r.method === 'POST').map((r) => [r.path, r.body, r.headers.origin]), [['/api/vltra/launches/launch-2/dismiss', {}, ORIGIN]]);
   assert.equal(f.navigations.length, 2);
   entries[2].click();
   const failed = payloads.snapshot.launches[1];
@@ -216,33 +216,33 @@ test('sidebar degrades to two lines: nothing needs you; unreachable; reconnectin
   const f = fixture({ snapshot: wireSnapshot([wireRow('w', 'working', { activityAt: NOW - 11 * minute }), wireRow('w2', 'working'), wireRow('h', 'handled')]) });
   await flush();
   f.net.streams[0].send(change({ initial: true })); await flush();
-  assert.deepEqual(sidebarText(f.sidebar()), ['Fleet             2 working · 1 stuck', 'Nothing needs you']);
+  assert.deepEqual(sidebarText(f.sidebar()), ['Vltra             2 working · 1 stuck', 'Nothing needs you']);
   assert.equal(sidebarEntries(f.sidebar())[1].spans[0].fg, '#muted');
   f.dispose();
   const quiet = sidebarLines({ live: parseSnapshot(wireSnapshot([wireRow('h', 'handled')])), status: 'live', baseURL: 'u', now: NOW });
-  assert.deepEqual(lineText(quiet), ['Fleet', 'Nothing needs you']);
+  assert.deepEqual(lineText(quiet), ['Vltra', 'Nothing needs you']);
   const down = sidebarLines({ live: undefined, status: 'unreachable', baseURL: 'https://fleet.oox.sh', now: NOW });
-  assert.deepEqual(lineText(down), ['Fleet                     unreachable', 'fleet.oox.sh · retrying…']);
+  assert.deepEqual(lineText(down), ['Vltra                     unreachable', 'fleet.oox.sh · retrying…']);
   assert.equal(down[0].lines[0].at(-1).tone, 'error');
 
   const live = parseSnapshot(wireSnapshot([wireRow('a', 'blocked'), wireRow('b', 'finished', { outcome: 'failed' }), wireRow('w', 'working')]));
   const view = (status, l = live) => sidebarLines({ live: l, status, baseURL: 'u', now: NOW, currentID: 'b' });
-  assert.deepEqual(lineText(view('reconnecting')), ['Fleet                   reconnecting…', ' ? box T a                         1m', '   needs you', '▌• box this session            failed']);
+  assert.deepEqual(lineText(view('reconnecting')), ['Vltra                   reconnecting…', ' ? box T a                         1m', '   needs you', '▌• box this session            failed']);
   assert.ok(view('reconnecting').slice(1).some((e) => e.lines.flat().some((p) => p.tone !== 'muted')), 'reconnecting keeps the list as is');
-  for (const [status, l, label] of [['unreachable', live, 'unreachable'], ['live', parseSnapshot(wireSnapshot([wireRow('a', 'blocked')], 'disconnected')), 'Fleet lost OpenCode']]) {
+  for (const [status, l, label] of [['unreachable', live, 'unreachable'], ['live', parseSnapshot(wireSnapshot([wireRow('a', 'blocked')], 'disconnected')), 'Vltra lost OpenCode']]) {
     const entries = view(status, l);
-    assert.equal(lineText(entries)[0], `Fleet${' '.repeat(SIDEBAR_COLS - 5 - label.length)}${label}`);
+    assert.equal(lineText(entries)[0], `Vltra${' '.repeat(SIDEBAR_COLS - 5 - label.length)}${label}`);
     assert.ok(entries.slice(1).every((e) => e.lines.flat().every((p) => p.tone === 'muted')), `${status}: the list is dimmed`);
   }
 });
 
 test('sidebar with the S2 data (inside a finished session, nothing working) reads like mock (d)', async () => {
-  const fleetDir = '/home/magoz/dev/repos/fleet';
+  const vltraDir = '/home/magoz/dev/repos/vltra';
   const s2 = {
     generatedAt: NOW, counts: payloads.snapshot.counts, connection: { status: 'connected', since: NOW, failures: 0 }, launches: [],
     projects: [
-      { id: 'fleet', name: 'fleet', directory: fleetDir, worktrees: [{ directory: fleetDir, kind: 'root', rows: [
-        wireRow('ses_greeting', 'finished', { title: 'Greeting', projectID: 'fleet', directory: fleetDir, activeAt: NOW - 4 * minute }),
+      { id: 'vltra', name: 'vltra', directory: vltraDir, worktrees: [{ directory: vltraDir, kind: 'root', rows: [
+        wireRow('ses_greeting', 'finished', { title: 'Greeting', projectID: 'vltra', directory: vltraDir, activeAt: NOW - 4 * minute }),
       ] }] },
       { id: 'global', name: 'global', directory: '/', worktrees: [{ directory: '/tmp', kind: 'directory', rows: [
         wireRow('ses_ok', 'finished', { title: 'Request for exact "ok" reply', projectID: 'global', directory: '/tmp', activeAt: NOW - 3 * 60 * minute }),
@@ -254,9 +254,9 @@ test('sidebar with the S2 data (inside a finished session, nothing working) read
   f.net.streams[0].send(change({ initial: true })); await flush();
   const entries = sidebarEntries(f.sidebar('ses_ok'));
   assert.deepEqual(entries.map((e) => e.lines.map((l) => l.trimEnd())), [
-    ['Fleet'],
+    ['Vltra'],
     ['▌• tmp this session                3h'],
-    [' • fleet Greeting                  4m'],
+    [' • vltra Greeting                  4m'],
   ]);
   const all = entries.flatMap((e) => e.lines).join('\n');
   assert.doesNotMatch(all, /Request for exact|Nothing is working|ctrl\+x/, 'the title shows once (in the host), no hints');
@@ -322,7 +322,7 @@ test('sidebar lines never exceed the sidebar width, measured with Bun.stringWidt
   assert.match(rows[4], /^ {3}bash: x+…$/);
 });
 
-test('the Fleet UI never reads warning or accent tokens and uses only base/muted/error/green/blue tones', async () => {
+test('the Vltra UI never reads warning or accent tokens and uses only base/muted/error/green/blue tones', async () => {
   forbidden.length = 0;
   const f = fixture({ route: { type: 'session', sessionID: 'ses_done_new' } });
   await flush();
@@ -351,13 +351,13 @@ test('the Fleet UI never reads warning or accent tokens and uses only base/muted
 
 test('answer excerpts load lazily for the page, two at a time, failures not retried', async () => {
   const g = fixture();
-  g.net.respond('GET', '/api/fleet/sessions/ses_done_new/summary', 200, payloads.summary);
-  g.net.respond('GET', '/api/fleet/sessions/ses_tmp/summary', 500, { error: 'Internal error' });
+  g.net.respond('GET', '/api/vltra/sessions/ses_done_new/summary', 200, payloads.summary);
+  g.net.respond('GET', '/api/vltra/sessions/ses_tmp/summary', 500, { error: 'Internal error' });
   await flush();
   assert.deepEqual(g.net.requests().map((r) => r.path), [
-    `/api/fleet/sessions/ses_done_new/summary?idle=${NOW - 30 * minute}`, `/api/fleet/sessions/ses_tmp/summary?idle=${NOW - 10 * minute}`,
+    `/api/vltra/sessions/ses_done_new/summary?idle=${NOW - 30 * minute}`, `/api/vltra/sessions/ses_tmp/summary?idle=${NOW - 10 * minute}`,
   ]);
-  assert.match(text(g.routes[0].render({})), /fleet · fleet-feat-x · Done new +Added the palette\. · 30m/);
+  assert.match(text(g.routes[0].render({})), /vltra · vltra-feat-x · Done new +Added the palette\. · 30m/);
   assert.doesNotMatch(sidebarText(g.sidebar()).join('\n'), /Added the palette/, 'the sidebar leaves answers to the session');
   g.net.streams[0].send(change({ initial: false, rows: [] })); await flush();
   assert.equal(g.net.requests().length, 2);
@@ -368,13 +368,13 @@ test('ctrl+x h marks the current finished root handled (Origin header), optimist
   const f = fixture({ route: { type: 'session', sessionID: 'ses_done_new' } });
   await flush();
   f.slot('append', 'app').render();
-  f.net.respond('POST', '/api/fleet/sessions/ses_done_new/handled', 200, { sessionID: 'ses_done_new', outcome: 'handled' });
-  f.net.respond('POST', '/api/fleet/sessions/ses_done_new/reopen', 200, { sessionID: 'ses_done_new', outcome: 'reopened' });
-  assert.ok(sidebarText(f.sidebar('ses_done_new')).includes('▌• fleet this session             30m'));
-  await f.run('fleet.handled');
+  f.net.respond('POST', '/api/vltra/sessions/ses_done_new/handled', 200, { sessionID: 'ses_done_new', outcome: 'handled' });
+  f.net.respond('POST', '/api/vltra/sessions/ses_done_new/reopen', 200, { sessionID: 'ses_done_new', outcome: 'reopened' });
+  assert.ok(sidebarText(f.sidebar('ses_done_new')).includes('▌• vltra this session             30m'));
+  await f.run('vltra.handled');
   const posts = () => f.net.requests().filter((r) => r.method === 'POST');
   assert.deepEqual(posts().map((r) => [r.path, r.body, r.headers]), [
-    ['/api/fleet/sessions/ses_done_new/handled', {}, { accept: 'application/json', 'content-type': 'application/json', origin: ORIGIN }],
+    ['/api/vltra/sessions/ses_done_new/handled', {}, { accept: 'application/json', 'content-type': 'application/json', origin: ORIGIN }],
   ]);
   const entries = sidebarEntries(f.sidebar('ses_done_new'));
   const lines = entries.flatMap((e) => e.lines.map((l) => l.trimEnd()));
@@ -385,10 +385,10 @@ test('ctrl+x h marks the current finished root handled (Origin header), optimist
   assert.equal(text(f.slot('append', 'home.footer.status').render()), '⚑ 6 need you · 3 working · 2 stuck');
   assert.deepEqual(f.toasts.at(-1), { variant: 'success', message: 'Handled Done new · ctrl+x z to undo' });
   entries[1].click(); await flush();
-  assert.deepEqual(posts().map((r) => r.path).at(-1), '/api/fleet/sessions/ses_done_new/reopen');
-  assert.ok(sidebarText(f.sidebar('ses_done_new')).includes('▌• fleet this session             30m'));
+  assert.deepEqual(posts().map((r) => r.path).at(-1), '/api/vltra/sessions/ses_done_new/reopen');
+  assert.ok(sidebarText(f.sidebar('ses_done_new')).includes('▌• vltra this session             30m'));
   assert.deepEqual(f.toasts.at(-1), { variant: 'info', message: 'Reopened Done new' });
-  await f.run('fleet.undo');
+  await f.run('vltra.undo');
   assert.deepEqual(f.toasts.at(-1), { variant: 'info', message: 'Nothing to undo' });
   assert.equal(posts().length, 2);
   f.dispose();
@@ -398,14 +398,14 @@ test('handled: refused or failed calls roll back; only finished sessions qualify
   const f = fixture({ route: { type: 'session', sessionID: 'ses_done_old' } });
   await flush();
   f.slot('append', 'app').render();
-  f.net.respond('POST', '/api/fleet/sessions/ses_done_old/handled', 409, { error: 'Only a finished session can be marked handled' });
-  await f.run('fleet.handled');
+  f.net.respond('POST', '/api/vltra/sessions/ses_done_old/handled', 409, { error: 'Only a finished session can be marked handled' });
+  await f.run('vltra.handled');
   assert.deepEqual(f.toasts.at(-1), { variant: 'error', message: 'Could not mark handled: Only a finished session can be marked handled' });
-  assert.ok(sidebarText(f.sidebar()).includes(' • fleet Done old              failed'));
+  assert.ok(sidebarText(f.sidebar()).includes(' • vltra Done old              failed'));
   f.setRoute({ type: 'session', sessionID: 'ses_wait_old' });
-  await f.run('fleet.handled');
+  await f.run('vltra.handled');
   f.setRoute({ type: 'home' });
-  await f.run('fleet.handled');
+  await f.run('vltra.handled');
   assert.deepEqual(f.toasts.slice(-2).map((t) => t.message), ['Only a finished session can be marked handled', 'Open a finished session first']);
   assert.equal(f.net.requests().filter((r) => r.method === 'POST').length, 1);
   f.dispose();
@@ -414,24 +414,24 @@ test('handled: refused or failed calls roll back; only finished sessions qualify
 test('ctrl+x o launches a worktree and lands in its session when ready, unless the user moved on', async () => {
   const f = fixture({
     route: { type: 'session', sessionID: 'ses_wait_old' },
-    pick: (options) => options.find((o) => o.title === '+ New worktree in fleet…').value,
+    pick: (options) => options.find((o) => o.title === '+ New worktree in vltra…').value,
     prompts: ['Add dark mode', 'feat/dark-mode'],
   });
-  f.net.respond('GET', '/api/fleet/launcher', 200, payloads.launcher);
-  f.net.respond('POST', '/api/fleet/launcher/branch', 200, { branch: 'feat/dark-mode', source: 'fallback' });
-  f.net.respond('POST', '/api/fleet/launches', 200, { launchID: 'launch-9' });
+  f.net.respond('GET', '/api/vltra/launcher', 200, payloads.launcher);
+  f.net.respond('POST', '/api/vltra/launcher/branch', 200, { branch: 'feat/dark-mode', source: 'fallback' });
+  f.net.respond('POST', '/api/vltra/launches', 200, { launchID: 'launch-9' });
   await flush();
   f.net.streams[0].send(change({ initial: true })); await flush();
   f.slot('append', 'app').render();
-  await f.run('fleet.launcher');
-  assert.equal(f.dialogs[0].title, 'Fleet: New / open');
+  await f.run('vltra.launcher');
+  assert.equal(f.dialogs[0].title, 'Vltra: New / open');
   assert.deepEqual(f.net.requests().filter((r) => r.method === 'POST').map((r) => [r.path, r.body, r.headers.origin]), [
-    ['/api/fleet/launcher/branch', { task: 'Add dark mode' }, ORIGIN],
-    ['/api/fleet/launches', { repoDir: '/home/magoz/dev/repos/fleet', branch: 'feat/dark-mode', task: 'Add dark mode' }, ORIGIN],
+    ['/api/vltra/launcher/branch', { task: 'Add dark mode' }, ORIGIN],
+    ['/api/vltra/launches', { repoDir: '/home/magoz/dev/repos/vltra', branch: 'feat/dark-mode', task: 'Add dark mode' }, ORIGIN],
   ]);
   const launch = wireLaunch({ id: 'launch-9', branch: 'feat/dark-mode' });
   f.net.streams[0].send(change({ initial: false, launches: [launch] })); await flush();
-  assert.ok(sidebarText(f.sidebar()).some((l) => l.startsWith(' ◌ feat/dark-mode · fleet')));
+  assert.ok(sidebarText(f.sidebar()).some((l) => l.startsWith(' ◌ feat/dark-mode · vltra')));
   assert.equal(f.timers.intervals(), 2);
   f.net.streams[0].send(change({ initial: false, launches: [{ ...launch, status: 'ready', sessionID: 'ses_launched' }] })); await flush();
   assert.deepEqual(f.navigations.at(-1), { type: 'session', sessionID: 'ses_launched' });
@@ -443,14 +443,14 @@ test('ctrl+x j jumps through the needs-me list in order; toasts when nothing nee
   const f = fixture({ route: { type: 'session', sessionID: 'ses_wait_new' } });
   await flush();
   f.slot('append', 'app').render();
-  f.run('fleet.next');
+  f.run('vltra.next');
   assert.deepEqual(f.navigations.at(-1), { type: 'session', sessionID: 'ses_wait_sub' });
-  f.run('fleet.next');
+  f.run('vltra.next');
   assert.deepEqual(f.navigations.at(-1), { type: 'session', sessionID: 'ses_done_old' });
   const g = fixture({ snapshot: wireSnapshot([wireRow('w', 'working')]) });
   await flush();
   g.slot('append', 'app').render();
-  g.run('fleet.next');
+  g.run('vltra.next');
   assert.deepEqual(g.toasts.map((t) => t.message), ['Nothing needs you']);
   f.dispose(); g.dispose();
 });
@@ -459,26 +459,26 @@ test('page: needs me then working with stuck labels; j/k move; enter opens; h ha
   const f = fixture();
   await flush();
   f.slot('append', 'app').render();
-  f.run('fleet.open');
+  f.run('vltra.open');
   assert.deepEqual(f.navigations.at(-1), { type: 'plugin', name: ROUTE });
   const page = f.routes[0].render({});
   const screen = text(page);
-  assert.match(screen, /^Fleet +connecting…/);
-  assert.match(screen, /Blocked 3\n› ! fleet · Wait old +bash: pnpm db:push · 3h/);
-  assert.match(screen, /Finished 4\n {2}• fleet · Done old +run failed · 5h/);
-  assert.match(screen, /Working 3\n {2}◌ fleet · Quiet run +quiet 15m\n {2}◌ fleet · fleet-feat-x · Retry run +retrying \(2×, rate limited\)\n {2}◌ fleet · Busy run +bash: pnpm test\n/);
+  assert.match(screen, /^Vltra +connecting…/);
+  assert.match(screen, /Blocked 3\n› ! vltra · Wait old +bash: pnpm db:push · 3h/);
+  assert.match(screen, /Finished 4\n {2}• vltra · Done old +run failed · 5h/);
+  assert.match(screen, /Working 3\n {2}◌ vltra · Quiet run +quiet 15m\n {2}◌ vltra · vltra-feat-x · Retry run +retrying \(2×, rate limited\)\n {2}◌ vltra · Busy run +bash: pnpm test\n/);
   assert.doesNotMatch(screen, /Handled one|Box route|Gone scratch/);
   f.run('j');
-  assert.match(text(page), /› \? fleet · fleet-feat-x · Wait new/);
+  assert.match(text(page), /› \? vltra · vltra-feat-x · Wait new/);
   f.run('return');
   assert.deepEqual(f.navigations.at(-1), { type: 'session', sessionID: 'ses_wait_new' });
   f.setRoute({ type: 'plugin', name: ROUTE });
   f.run('o'); await flush();
   assert.deepEqual(f.opened, ['https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_wait_new']);
-  f.net.respond('POST', '/api/fleet/sessions/ses_done_old/handled', 200, { sessionID: 'ses_done_old', outcome: 'handled' });
+  f.net.respond('POST', '/api/vltra/sessions/ses_done_old/handled', 200, { sessionID: 'ses_done_old', outcome: 'handled' });
   f.run('j'); f.run('j');
   f.run('h'); await flush();
-  assert.deepEqual(f.net.requests().filter((r) => r.method === 'POST').map((r) => r.path), ['/api/fleet/sessions/ses_done_old/handled']);
+  assert.deepEqual(f.net.requests().filter((r) => r.method === 'POST').map((r) => r.path), ['/api/vltra/sessions/ses_done_old/handled']);
   f.run('escape');
   assert.deepEqual(f.navigations.at(-1), { type: 'home' });
   f.dispose();
@@ -493,7 +493,7 @@ test('notifications: none for the first snapshot; gaps mode batches → blocked 
   await flush();
   assert.equal(f.notified.length, 0);
   await f.timers.run(1500);
-  assert.deepEqual(f.notified, [{ title: 'Fleet', message: 'box · T a needs you', notification: { when: 'blurred' }, sound: false }]);
+  assert.deepEqual(f.notified, [{ title: 'Vltra', message: 'box · T a needs you', notification: { when: 'blurred' }, sound: false }]);
   f.dispose();
 });
 
@@ -514,7 +514,7 @@ test('layout helpers: truncation, scroll window, unreachable page text', () => {
   const lines = pageLines({ live, status: 'live', baseURL: 'u', now: NOW, cols: 60 });
   assert.deepEqual(selectableIDs(lines), ['d']);
   assert.ok(lines.every((l) => [...l.parts.map((p) => p.text).join('')].length <= 60));
-  assert.equal(pageLines({ live: undefined, status: 'unreachable', baseURL: 'https://f', now: NOW, cols: 60 })[0].parts[0].text, 'Fleet unreachable at https://f');
+  assert.equal(pageLines({ live: undefined, status: 'unreachable', baseURL: 'https://f', now: NOW, cols: 60 })[0].parts[0].text, 'Vltra unreachable at https://f');
   assert.equal(fit('abcdef', 4), 'abc…');
   assert.deepEqual([scrollTop(0, 3, 10, 5), scrollTop(0, 7, 10, 5), scrollTop(5, 2, 10, 5), scrollTop(3, 1, 4, 5)], [0, 3, 1, 0]);
 });

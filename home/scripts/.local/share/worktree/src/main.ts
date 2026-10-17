@@ -150,7 +150,7 @@ const checkout = Command.make(
     })
 ).pipe(
   Command.withDescription(
-    "Create and provision a sibling Git worktree without Herdr or an agent (OpenCode/Fleet strategy)."
+    "Create and provision a sibling Git worktree without Herdr or an agent (OpenCode/Vltra strategy)."
   )
 )
 

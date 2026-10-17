@@ -1,7 +1,7 @@
-// `create_worktree` and `/worktree` (OpenCode V2 Effect API). Same path as Fleet's launcher: a
+// `create_worktree` and `/worktree` (OpenCode V2 Effect API). Same path as Vltra's launcher: a
 // provisioned checkout through OpenCode's native worktree API (the dotfiles `worktrees` strategy),
 // then a fresh session there that receives the task. No Herdr, no TUI: works from the web app,
-// Fleet and the TUI, for this session's repository or any other.
+// Vltra and the TUI, for this session's repository or any other.
 import path from "node:path"
 import type { SessionCreateInput, SessionMoveInput, SessionPromptInput, WorktreeCreateInput, WorktreeRemoveInput } from "@opencode/client/effect/api"
 import type { CommandDefinition, CommandInvocation } from "@opencode/plugin/effect/command"

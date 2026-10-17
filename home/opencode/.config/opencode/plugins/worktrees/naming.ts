@@ -1,6 +1,6 @@
 // OpenCode's worktree `name` becomes the last path segment of the suggested
 // directory (core: path.join(parent, name)), so it cannot carry a branch `/`.
-// Encoding (documented in README.md, used by Fleet):
+// Encoding (documented in README.md, used by Vltra):
 //   1. `--` separates branch segments exactly:  feat--x -> feat/x, fix--api--y -> fix/api/y.
 //      This is the canonical, reversible form: branchToName('feat/x') === 'feat--x'.
 //   2. Without `--`, a leading conventional type and `-` becomes `type/`:
@@ -26,7 +26,7 @@ export function branchFromName(name: string): string {
   return typed ? `${typed[1]}/${typed[2]}` : `feat/${name}`;
 }
 
-/** Canonical name for a branch (what Fleet must send). Throws if the branch has no exact encoding. */
+/** Canonical name for a branch (what Vltra must send). Throws if the branch has no exact encoding. */
 export function branchToName(branch: string): string {
   const segments = branch.split('/');
   if (segments.length === 0 || !segments.every((segment) => SEGMENT.test(segment) && !segment.includes('--'))) {

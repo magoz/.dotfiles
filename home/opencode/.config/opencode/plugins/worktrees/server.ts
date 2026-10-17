@@ -197,7 +197,7 @@ export function createStrategy(env: NodeJS.ProcessEnv = process.env): WorktreeDe
       const primary = path.dirname(commonDir)
 
       // Herdr-free retirement: plan, then retire with the exact plan token. No agent checks:
-      // OpenCode/Fleet must not delete a worktree that still has working sessions.
+      // OpenCode/Vltra must not delete a worktree that still has working sessions.
       const plan = yield* exec("worktree-manage", ["plan-checkout", "--cwd", primary, "--path", directory], { cwd: primary, timeout: PLAN_TIMEOUT, capture: "both" })
       if (plan.code !== 0) return yield* fail(`Retirement refused for ${directory}: ${managerReason(plan.stderr)}. Checkout preserved.`)
       const planned = Option.getOrUndefined(parsePlan(plan.stdout))

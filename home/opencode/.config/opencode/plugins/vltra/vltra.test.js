@@ -4,13 +4,13 @@ import {
   DEFAULT_KEYS, QUIET_AFTER, applyChange, askKind, askText, badgeText, badgeView, buildBoard, countRows, isStuck, launcherOptions,
   nextNeedsMe, notification, notifyMode, parseChange, parseLauncher, parseRow, parseSnapshot, relativeTime, resolveBaseURL,
   resolveKeys, rowLabel, rowReason, transitions, withOverrides,
-} from './fleet.js';
+} from './vltra.js';
 import { NOW, payloads, realRow, wireLaunch, wireRow, wireSnapshot } from './fixtures.js';
 
 const minute = 60_000;
 const ids = (rows) => rows.map((r) => r.id);
 
-test('real Fleet payloads validate: every row, child, launch and the launcher list', () => {
+test('real Vltra payloads validate: every row, child, launch and the launcher list', () => {
   const live = parseSnapshot(payloads.snapshot);
   const wire = payloads.snapshot.projects.flatMap((p) => p.worktrees.flatMap((w) => w.rows));
   assert.equal(live.rows.size, wire.length);
@@ -24,10 +24,10 @@ test('real Fleet payloads validate: every row, child, launch and the launcher li
   assert.match(live.rows.get('ses_busy').web, /^https:\/\//);
   const change = parseChange(payloads.change);
   assert.deepEqual([ids(change.rows), change.removed, change.launches.length], [['ses_busy'], ['ses_tmp'], 3]);
-  assert.deepEqual(parseLauncher(payloads.launcher).map((e) => [e.name, e.worktrees.length]), [['fleet', 2], ['box', 0], ['subs', 0], ['anvil', 0]]);
+  assert.deepEqual(parseLauncher(payloads.launcher).map((e) => [e.name, e.worktrees.length]), [['vltra', 2], ['box', 0], ['subs', 0], ['anvil', 0]]);
 });
 
-test('ordering mirrors Fleet: blocked longest wait first, then finished oldest first; working stuck first, then newest', () => {
+test('ordering mirrors Vltra: blocked longest wait first, then finished oldest first; working stuck first, then newest', () => {
   const board = buildBoard(parseSnapshot(payloads.snapshot), NOW);
   assert.deepEqual(ids(board.blocked), ['ses_wait_old', 'ses_wait_new', 'ses_wait_sub']);
   assert.deepEqual(ids(board.finished), ['ses_done_old', 'ses_done_stop', 'ses_done_new', 'ses_tmp']);
@@ -91,8 +91,8 @@ test('reasons: request summary (own, then subagent, +more), how the run ended, a
 
 test('labels: project · worktree · title; global project uses the directory', () => {
   const live = parseSnapshot(payloads.snapshot);
-  assert.equal(rowLabel(live, live.rows.get('ses_done_new')), 'fleet · fleet-feat-x · Done new');
-  assert.equal(rowLabel(live, live.rows.get('ses_done_old')), 'fleet · Done old');
+  assert.equal(rowLabel(live, live.rows.get('ses_done_new')), 'vltra · vltra-feat-x · Done new');
+  assert.equal(rowLabel(live, live.rows.get('ses_done_old')), 'vltra · Done old');
   assert.equal(rowLabel(live, live.rows.get('ses_tmp')), 'scratch · Scratch');
   const odd = parseSnapshot(wireSnapshot([wireRow('c', 'finished', { title: 'bad\x1b[31mtitle\nline' })]));
   assert.equal(odd.rows.get('c').title, 'bad [31mtitle line');
@@ -154,8 +154,8 @@ test('notifications: gaps = → blocked from a subagent; all adds root → block
   assert.deepEqual(transitions(before, after, 'off'), []);
   assert.deepEqual(transitions(undefined, after, 'all'), []);
   assert.equal(notifyMode('bogus'), 'gaps');
-  assert.deepEqual(notification(after, transitions(before, after, 'gaps')), { title: 'Fleet', message: 'box · T a needs you' });
-  assert.deepEqual(notification(after, transitions(before, after, 'all')), { title: 'Fleet', message: '2 need you · 1 finished — box · T a' });
+  assert.deepEqual(notification(after, transitions(before, after, 'gaps')), { title: 'Vltra', message: 'box · T a needs you' });
+  assert.deepEqual(notification(after, transitions(before, after, 'all')), { title: 'Vltra', message: '2 need you · 1 finished — box · T a' });
 });
 
 test('next needs-me follows the list order from the current root, wrapping', () => {
@@ -167,17 +167,17 @@ test('next needs-me follows the list order from the current root, wrapping', () 
   assert.equal(nextNeedsMe([], 'x'), undefined);
 });
 
-test('launcher options: one category per repo in Fleet order, worktrees, then + New worktree', () => {
+test('launcher options: one category per repo in Vltra order, worktrees, then + New worktree', () => {
   const options = launcherOptions(parseLauncher(payloads.launcher));
   assert.deepEqual(options.slice(0, 4).map((o) => [o.category, o.title, o.description]), [
-    ['fleet', 'fleet', '/home/magoz/dev/repos/fleet · 2 blocked · 2 finished · 2 working'],
-    ['fleet', 'fleet · feat/x', '#7 open · 1 blocked · 1 finished · 1 working'],
-    ['fleet', 'fleet · pi/thing', 'pi · #3 closed'],
-    ['fleet', '+ New worktree in fleet…', undefined],
+    ['vltra', 'vltra', '/home/magoz/dev/repos/vltra · 2 blocked · 2 finished · 2 working'],
+    ['vltra', 'vltra · feat/x', '#7 open · 1 blocked · 1 finished · 1 working'],
+    ['vltra', 'vltra · pi/thing', 'pi · #3 closed'],
+    ['vltra', '+ New worktree in vltra…', undefined],
   ]);
-  assert.deepEqual(options[1].value, { kind: 'open', directory: '/home/magoz/dev/repos/fleet-feat-x', latestSession: 'ses_retry', name: 'fleet · feat/x' });
-  assert.deepEqual(options[3].value, { kind: 'new', repoDir: '/home/magoz/dev/repos/fleet', repoName: 'fleet' });
-  assert.deepEqual(options.map((o) => o.category).filter((c, i, all) => all.indexOf(c) === i), ['fleet', 'box', 'subs', 'anvil']);
+  assert.deepEqual(options[1].value, { kind: 'open', directory: '/home/magoz/dev/repos/vltra-feat-x', latestSession: 'ses_retry', name: 'vltra · feat/x' });
+  assert.deepEqual(options[3].value, { kind: 'new', repoDir: '/home/magoz/dev/repos/vltra', repoName: 'vltra' });
+  assert.deepEqual(options.map((o) => o.category).filter((c, i, all) => all.indexOf(c) === i), ['vltra', 'box', 'subs', 'anvil']);
   // A plain folder: open only, no + New worktree.
   assert.deepEqual(options.filter((o) => o.category === 'subs').map((o) => [o.title, o.value.kind]), [['subs', 'open']]);
   assert.equal(parseLauncher({ entries: 'x' }), undefined);
