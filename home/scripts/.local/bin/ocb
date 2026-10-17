@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ocb: OpenCode on Box. Runs the local OpenCode 2 terminal client against the
-# Box server, published by Vltra at https://fleet.oox.sh (tailnet-only, Let's
+# Box server, published by Vltra at https://vltra.dev (tailnet-only, Let's
 # Encrypt; Vltra proxies OpenCode's API). Agents, tools and repositories stay on
 # Box; only the UI runs here.
 #
@@ -12,7 +12,7 @@
 # session with ctrl+x l or /sessions. See ~/.box/opencode.md on Box.
 set -euo pipefail
 
-url=${OCB_URL:-https://fleet.oox.sh}
+url=${OCB_URL:-https://vltra.dev}
 host=${OCB_SSH_HOST:-box}
 service=opencode-box
 account=opencode

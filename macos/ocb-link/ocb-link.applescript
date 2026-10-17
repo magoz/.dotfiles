@@ -1,4 +1,4 @@
--- Handles ocb://session/<id> links (e.g. "Open in terminal" on fleet.oox.sh):
+-- Handles ocb://session/<id> links (e.g. "Open in terminal" on vltra.dev):
 -- opens a new Ghostty window running `ocb -s <id>` (OpenCode on Box).
 on open location theURL
 	set prefix to "ocb://session/"

@@ -4,7 +4,7 @@ import { BADGE_TONES, ROUTE, SIDEBAR_COLS, cells, createNotifier, fit, openURL, 
 import { parseSnapshot } from './vltra.js';
 import { NOW, change, fakeFetch, fakeTimers, flush, payloads, wireLaunch, wireRow, wireSnapshot } from './fixtures.js';
 
-const ORIGIN = 'https://fleet.oox.sh';
+const ORIGIN = 'https://vltra.dev';
 const minute = 60_000;
 
 /** Solid universal runtime stand-in: plain nodes; function children are read at inspection time. */
@@ -140,7 +140,7 @@ test('badge: ⚑ and "N need you" in Vltra green (success), working base, stuck 
 
 test('sidebar: one Vltra title with counts, then one line per entry: launches, blocked (with the ask), finished, +N more', async () => {
   const f = fixture();
-  assert.deepEqual(sidebarText(f.sidebar()), [`Vltra${' '.repeat(21)}connecting…`, 'fleet.oox.sh']);
+  assert.deepEqual(sidebarText(f.sidebar()), [`Vltra${' '.repeat(21)}connecting…`, 'vltra.dev']);
   await flush();
   f.net.streams[0].send(change({ initial: true })); await flush();
   const entries = sidebarEntries(f.sidebar('ses_done_new'));
@@ -221,8 +221,8 @@ test('sidebar degrades to two lines: nothing needs you; unreachable; reconnectin
   f.dispose();
   const quiet = sidebarLines({ live: parseSnapshot(wireSnapshot([wireRow('h', 'handled')])), status: 'live', baseURL: 'u', now: NOW });
   assert.deepEqual(lineText(quiet), ['Vltra', 'Nothing needs you']);
-  const down = sidebarLines({ live: undefined, status: 'unreachable', baseURL: 'https://fleet.oox.sh', now: NOW });
-  assert.deepEqual(lineText(down), ['Vltra                     unreachable', 'fleet.oox.sh · retrying…']);
+  const down = sidebarLines({ live: undefined, status: 'unreachable', baseURL: 'https://vltra.dev', now: NOW });
+  assert.deepEqual(lineText(down), ['Vltra                     unreachable', 'vltra.dev · retrying…']);
   assert.equal(down[0].lines[0].at(-1).tone, 'error');
 
   const live = parseSnapshot(wireSnapshot([wireRow('a', 'blocked'), wireRow('b', 'finished', { outcome: 'failed' }), wireRow('w', 'working')]));
@@ -474,7 +474,7 @@ test('page: needs me then working with stuck labels; j/k move; enter opens; h ha
   assert.deepEqual(f.navigations.at(-1), { type: 'session', sessionID: 'ses_wait_new' });
   f.setRoute({ type: 'plugin', name: ROUTE });
   f.run('o'); await flush();
-  assert.deepEqual(f.opened, ['https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_wait_new']);
+  assert.deepEqual(f.opened, ['https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_wait_new']);
   f.net.respond('POST', '/api/vltra/sessions/ses_done_old/handled', 200, { sessionID: 'ses_done_old', outcome: 'handled' });
   f.run('j'); f.run('j');
   f.run('h'); await flush();

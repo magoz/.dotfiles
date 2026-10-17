@@ -42,7 +42,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_wait_sub",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_wait_sub",
                   "terminal": "ocb://session/ses_wait_sub",
                   "command": "ocb -s ses_wait_sub"
                 },
@@ -92,7 +92,7 @@
                       }
                     ],
                     "links": {
-                      "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_wait_sub_child",
+                      "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_wait_sub_child",
                       "terminal": "ocb://session/ses_wait_sub_child",
                       "command": "ocb -s ses_wait_sub_child"
                     },
@@ -125,7 +125,7 @@
                 ],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_wait_old",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_wait_old",
                   "terminal": "ocb://session/ses_wait_old",
                   "command": "ocb -s ses_wait_old"
                 },
@@ -157,7 +157,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_busy",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_busy",
                   "terminal": "ocb://session/ses_busy",
                   "command": "ocb -s ses_busy"
                 },
@@ -184,7 +184,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_quiet",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_quiet",
                   "terminal": "ocb://session/ses_quiet",
                   "command": "ocb -s ses_quiet"
                 },
@@ -213,7 +213,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_done_stop",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_done_stop",
                   "terminal": "ocb://session/ses_done_stop",
                   "command": "ocb -s ses_done_stop"
                 },
@@ -241,7 +241,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_done_old",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_done_old",
                   "terminal": "ocb://session/ses_done_old",
                   "command": "ocb -s ses_done_old"
                 },
@@ -270,7 +270,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_handled",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_handled",
                   "terminal": "ocb://session/ses_handled",
                   "command": "ocb -s ses_handled"
                 },
@@ -314,7 +314,7 @@
                   }
                 ],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_wait_new",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_wait_new",
                   "terminal": "ocb://session/ses_wait_new",
                   "command": "ocb -s ses_wait_new"
                 },
@@ -346,7 +346,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_retry",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_retry",
                   "terminal": "ocb://session/ses_retry",
                   "command": "ocb -s ses_retry"
                 },
@@ -374,7 +374,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_done_new",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_done_new",
                   "terminal": "ocb://session/ses_done_new",
                   "command": "ocb -s ses_done_new"
                 },
@@ -402,7 +402,7 @@
                     "permissions": [],
                     "forms": [],
                     "links": {
-                      "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_done_new_child",
+                      "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_done_new_child",
                       "terminal": "ocb://session/ses_done_new_child",
                       "command": "ocb -s ses_done_new_child"
                     },
@@ -441,7 +441,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_tmp",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_tmp",
                   "terminal": "ocb://session/ses_tmp",
                   "command": "ocb -s ses_tmp"
                 },
@@ -475,7 +475,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_gone",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_gone",
                   "terminal": "ocb://session/ses_gone",
                   "command": "ocb -s ses_gone"
                 },
@@ -514,7 +514,7 @@
                 "permissions": [],
                 "forms": [],
                 "links": {
-                  "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_box",
+                  "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_box",
                   "terminal": "ocb://session/ses_box",
                   "command": "ocb -s ses_box"
                 },
@@ -604,7 +604,7 @@
         "permissions": [],
         "forms": [],
         "links": {
-          "web": "https://fleet.oox.sh/server/aHR0cHM6Ly9mbGVldC5vb3guc2g/session/ses_busy",
+          "web": "https://vltra.dev/server/aHR0cHM6Ly92bHRyYS5kZXY/session/ses_busy",
           "terminal": "ocb://session/ses_busy",
           "command": "ocb -s ses_busy"
         },

@@ -434,7 +434,7 @@ export function launcherOptions(entries, formatPath = (p) => p) {
 export const reconnectDelay = (attempt) => Math.min(30_000, 1000 * 2 ** attempt);
 
 /** Base URL from plugin option, then env, then default; http(s) only, no trailing slash. */
-export function resolveBaseURL(option, env, fallback = 'https://fleet.oox.sh') {
+export function resolveBaseURL(option, env, fallback = 'https://vltra.dev') {
   for (const value of [option, env]) {
     if (!string(value) || !value.trim()) continue;
     try {

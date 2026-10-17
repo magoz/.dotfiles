@@ -65,7 +65,7 @@ Context
   opens the page. Blocked rows come first, and the current session always keeps a slot.
 - **Quiet states (about 2 lines).** Nothing needs me: `Nothing needs you` (muted) under the
   title. Vltra unreachable without data: `unreachable` (red) on the title line and
-  `fleet.oox.sh · retrying…`. With earlier data, unreachable or "Vltra lost OpenCode" keeps the
+  `vltra.dev · retrying…`. With earlier data, unreachable or "Vltra lost OpenCode" keeps the
   list but dims all of it. Context and MCP stay visible in every state.
 - **Undo.** For 5 minutes after a handled, ` ✓ Handled <title…> · undo` sits under the title.
 
@@ -177,7 +177,7 @@ all of its rows.
 
 ## Data and routes
 
-Base URL: plugin option `url`, else env `VLTRA_URL`, else `https://fleet.oox.sh`. The site is
+Base URL: plugin option `url`, else env `VLTRA_URL`, else `https://vltra.dev`. The site is
 tailnet-only but has a publicly trusted certificate, so the Macs need no extra CA.
 
 | Route | Use |
@@ -257,9 +257,9 @@ are:
 1. On Box, after the branch is merged, deploy Vltra the usual way (`pnpm ship`). The Vltra owner
    does this; it is not part of this plugin.
 2. Check the read side from the Mac:
-   `curl -s https://fleet.oox.sh/api/vltra | jq '.counts, (.launches | length)'`.
+   `curl -s https://vltra.dev/api/vltra | jq '.counts, (.launches | length)'`.
 3. Check that the guard and route exist without mutating anything. An unknown id gives 404:
-   `curl -s -X POST -H 'content-type: application/json' -H 'origin: https://fleet.oox.sh' -d '{}' https://fleet.oox.sh/api/vltra/sessions/does-not-exist/handled`
+   `curl -s -X POST -H 'content-type: application/json' -H 'origin: https://vltra.dev' -d '{}' https://vltra.dev/api/vltra/sessions/does-not-exist/handled`
    should print `{"error":"Session not found"}`. Without the `origin` header it should print
    `{"error":"Request rejected"}`.
 4. Restart `ocb` (the dotfiles are stowed, so the plugin is live once this branch is merged). Open

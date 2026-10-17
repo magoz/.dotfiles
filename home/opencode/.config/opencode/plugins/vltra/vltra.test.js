@@ -184,10 +184,10 @@ test('launcher options: one category per repo in Vltra order, worktrees, then + 
 });
 
 test('base URL, keys and notify options', () => {
-  assert.equal(resolveBaseURL(undefined, undefined), 'https://fleet.oox.sh');
+  assert.equal(resolveBaseURL(undefined, undefined), 'https://vltra.dev');
   assert.equal(resolveBaseURL('https://a.example/', 'https://b.example'), 'https://a.example');
   assert.equal(resolveBaseURL(undefined, 'http://127.0.0.1:3000/'), 'http://127.0.0.1:3000');
-  assert.equal(resolveBaseURL('https://user:pw@a.example', 'file:///etc'), 'https://fleet.oox.sh');
+  assert.equal(resolveBaseURL('https://user:pw@a.example', 'file:///etc'), 'https://vltra.dev');
   assert.deepEqual(DEFAULT_KEYS, { open: '<leader>f', next: '<leader>j', launcher: '<leader>o', handled: '<leader>h', undo: '<leader>z' });
   assert.deepEqual(resolveKeys({ launcher: ' <leader>p ', undo: false, handled: '', next: 3 }), { ...DEFAULT_KEYS, launcher: '<leader>p', undo: false });
   assert.deepEqual(resolveKeys('x'), DEFAULT_KEYS);

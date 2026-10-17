@@ -15,7 +15,7 @@ Local OpenCode runtime plugins.
 - `worktrees`: Effect server worktree strategy `dotfiles` (Herdr-free `worktree checkout` + `retire-checkout`); `name` `feat--x` → branch `feat/x`; owns only checkouts with the private-git-dir `dotfiles-worktree` marker.
 - `skill-commands`: Effect plugin; registers `/<id>` for shared skills with `metadata.opencode/slash: "true"`; runs as a skill-attached prompt.
 - `subscription-usage`: Effect server (credential resolution, bounded cached fetch), sanitized on-demand TUI output.
-- `vltra`: auto-discovered TUI-only Vltra client of `fleet.oox.sh` (sidebar, launcher, handled/undo via Vltra's JSON routes with `Origin`).
+- `vltra`: auto-discovered TUI-only Vltra client of `vltra.dev` (sidebar, launcher, handled/undo via Vltra's JSON routes with `Origin`).
 
 Effect plugins (server side only: the TUI API is Promise-only) are TypeScript `server.ts` files
 sharing `plugins/package.json` (one `npm ci`, `effect` pinned to the host's version) and
