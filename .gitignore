@@ -40,6 +40,9 @@ home/pi/.pi/node_modules
 home/pi/.pi/agent/extensions/**/node_modules
 
 
+# private skills: symlink to a private skills repo (never commit)
+home/agents/.agents/skills/private
+
 # local Effect CLIs (deps are installed locally, not vendored)
 home/scripts/.local/share/worktree/node_modules
 
