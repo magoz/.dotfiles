@@ -219,8 +219,46 @@ return {
 				})
 			end
 
+			-- TypeScript 7 projects that install @effect/tsgo use its tsgo build (Effect diagnostics
+			-- included) instead of vtsls: TypeScript 7 ships no tsserver for vtsls to load.
+			local function effect_tsgo_root(bufnr)
+				local root = vim.fs.root(bufnr, {
+					{ "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb", "bun.lock" },
+					{ ".git" },
+				})
+				if root and vim.uv.fs_stat(vim.fs.joinpath(root, "node_modules/.bin/effect-tsgo")) then
+					return root
+				end
+			end
+
+			vim.lsp.config("effect_tsgo", {
+				capabilities = capabilities,
+				settings = vim.lsp.config.tsc.settings,
+				filetypes = vim.lsp.config.tsc.filetypes,
+				cmd = function(dispatchers, config)
+					local exe = vim.trim(
+						vim.fn.system({ vim.fs.joinpath(config.root_dir, "node_modules/.bin/effect-tsgo"), "get-exe-path" })
+					)
+					return vim.lsp.rpc.start({ exe, "--lsp", "--stdio" }, dispatchers, { cwd = config.root_dir })
+				end,
+				root_dir = function(bufnr, on_dir)
+					local root = effect_tsgo_root(bufnr)
+					if root then
+						on_dir(root)
+					end
+				end,
+			})
+
+			local vtsls_root_dir = vim.lsp.config.vtsls.root_dir
+
 			-- Custom configurations for specific servers
 			vim.lsp.config("vtsls", {
+				root_dir = function(bufnr, on_dir)
+					if effect_tsgo_root(bufnr) then
+						return
+					end
+					vtsls_root_dir(bufnr, on_dir)
+				end,
 				capabilities = capabilities,
 				settings = {
 					vtsls = {
@@ -323,6 +361,7 @@ return {
 				"rust_analyzer",
 				"cssmodules_ls",
 				"vtsls",
+				"effect_tsgo",
 				"tailwindcss",
 				"jsonls",
 				"lua_ls",
