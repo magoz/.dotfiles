@@ -42,6 +42,11 @@ HOME=$positive_home zsh -dfc '
 ' >/dev/null 2>&1
 [[ -L $positive_home/.config/starship.toml ]]
 [[ -e $positive_home/.config/vimium/vimium.css ]]
+grep -Fxq 'link_external_skill private "$HOME/dev/repos/skills-private"' "$MACOS_DIR/stow"
+grep -Fxq '  link_external_skill "$skill" "$HOME/dev/repos/10x-factory/.agents/skills/$skill"' "$MACOS_DIR/stow"
+for skill in private 10x-upstream 10x-downstream; do
+  git -C "$REPO_ROOT" check-ignore --quiet -- "home/agents/.agents/skills/$skill"
+done
 grep -Eq '^[[:space:]]+starship \\$' "$MACOS_DIR/install"
 ! grep -Fq powerlevel10k "$MACOS_DIR/install"
 bash -n "$MACOS_DIR/install"

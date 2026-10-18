@@ -99,5 +99,33 @@ for package in "${packages[@]}"; do
   stow --dir "$HOME_PACKAGES" --target "$HOME" --restow "$package"
 done
 
+# Links a skill directory from another checkout as ~/.agents/skills/<name>. ~/.agents is a Stow
+# link into this repo, so the link lands in the tree: refuse unless .gitignore excludes it. A
+# missing checkout is skipped; clone it and rerun.
+link_external_skill() {
+  local name=$1
+  local source=$2
+  local link=$HOME/.agents/skills/$name
+
+  if ! git -C "$REPO_ROOT" check-ignore --quiet -- "home/agents/.agents/skills/$name"; then
+    printf 'error: .gitignore must exclude home/agents/.agents/skills/%s\n' "$name" >&2
+    return 1
+  fi
+  if [[ ! -d $source ]]; then
+    printf 'skipping %s skills: %s not found\n' "$name" "$source"
+    return 0
+  fi
+  if [[ -e $link && ! -L $link ]]; then
+    printf 'error: refusing to replace a non-symlink: %s\n' "$link" >&2
+    return 1
+  fi
+  ln -sfn "$source" "$link"
+}
+
+link_external_skill private "$HOME/dev/repos/skills-private"
+for skill in 10x-upstream 10x-downstream; do
+  link_external_skill "$skill" "$HOME/dev/repos/10x-factory/.agents/skills/$skill"
+done
+
 "$HOME/.local/bin/update-zsh-completions"
 echo "✅ Stow complete"

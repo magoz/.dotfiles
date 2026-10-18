@@ -90,6 +90,8 @@ To apply only the tracked home configuration without installing software:
 
 The Stow command is safe to rerun. It also migrates symlinks created by the previous root-level package layout to `home/` while leaving unrelated symlinks untouched.
 
+It then links agent skills kept in other checkouts into `~/.agents/skills`, skipping any checkout that is absent (clone it and rerun): `~/dev/repos/skills-private` as `private`, and `10x-upstream` and `10x-downstream` from `~/dev/repos/10x-factory/.agents/skills`. These links land inside this repository and are listed in `.gitignore`.
+
 ## Arch Linux (including Omarchy)
 
 ### Prerequisites
