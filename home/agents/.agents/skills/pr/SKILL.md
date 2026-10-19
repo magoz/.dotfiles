@@ -246,8 +246,8 @@ sets on the exact reviewed commit. Detect it; never assume it.
 
    Set only `success`, only that context, only on the reviewed head SHA; never on another PR or
    commit. Re-query the required contexts afterwards; if the POST fails, or the re-query does not
-   show every required context (including `<context>`) at `success`, stop without merging. A later push leaves the new head without it, which is the point: review the
-   delta first.
+   show every required context (including `<context>`) at `success`, stop without merging. A later
+   push leaves the new head without it, which is the point: review the delta first.
 3. **Report** in Pre-merge whether the status is required and present. Before Merge it is normally
    absent: when the head meets every Set condition, report `pending: set at merge`, not a blocker;
    otherwise report the unmet condition. The managed PR body records only the requirement
