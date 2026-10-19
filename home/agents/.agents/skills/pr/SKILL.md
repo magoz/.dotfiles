@@ -213,6 +213,47 @@ only missing or invalidated opinions, recording original targets and delta appli
 An unavailable-model caller fallback is not a preferred-model opinion; recheck availability when a later invocation needs
 that missing opinion. Reusing two valid opinions requires no new launches.
 
+## Review status
+
+Some repositories make the review itself a merge requirement: their base-branch policy requires a
+commit status (default context `review`; repository guidance may name another) that the review flow
+sets on the exact reviewed commit. Detect it; never assume it.
+
+1. **Detect** read-only against the base repository and branch (the PR's base, also for forks):
+   active rulesets via `gh api --paginate repos/<owner>/<repo>/rules/branches/<base>` (a
+   `required_status_checks` rule listing the context), and classic protection via
+   `gh api repos/<owner>/<repo>/branches/<base>` (`protected`, and
+   `protection.required_status_checks.contexts`/`checks`), which needs only read access. A 403
+   saying the plan lacks the feature ("Upgrade to GitHub Pro…") means rulesets are absent. Required
+   only when either lists the context. Settable only when that entry is unpinned: a non-null ruleset
+   `integration_id` or classic `app_id` means another app must report it; record
+   `review status: pinned to <app>, not settable` and never post it. When neither lists it, skip
+   this section and record `review status: not required by <base> policy`. When detection itself
+   fails (other auth errors, network, 5xx), record it and do not set the status; a missing required
+   status then blocks the merge visibly instead of being guessed.
+2. **Set** it only in Merge, as the last action before the merge call (step 6), and only when all
+   hold for the exact current head SHA: the PR is not a draft; both review opinions passed for that
+   head (or valid delta reuse) with no open blocker/high and every medium dispositioned; every other
+   required context is present with check-run conclusion or status state `success` on that SHA
+   (`skipped` and `neutral` count as passing to GitHub but not here: a draft's skipped runs would
+   otherwise stand in for real CI). Then:
+
+   ```bash
+   gh api --method POST repos/<owner>/<repo>/statuses/<reviewed-head-sha> \
+     --raw-field state=success --raw-field context=<context> \
+     --raw-field description='<models>: passed'
+   ```
+
+   Set only `success`, only that context, only on the reviewed head SHA; never on another PR or
+   commit. Re-query the required contexts afterwards; if the POST fails, or the re-query does not
+   show every required context (including `<context>`) at `success`, stop without merging. A later push leaves the new head without it, which is the point: review the
+   delta first.
+3. **Report** in Pre-merge whether the status is required and present. Before Merge it is normally
+   absent: when the head meets every Set condition, report `pending: set at merge`, not a blocker;
+   otherwise report the unmet condition. The managed PR body records only the requirement
+   (`review status: required by <base> policy (set at merge)` or `not required`), never presence,
+   so it does not go stale. Pre-merge never sets it.
+
 ## Repository discovery
 
 Before choosing commands or gates:
@@ -637,8 +678,9 @@ Git state, or GitHub state.
 2. Require the current remote base to be an ancestor of the PR head; otherwise report base drift and
    stop rather than rebasing or merging automatically.
 3. Inspect draft state, mergeability/conflicts, review decision, required status rollup, unresolved
-   review threads, and repository-required deployment or merge-queue state. An absent required check
-   is not a pass; an optional pending check is not automatically a blocker.
+   review threads, Review status (detect and report only), and repository-required deployment or
+   merge-queue state. An absent required check is not a pass (except a Review status reported
+   `pending: set at merge`); an optional pending check is not automatically a blocker.
 4. Only when required validation is missing/stale, or the user explicitly requests a fresh/full audit,
    create an isolated temporary clone and run the needed checks there. Do not copy this work into a
    second full validation pass. All fetch/install/validation work for this read-only mode stays in
@@ -726,10 +768,12 @@ another merge.
    and exact local/remote head. Mark a draft ready only once applicable gates are satisfied.
 3. Run the lightweight Pre-merge remote-state gate against that head, reusing the readiness evidence
    from step 2. Do not automatically create an isolated clone or run another test/review cycle.
-   Missing required evidence blocks merge; request a fresh/full audit only when actually needed.
+   Missing required evidence blocks merge (a Review status `pending: set at merge` is not missing);
+   request a fresh/full audit only when actually needed.
 4. Immediately before merging, re-query base/head SHAs, draft state, mergeability, required checks,
    reviews, unresolved threads, and repository-required deployment or queue state. If the base or head
-   changed, the evidence is stale: rerun the affected Ready/Pre-merge gates. Detect merge-queue
+   changed, the evidence is stale: rerun the affected Ready/Pre-merge gates. A required Review
+   status that is still absent is expected here; it is set in step 6. Detect merge-queue
    requirements before the merge call and stop if a queue applies; this mode supports only an
    immediate squash merge and never enables auto-merge or enqueues a PR.
 5. Record a durable cleanup receipt in the locked location established above, outside any removable
@@ -748,8 +792,9 @@ another merge.
    and persist already-merged evidence as described above.
 6. Confirm the repository permits squash merging. Use GitHub's immediate merge API rather than
    `gh pr merge`, because the latter may implicitly enqueue or enable auto-merge on queue-protected
-   branches. Supply `merge_method=squash` and the reviewed head SHA as the server-side head
-   precondition. Do not use administrator bypass or another merge method:
+   branches. When the base policy requires a Review status, set it first under that section's
+   conditions and re-query. Supply `merge_method=squash` and the reviewed head SHA as the
+   server-side head precondition. Do not use administrator bypass or another merge method:
 
    ```bash
    gh api --method PUT repos/<owner>/<repo>/pulls/<number>/merge \
