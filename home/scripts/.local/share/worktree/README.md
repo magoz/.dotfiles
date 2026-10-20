@@ -144,8 +144,8 @@ destination Pi, the extension gracefully shuts down the source Pi. If creation o
 provisioning fails, the source stays alive.
 
 Before calling the CLI, `create_worktree` preflights the source app's Vercel
-identity through `provision env --check-vercel-link --non-interactive`. When a
-link is missing, the tool returns the app directory and retry arguments to the
+identity through `provision env --check-vercel-link --non-interactive`, which passes
+for repos that are not Vercel apps. When a Vercel app's link is missing, the tool returns the app directory and retry arguments to the
 current Pi agent **before allocating anything**. The agent investigates and links
 an unambiguous existing project/team proactively, then retries the same tool
 request. Only uncertain selection or missing authentication/access needs user
@@ -308,26 +308,24 @@ Progress, warnings, and provisioning/setup output go to stderr. `worktree create
 (the Herdr flow) is unchanged; both commands share the same resolution and
 provisioning steps (`src/steps.ts`).
 
-### Provisioning rule (no-Vercel repos never fail)
+### Provisioning (no-Vercel repos never fail)
 
-Decided from local evidence only (no network, no env-file reads):
+Every checkout runs the same
+`provision env --repo <path> --source <source> --database --non-interactive --label --ttl`
+as `create` (needs `provision` >= 0.6.0). `provision env` decides from local evidence
+whether the app is a Vercel app (`provision.appDir`, or a `.vercel/project.json` in any
+checkout of the repository):
 
-- **Vercel-configured** — the source `package.json` declares `provision.appDir`, or any
-  checkout of the repository (`git worktree list`) has a root
-  `.vercel/project.json` (the link `provision env` reuses from siblings): run the full
-  `provision env --repo <path> --source <source> --database --non-interactive --label --ttl`,
-  exactly like `create`. Any failure fails (checkout preserved). A configured repo that
-  is not linked anywhere fails in `provision env` — link it; that is a real problem.
-- **Not configured, supported lockfile** (`pnpm-lock.yaml`, `bun.lock`, `bun.lockb`,
-  `package-lock.json`, `yarn.lock` at the checkout root, mirroring `provision env`):
-  `provision env --repo <path> --skip-vercel --non-interactive` installs dependencies
-  only. No env files, no databases (a repo without Vercel has no sandbox profile and
-  must not consume the global sandbox). Warning: no Vercel configuration.
-- **Not configured, no lockfile** (e.g. `~/.dotfiles`): provisioning is skipped.
-  Warnings: no Vercel configuration, no supported lockfile.
+- **Vercel app**: dependency install, Vercel env pull, two sandbox databases, then
+  `provision.setup`. Any failure fails (checkout preserved). A Vercel app that is not
+  linked anywhere fails in `provision env`; link it, that is a real problem.
+- **Anything else** (libraries, tools, `~/.dotfiles`): dependency install when there is
+  a lockfile, then `provision.setup`. No env files, no databases (a repo without Vercel
+  has no sandbox profile and must not consume the global sandbox). `provision env`
+  prints the warnings.
 
-`--check-vercel-link` is deliberately not used for this decision: it fails (exit 2,
-not 3) in repos whose `.vercel`/env paths are not ignored, such as `~/dev/repos/vltra`.
+`worktree` keeps no copy of this rule, so `checkout`, `create`, and the `create_worktree`
+preflights (`provision env --check-vercel-link`, which passes for non-Vercel repos) agree.
 
 ### Ownership marker
 

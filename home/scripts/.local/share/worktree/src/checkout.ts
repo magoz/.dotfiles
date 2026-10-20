@@ -1,6 +1,6 @@
 import { Console, Effect } from "effect"
-import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { lstatSync, realpathSync } from "node:fs"
+import { resolve } from "node:path"
 import {
   type CheckedOutEnvironment,
   type CheckoutFailure,
@@ -11,67 +11,7 @@ import {
 } from "./domain"
 import { markerPath, writeMarker } from "./marker"
 import { Process } from "./process"
-import { readDeclaredSetup, resolveBranchBase, resolveSource, runInstallOnly, runProvisioning, runSetupCommands } from "./steps"
-
-/**
- * How a provision-only checkout is provisioned. Decided from local evidence only
- * (no network, no env-file reads), so unlinked repositories never fail:
- *
- * - `full`: the repository is configured for Vercel provisioning. Runs
- *   `provision env --database` exactly like `worktree create` (it also runs the
- *   declared setup); any failure fails.
- * - `install`: not configured for Vercel; a lockfile `provision env` supports
- *   exists, so only dependencies are installed (`--skip-vercel`, no databases).
- * - `none`: not configured and no supported lockfile; provisioning is skipped.
- *
- * Skipping is always reported as a warning, never a failure.
- */
-export type ProvisioningPlan =
-  | { readonly kind: "full" }
-  | { readonly kind: "install"; readonly lockfile: string }
-  | { readonly kind: "none" }
-
-/** Must match `provision env`'s installDependencies() detection order. */
-export const SUPPORTED_LOCKFILES = ["pnpm-lock.yaml", "bun.lock", "bun.lockb", "package-lock.json", "yarn.lock"] as const
-
-export const NO_VERCEL_WARNING =
-  "no Vercel configuration (no .vercel/project.json in any checkout, no package.json provision.appDir); " +
-  "skipped Vercel environment pull and sandbox databases"
-export const NO_LOCKFILE_WARNING = "no supported lockfile; skipped dependency install"
-
-const declaresProvisioning = (checkout: string) => {
-  try {
-    const manifest: unknown = JSON.parse(readFileSync(join(checkout, "package.json"), "utf8"))
-    return typeof manifest === "object" && manifest !== null && "provision" in manifest &&
-      typeof manifest.provision === "object" && manifest.provision !== null && "appDir" in manifest.provision
-  } catch {
-    // Missing or unreadable manifests are not configuration evidence.
-    return false
-  }
-}
-
-/**
- * A repository is "Vercel-configured" when its source package.json declares
- * `provision.appDir` (explicit opt-in, e.g. a monorepo app directory), or
- * when any of its checkouts has a root `.vercel/project.json` (the link `provision env`
- * reuses from siblings). Configured-but-unlinked repos still fail in `provision env`.
- */
-export const isVercelConfigured = (source: string) =>
-  Effect.gen(function* () {
-    if (declaresProvisioning(source)) return true
-    const process = yield* Process
-    const listed = yield* process.capture("git", ["-C", source, "worktree", "list", "--porcelain", "-z"])
-    const checkouts = listed.stdout.split("\0")
-      .filter((field) => field.startsWith("worktree "))
-      .map((field) => field.slice("worktree ".length))
-    return [source, ...checkouts].some((checkout) => existsSync(join(checkout, ".vercel", "project.json")))
-  })
-
-export const planProvisioning = (vercelConfigured: boolean, destination: string): ProvisioningPlan => {
-  if (vercelConfigured) return { kind: "full" }
-  const lockfile = SUPPORTED_LOCKFILES.find((name) => existsSync(join(destination, name)))
-  return lockfile === undefined ? { kind: "none" } : { kind: "install", lockfile }
-}
+import { readDeclaredSetup, resolveBranchBase, resolveSource, runProvisioning, runSetupCommands } from "./steps"
 
 const fail = (branch: string, failure: CheckoutFailure, prefix?: string) =>
   Effect.mapError((error: WorktreeError | ProcessError) => new CheckoutError({
@@ -124,8 +64,8 @@ export const checkoutEnvironment = (options: CheckoutOptions) =>
       ...(options.path === undefined ? {} : { path: resolve(options.path) })
     }, "always").pipe(preflight)
     yield* requireAbsent(requested).pipe(preflight)
-    const vercelConfigured = yield* isVercelConfigured(source).pipe(preflight)
-    const declaredSetup = yield* readDeclaredSetup(primary, base).pipe(preflight)
+    // Validated before allocating anything; `provision env` runs it after provisioning.
+    yield* readDeclaredSetup(primary, base).pipe(preflight)
 
     yield* Console.log(`worktree: checking out ${branch} from ${base} at ${requested}`)
     const runner = yield* Process
@@ -152,24 +92,10 @@ export const checkoutEnvironment = (options: CheckoutOptions) =>
 
     const preserved = (stage: "provision" | "setup") =>
       fail(branch, { stage, path: destination, base }, `${stage} failed; preserved checkout ${destination} on branch ${branch}`)
-    const warnings: Array<string> = []
-    const plan = planProvisioning(vercelConfigured, destination)
-    switch (plan.kind) {
-      case "full":
-        yield* runProvisioning(source, destination, options.label ?? branch, options.ttl).pipe(preserved("provision"))
-        break
-      case "install":
-        warnings.push(NO_VERCEL_WARNING)
-        yield* runInstallOnly(destination).pipe(preserved("provision"))
-        break
-      case "none":
-        warnings.push(NO_VERCEL_WARNING, NO_LOCKFILE_WARNING)
-        break
-    }
-    // `provision env` runs the declared setup after full provisioning; otherwise run it here.
-    const setup = plan.kind === "full" ? options.setupCommands : [...declaredSetup, ...options.setupCommands]
-    yield* runSetupCommands(destination, setup).pipe(preserved("setup"))
-    for (const warning of warnings) yield* Console.error(`worktree: warning: ${warning}`)
+    // `provision env` decides what the checkout needs (a Vercel app gets env files and databases,
+    // anything else only an install) and runs the declared setup; it prints its own warnings.
+    yield* runProvisioning(source, destination, options.label ?? branch, options.ttl).pipe(preserved("provision"))
+    yield* runSetupCommands(destination, options.setupCommands).pipe(preserved("setup"))
 
-    return { source, branch, base, path: destination, warnings } satisfies CheckedOutEnvironment
+    return { source, branch, base, path: destination, warnings: [] } satisfies CheckedOutEnvironment
   })

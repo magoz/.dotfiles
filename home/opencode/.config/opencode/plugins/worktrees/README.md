@@ -56,10 +56,10 @@ service user already has; nothing is prompted (`--non-interactive`).
   plugin returns the CLI's real path. OpenCode never creates `<parent>/<name>`.
 - **Base**: OpenCode's `branch` input is a *starting ref*, passed as `--base` (used
   without fetching). Omitted → the CLI fetches origin's live default tip (fail closed).
-- **Provisioning**: exactly `worktree checkout`'s rule (Vercel-configured repos get the
-  full `provision env --database`, which also runs the repository's `package.json`
-  `provision.setup` (e.g. migrations); others install
-  dependencies only or skip, with warnings).
+- **Provisioning**: `worktree checkout` runs `provision env --database`, which decides:
+  Vercel apps get env files, databases and the repository's `package.json`
+  `provision.setup` (e.g. migrations); other repos only install dependencies (if they
+  have a lockfile) and run `provision.setup`, with warnings.
   The plugin passes no `--setup`. See `home/scripts/.local/share/worktree/README.md`. Warnings are logged
   to the service journal as `[worktrees] <path>: <warning>`.
 - **Failures** throw `Error`s built only from validated data (stage, branch, absolute

@@ -47,7 +47,7 @@ const cleanup = () => {
 process.on('exit', cleanup);
 
 try {
-  // Repository: no Vercel link, a pnpm lockfile -> install-only provisioning.
+  // Repository: no Vercel link, a pnpm lockfile; provision env decides it only needs an install.
   const origin = path.join(root, 'origin.git'), producer = path.join(root, 'producer'), repo = path.join(dirs.repos, 'app');
   git(root, 'init', '--bare', '--initial-branch=main', origin);
   git(root, 'clone', '-q', origin, producer);
@@ -111,10 +111,10 @@ try {
   assert.equal(created.body.directory, destination);
   assert.equal(git(destination, 'branch', '--show-current'), 'feat/integration');
   assert.equal(git(destination, 'rev-parse', 'HEAD'), fresh);
-  assert.deepEqual(readFileSync(log, 'utf8').trim().split('\n'), [`env --repo ${destination} --skip-vercel --non-interactive`]);
+  assert.deepEqual(readFileSync(log, 'utf8').trim().split('\n'), [`env --repo ${destination} --source ${repo} --database --non-interactive --label feat/integration --ttl 7d`]);
   const marker = JSON.parse(readFileSync(path.join(git(destination, 'rev-parse', '--absolute-git-dir'), 'dotfiles-worktree'), 'utf8'));
   assert.equal(marker.strategy, 'dotfiles'); assert.equal(marker.branch, 'feat/integration');
-  step(`worktree.create -> ${destination} on feat/integration at fresh origin tip, install-only provisioning (${Math.round((Date.now() - started) / 1000)}s)`);
+  step(`worktree.create -> ${destination} on feat/integration at fresh origin tip, provisioned by provision env (${Math.round((Date.now() - started) / 1000)}s)`);
 
   const listed = await request('GET', `/api/worktree?projectID=${encodeURIComponent(projectID)}`);
   assert.equal(listed.status, 200);

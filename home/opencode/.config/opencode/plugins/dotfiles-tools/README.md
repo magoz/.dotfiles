@@ -20,7 +20,8 @@ sessions can call the tool. Host schemas are `portable(..., { exact: true })`, s
 (such as the Herdr-era `setup`/`ttl`/`path`/`label`) are rejected.
 
 1. `provision env --repo <repo> --check-vercel-link --non-interactive` (30s), run with the
-   service's environment minus `HERDR_*`. Nothing has been allocated at this point. Only exit 3
+   service's environment minus `HERDR_*`. Nothing has been allocated at this point. Repos
+   that are not Vercel apps (no `provision.appDir`, no link in any checkout) pass. Only exit 3
    with a strict `{status:'vercel_link_required',directory,reason}` report becomes a structured
    result containing the identical `retry` input. Any other failure stops the call, and
    stderr is never echoed.

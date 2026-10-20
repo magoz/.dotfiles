@@ -33,16 +33,12 @@ JSON object on stderr:
   "status": "approval_required",
   "reason": "…",
   "hint": "…",
-  "next": [
-    "cd /home/acme/src/acme-app && /usr/local/bin/provision factory --domain app.acme.com --dry-run"
-  ]
+  "next": ["cd /home/acme/src/acme-app && provision factory --domain app.acme.com --dry-run"]
 }
 ```
 
 Give the human the `next` command verbatim, say in one or two sentences what it will do, and wait
-for them to paste the output. You may also skip the attempt and write the command yourself; use
-`/usr/local/bin/provision` when it exists, since a `provision` earlier on `PATH` could be a
-different binary.
+for them to paste the output. You may also skip the attempt and write the command yourself.
 
 Agents are also detected for `provision env`, which then never prompts (as with
 `--non-interactive`).
@@ -58,9 +54,13 @@ This installs dependencies, links the Vercel project, pulls Development into `.e
 leases), and runs `package.json` `provision.setup` (usually migrations). Without `--database` the
 env files keep whatever database Vercel provides; prefer `--database` for anything that writes data.
 
+- **Not a Vercel app** (warning; no `provision.appDir` and no `.vercel/project.json` in any
+  checkout): only the install and `provision.setup` run. Expected for libraries and tools; for a
+  Vercel app, link it (below) or declare `provision.appDir`.
 - **Exit 3** (`{"status":"vercel_link_required",…}` on stderr): the app is not linked and the
   project is ambiguous. Rerun with `--source <already-linked checkout>` or
-  `--vercel-project <name>`; ask the human which project if you cannot tell.
+  `--vercel-project <name>` (a project in the Vercel CLI's current scope, see `vercel switch`);
+  ask the human which project if you cannot tell.
 - **Setup failed**: env files and databases are kept. Fix the cause, then rerun the same command;
   it resumes. `--skip-setup` skips setup on purpose.
 - **Existing env files**: refreshed from Vercel by default. `--env-conflict preserve` keeps them.
@@ -117,7 +117,9 @@ Release both leases before deleting a worktree. Branches expire on their own aft
 ## Provision a new project (human runs it)
 
 Prerequisites: the GitHub repository exists under the factory's GitHub owner, there is a local
-checkout with that `origin`, and the factory is registered (`provision config list`).
+checkout with that `origin` whose `.gitignore` ignores `.vercel` (the `vercel` step writes
+`.vercel/project.json` itself and refuses otherwise), and the factory is registered
+(`provision config list`).
 
 ### First, work out what the repository needs
 
@@ -132,17 +134,17 @@ Don't assume a template: read the code, then compare with Vercel.
    human asks to rotate.
 3. **Sort each missing variable:**
 
-   | The code reads…                                                        | Comes from                                                                                                                               |
-   | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-   | `DATABASE_URL*` (Neon)                                                 | `neon` step (Production); Preview databases come from Neon's Vercel integration, connected once by the human (relay the `manual:` lines) |
-   | `R2_*` (S3-compatible storage)                                         | `r2` step (needs `--domain` for the upload origin)                                                                                       |
-   | `QSTASH_*`                                                             | `upstash` step (the human pastes the console's `.env` block)                                                                             |
-   | `RESEND_API_KEY`                                                       | `resend` step                                                                                                                            |
-   | `AUTH_EMAIL_FROM`                                                      | `--email-from` (domain verified in the factory's Resend)                                                                                 |
-   | `REPORT_RECEIVER_*`                                                    | `reports` step (factories with a receiver)                                                                                               |
-   | a random secret the app generates itself (auth, cron, encryption keys) | `--secret NAME[=FORMAT]`                                                                                                                 |
-   | a third-party key (AI Gateway, OAuth apps, data APIs)                  | the human, with `vercel env add`                                                                                                         |
-   | plain config (URLs, limits, flags)                                     | you, with `vercel env add … --value … --yes`                                                                                             |
+   | The code reads…                                                        | Comes from                                                                                                                                                                             |
+   | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `DATABASE_URL*` (Neon)                                                 | `neon` step (Production); Preview databases come from Neon's Vercel integration, connected once by the human (the step waits for them to confirm; otherwise relay the `manual:` lines) |
+   | `R2_*` (S3-compatible storage)                                         | `r2` step (needs `--domain` for the upload origin)                                                                                                                                     |
+   | `QSTASH_*`                                                             | `upstash` step (the human pastes the console's `.env` block)                                                                                                                           |
+   | `RESEND_API_KEY`                                                       | `resend` step                                                                                                                                                                          |
+   | `AUTH_EMAIL_FROM`                                                      | `--email-from` (domain verified in the factory's Resend)                                                                                                                               |
+   | `REPORT_RECEIVER_*`                                                    | `reports` step (factories with a receiver)                                                                                                                                             |
+   | a random secret the app generates itself (auth, cron, encryption keys) | `--secret NAME[=FORMAT]`                                                                                                                                                               |
+   | a third-party key (AI Gateway, OAuth apps, data APIs)                  | the human, with `vercel env add`                                                                                                                                                       |
+   | plain config (URLs, limits, flags)                                     | you, with `vercel env add … --value … --yes`                                                                                                                                           |
 
    `--secret` formats: `NAME` (32 random bytes, base64), `NAME=base64-<bytes>`,
    `NAME=hex-<bytes>`, `NAME=vapid` (web-push pair: `NAME_PUBLIC_KEY` + `NAME_PRIVATE_KEY`).
@@ -160,7 +162,7 @@ the commands, in order:
 
 ```bash
 # 1. Plan: reads providers, changes nothing
-/usr/local/bin/provision factory --checkout <checkout> --domain <production-host> \
+provision factory --checkout <checkout> --domain <production-host> \
   --only vercel,neon,resend,secrets,domain \
   --sender-name <App name> --email-from login@<verified-domain> \
   --secret BETTER_AUTH_SECRET --secret CRON_SECRET=hex-32 --dry-run
@@ -178,11 +180,12 @@ third-party keys and plain settings from step 3 still need `vercel env add`.
 
 Reading the output: each step prints one block. `would …` is a dry-run plan, `exists:` /
 `reusing …` means nothing changed, `skipped:` means the factory lacks that provider, and
-`manual: …` is a follow-up the human must do by hand. Relay `manual:` lines to the human.
+`manual: …` is a follow-up the human must do by hand. Relay `manual:` lines to the human. A final
+`next:` line (only when Development or `test` variables changed) is the local command to run.
 
 QStash credentials are pasted by the human when `provision factory` asks for them (hidden input,
 written straight to Vercel). If they skipped it, give them
-`/usr/local/bin/provision factory --checkout <checkout> --domain <host> --only upstash --on-existing reuse`.
+`provision factory --checkout <checkout> --domain <host> --only upstash --on-existing reuse`.
 Never ask the human to paste QStash values, or any other credential, into the chat.
 
 `--on-existing`: `ask` (default, prompts), `reuse` (change nothing that exists), `overwrite`

@@ -3,7 +3,6 @@ import { execFileSync } from "node:child_process"
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { NO_LOCKFILE_WARNING, NO_VERCEL_WARNING, planProvisioning } from "../src/checkout"
 import { CheckoutError, checkoutFailureReport } from "../src/domain"
 import { MARKER_FILE, readMarker } from "../src/marker"
 
@@ -80,16 +79,16 @@ const run = async (f: Fixture, args: string[], env: Record<string, string> = {})
 const expectNoTempRefs = (repo: string) =>
   expect(git(repo, "for-each-ref", "--format=%(refname)", "refs/worktree-bases/")).toBe("")
 
-test("no-Vercel repo without a lockfile: fresh origin tip, sibling path, warnings, no provisioning", async () => {
+const provisioned = (f: Fixture, path: string, label: string, ttl = "7d") =>
+  `env --repo ${path} --source ${f.repo} --database --non-interactive --label ${label} --ttl ${ttl}`
+
+test("fresh origin tip, sibling path, owned checkout, provisioned by provision env", async () => {
   const f = fixture()
   const result = await run(f, ["--repo", f.repo, "--branch", "feat/x", "--json"])
   expect(result.exitCode).toBe(0)
   expect(result.stdout.trim().split("\n")).toHaveLength(1)
   const path = join(f.root, "repo-feat-x")
-  expect(JSON.parse(result.stdout)).toEqual({
-    source: f.repo, branch: "feat/x", base: f.fresh, path,
-    warnings: [NO_VERCEL_WARNING, NO_LOCKFILE_WARNING]
-  })
+  expect(JSON.parse(result.stdout)).toEqual({ source: f.repo, branch: "feat/x", base: f.fresh, path, warnings: [] })
   expect(git(path, "branch", "--show-current")).toBe("feat/x")
   expect(git(path, "rev-parse", "HEAD")).toBe(f.fresh)
   // Ownership marker in the private git dir, never in the working tree.
@@ -101,45 +100,21 @@ test("no-Vercel repo without a lockfile: fresh origin tip, sibling path, warning
   expect(git(path, "status", "--porcelain", "--untracked-files=all")).toBe("")
   // Local main and remote-tracking refs are untouched by the fresh-tip fetch.
   expect(git(f.repo, "rev-parse", "main")).toBe(f.old)
-  expect(result.provisions).toEqual([])
-  expect(result.stderr).toContain("fetching origin")
-  expect(result.stderr).toContain(`worktree: warning: ${NO_VERCEL_WARNING}`)
-  expectNoTempRefs(f.repo)
-})
-
-test("no-Vercel repo with a lockfile installs dependencies only (no Vercel, no databases)", async () => {
-  const f = fixture({ "pnpm-lock.yaml": "lockfileVersion: '9.0'\n" })
-  const result = await run(f, ["--repo", f.repo, "--branch", "fix/y", "--json"])
-  expect(result.exitCode).toBe(0)
-  const path = join(f.root, "repo-fix-y")
-  expect(JSON.parse(result.stdout).warnings).toEqual([NO_VERCEL_WARNING])
-  expect(result.provisions).toEqual([`env --repo ${path} --skip-vercel --non-interactive`])
+  // Whether this is a Vercel app (env files, databases) or not (install only) is provision's call.
+  expect(result.provisions).toEqual([provisioned(f, path, "feat/x")])
   // Child stdout never reaches the JSON channel.
   expect(result.stdout).not.toContain("provision stdout")
   expect(result.stderr).toContain("provision stdout")
+  expect(result.stderr).toContain("fetching origin")
+  expectNoTempRefs(f.repo)
 })
 
-for (const evidence of ["source link", "sibling link", "provision"] as const) {
-  test(`Vercel-configured repo (${evidence}) provisions exactly like worktree create`, async () => {
-    const manifest: Record<string, string> = evidence === "provision"
-      ? { "package.json": JSON.stringify({ provision: { appDir: "." } }) }
-      : {}
-    const f = fixture(manifest)
-    const linked = evidence === "sibling link" ? join(f.root, "repo-other") : f.repo
-    if (evidence === "sibling link") git(f.repo, "worktree", "add", "-b", "other", linked)
-    if (evidence !== "provision") {
-      mkdirSync(join(linked, ".vercel"))
-      writeFileSync(join(linked, ".vercel", "project.json"), '{"orgId":"o","projectId":"p"}')
-    }
-    const result = await run(f, ["--repo", f.repo, "--branch", "feat/linked", "--label", "lbl", "--ttl", "3d", "--json"])
-    expect(result.exitCode).toBe(0)
-    const path = join(f.root, "repo-feat-linked")
-    expect(JSON.parse(result.stdout).warnings).toEqual([])
-    expect(result.provisions).toEqual([
-      `env --repo ${path} --source ${f.repo} --database --non-interactive --label lbl --ttl 3d`
-    ])
-  })
-}
+test("--label and --ttl reach provision env", async () => {
+  const f = fixture()
+  const result = await run(f, ["--repo", f.repo, "--branch", "feat/linked", "--label", "lbl", "--ttl", "3d", "--json"])
+  expect(result.exitCode).toBe(0)
+  expect(result.provisions).toEqual([provisioned(f, join(f.root, "repo-feat-linked"), "lbl", "3d")])
+})
 
 for (const stage of ["provision", "setup"] as const) {
   test(`${stage} failure exits nonzero, reports and preserves the checkout`, async () => {
@@ -174,52 +149,13 @@ test("setup commands run in order in the new checkout through the login shell", 
   expect(result.stdout).not.toContain("setup-stdout")
 })
 
-test("declared setup runs after install-only provisioning, before caller --setup", async () => {
-  const f = fixture({
-    "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
-    "package.json": declaring(["pwd > setup.txt", "echo declared >> setup.txt"])
-  })
-  const result = await run(f, ["--repo", f.repo, "--branch", "feat/declared", "--json", "--setup", "echo caller >> setup.txt"])
-  expect(result.exitCode).toBe(0)
-  const path = join(f.root, "repo-feat-declared")
-  expect(readFileSync(join(path, "setup.txt"), "utf8")).toBe(`${path}\ndeclared\ncaller\n`)
-  expect(result.provisions).toEqual([`env --repo ${path} --skip-vercel --non-interactive`])
-  // Declaring setup is not Vercel configuration evidence.
-  expect(JSON.parse(result.stdout).warnings).toEqual([NO_VERCEL_WARNING])
-})
-
-test("full provisioning leaves the declared setup to provision env; caller --setup still runs", async () => {
-  const f = fixture({
-    "package.json": JSON.stringify({ provision: { appDir: ".", setup: ["echo declared >> setup.txt"] } })
-  })
+test("the declared setup is left to provision env; caller --setup still runs", async () => {
+  const f = fixture({ "package.json": declaring(["echo declared >> setup.txt"]) })
   const result = await run(f, ["--repo", f.repo, "--branch", "feat/full", "--json", "--setup", "echo caller >> setup.txt"])
   expect(result.exitCode).toBe(0)
   const path = join(f.root, "repo-feat-full")
   expect(readFileSync(join(path, "setup.txt"), "utf8")).toBe("caller\n")
-  expect(result.provisions).toEqual([
-    `env --repo ${path} --source ${f.repo} --database --non-interactive --label feat/full --ttl 7d`
-  ])
-})
-
-test("declared setup is read from the pinned base, not the source working tree", async () => {
-  const f = fixture()
-  publish(f, { "package.json": declaring(["echo fresh > setup.txt"]) })
-  const fresh = await run(f, ["--repo", f.repo, "--branch", "feat/fresh", "--json"])
-  expect(fresh.exitCode).toBe(0)
-  expect(readFileSync(join(f.root, "repo-feat-fresh", "setup.txt"), "utf8")).toBe("fresh\n")
-  // Explicit older base without the declaration: nothing runs.
-  const old = await run(f, ["--repo", f.repo, "--branch", "feat/old", "--base", "main", "--json"])
-  expect(old.exitCode).toBe(0)
-  expect(existsSync(join(f.root, "repo-feat-old", "setup.txt"))).toBe(false)
-})
-
-test("a failing declared setup command preserves the checkout and skips caller setup", async () => {
-  const f = fixture({ "package.json": declaring(["exit 3"]) })
-  const result = await run(f, ["--repo", f.repo, "--branch", "feat/fails", "--json", "--setup", "touch caller.txt"])
-  const path = join(f.root, "repo-feat-fails")
-  expect(result.exitCode).toBe(2)
-  expect(JSON.parse(result.stdout)).toEqual({ status: "failed", stage: "setup", branch: "feat/fails", path, checkout: "preserved" })
-  expect(existsSync(join(path, "caller.txt"))).toBe(false)
+  expect(result.provisions).toEqual([provisioned(f, path, "feat/full")])
 })
 
 const malformed = (setup: unknown) => (f: Fixture) => {
@@ -282,7 +218,7 @@ test("human output summarises the checkout; failures without --json print no rep
   const f = fixture()
   const ok = await run(f, ["--repo", f.repo, "--branch", "feat/human"])
   expect(ok.exitCode).toBe(0)
-  expect(ok.stdout).toContain(`worktree: checkout ready\n  branch:     feat/human\n  base:       ${f.fresh}\n  path:       ${join(f.root, "repo-feat-human")}\n  warnings:   2\n`)
+  expect(ok.stdout).toContain(`worktree: checkout ready\n  branch:     feat/human\n  base:       ${f.fresh}\n  path:       ${join(f.root, "repo-feat-human")}\n`)
   const failed = await run(f, ["--repo", f.repo, "--branch", "feat/human"])
   expect(failed.exitCode).toBe(2)
   expect(failed.stdout).toBe("")
@@ -294,11 +230,4 @@ test("failure reports state exactly what may exist, never free text", () => {
     checkoutFailureReport(new CheckoutError({ message: "secret detail", branch: "feat/x", failure }))
   expect(report({ stage: "create", path: "/p" })).toEqual({ status: "failed", stage: "create", branch: "feat/x", path: "/p", checkout: "unknown" })
   expect(JSON.stringify(report({ stage: "setup", path: "/p", base: "abc" }))).not.toContain("secret")
-})
-
-test("provisioning plan: Vercel configuration wins; otherwise lockfile decides install vs none", () => {
-  const f = fixture({ "yarn.lock": "" })
-  expect(planProvisioning(true, f.repo)).toEqual({ kind: "full" })
-  expect(planProvisioning(false, f.repo)).toEqual({ kind: "install", lockfile: "yarn.lock" })
-  expect(planProvisioning(false, f.bin)).toEqual({ kind: "none" })
 })

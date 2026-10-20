@@ -41,8 +41,9 @@ export const resolveBranchBase = (
   })
 
 /**
- * Full provisioning through `provision env`: Vercel Development/test env pull, two sandbox
- * database leases, then the repository's declared setup (run by provision itself).
+ * Provisioning through `provision env` (>= 0.6.0, which decides whether the checkout is a Vercel
+ * app): dependency install; for a Vercel app, the Development/test env pull and two sandbox
+ * database leases; then the repository's declared setup (run by provision itself).
  */
 export const runProvisioning = (
   source: string,
@@ -65,20 +66,6 @@ export const runProvisioning = (
       label,
       "--ttl",
       ttl
-    ])
-  })
-
-/** Dependency install only: no Vercel pull, no env files, no databases. */
-export const runInstallOnly = (destination: string) =>
-  Effect.gen(function* () {
-    const process = yield* Process
-    yield* Console.log(`worktree: installing dependencies in ${destination}`)
-    yield* process.inherit("provision", [
-      "env",
-      "--repo",
-      destination,
-      "--skip-vercel",
-      "--non-interactive"
     ])
   })
 
