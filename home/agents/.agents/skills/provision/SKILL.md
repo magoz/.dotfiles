@@ -54,9 +54,10 @@ This installs dependencies, links the Vercel project, pulls Development into `.e
 leases), and runs `package.json` `provision.setup` (usually migrations). Without `--database` the
 env files keep whatever database Vercel provides; prefer `--database` for anything that writes data.
 
-- **Not a Vercel app** (warning; no `provision.appDir` and no `.vercel/project.json` in any
-  checkout): only the install and `provision.setup` run. Expected for libraries and tools; for a
-  Vercel app, link it (below) or declare `provision.appDir`.
+- **Not a Vercel app** (warning): no `provision.appDir`/`provision.factory`, `vercel.json`, or
+  Vercel link in any checkout. Env files and databases are skipped; the install (when there is a
+  lockfile) and `provision.setup` still run. Expected for libraries and tools; for a Vercel app,
+  link it (below) or declare `provision.appDir`.
 - **Exit 3** (`{"status":"vercel_link_required",…}` on stderr): the app is not linked and the
   project is ambiguous. Rerun with `--source <already-linked checkout>` or
   `--vercel-project <name>` (a project in the Vercel CLI's current scope, see `vercel switch`);

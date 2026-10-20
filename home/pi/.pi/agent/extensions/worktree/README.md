@@ -45,7 +45,7 @@ Before allocating a worktree, `create_worktree` runs
 `provision env --check-vercel-link --non-interactive` against the source checkout.
 This only validates/reuses local app identity; it does not install dependencies,
 pull env files, allocate databases, query Vercel, or choose a remote project.
-Repos that are not Vercel apps (no `provision.appDir`, no link in any checkout) pass.
+Repos that are not Vercel apps (by `provision env`'s local evidence) pass.
 
 An absent or ambiguous link returns `vercel_link_required`, the app directory,
 and the original retry arguments to the **current Pi agent**, without terminating

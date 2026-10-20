@@ -313,8 +313,8 @@ provisioning steps (`src/steps.ts`).
 Every checkout runs the same
 `provision env --repo <path> --source <source> --database --non-interactive --label --ttl`
 as `create` (needs `provision` >= 0.6.0). `provision env` decides from local evidence
-whether the app is a Vercel app (`provision.appDir`, or a `.vercel/project.json` in any
-checkout of the repository):
+whether the app is a Vercel app (`provision.appDir`/`factory`, a committed `vercel.json`,
+or a Vercel link in any checkout of the repository; see the provision README):
 
 - **Vercel app**: dependency install, Vercel env pull, two sandbox databases, then
   `provision.setup`. Any failure fails (checkout preserved). A Vercel app that is not
