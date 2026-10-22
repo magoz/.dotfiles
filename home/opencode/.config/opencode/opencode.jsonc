@@ -123,6 +123,15 @@
         "protocol": "2026-07-28",
         "oauth": false,
         "headers": { "Authorization": "Bearer {env:EAT_MCP_KEY}" }
+      },
+      // o-o (../o-o docs/adr/0011): read-only Gmail/Calendar/Drive/knowledge, groups chosen in
+      // o-o Settings → MCP. No OAuth. Token (Settings → MCP → New token) in OO_MCP_TOKEN,
+      // exported from ~/.env by opencode.service (restart after changing it).
+      "o-o": {
+        "type": "remote",
+        "url": "https://o-o.co/mcp",
+        "oauth": false,
+        "headers": { "Authorization": "Bearer {env:OO_MCP_TOKEN}" }
       }
     }
   },
