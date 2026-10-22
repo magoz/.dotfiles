@@ -113,6 +113,8 @@
       // Neon (read-only: write tools hidden, `run_sql` in READ ONLY transactions; the URL params
       // are a fixed OAuth grant, re-authorize to change them). OAuth via `/mcps`.
       "neon": { "type": "remote", "url": "https://mcp.neon.tech/mcp?readonly=true" },
+      // Cloudflare API (search/execute over the whole API + docs). Scopes chosen at OAuth via `/mcps`.
+      "cloudflare": { "type": "remote", "url": "https://mcp.cloudflare.com/mcp" },
       // Eat (../eat docs/mcp.md): protocol 2026-07-28 only, no OAuth. Owner API key in
       // EAT_MCP_KEY, exported from ~/.env by opencode.service (restart after changing it).
       "eat": {
