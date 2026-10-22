@@ -15,8 +15,8 @@ if [[ ! -f "$entry" ]]; then
   exit 127
 fi
 
-# A split-DNS browser hostname may resolve to a read-only gateway. Keep the CLI
-# endpoint in a local data file, never source/evaluate it as shell code.
+# Optional local endpoint override (e.g. a dev deployment). Read it as data,
+# never source/evaluate it as shell code.
 endpoint_file="$HOME/.config/aha/endpoint"
 if [[ -z ${AHA_ENDPOINT:-} && -f "$endpoint_file" ]]; then
   endpoint=''
