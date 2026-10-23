@@ -24,6 +24,9 @@ omarchy pkg add stow zsh zsh-autosuggestions zsh-syntax-highlighting
 command -v google-chrome-stable >/dev/null || omarchy install browser chrome
 omarchy default browser chrome
 
+# Linux UI fonts default larger than macOS; 10px matches my Mac (GTK apps, Chrome UI, shell).
+omarchy display text size 10 >/dev/null
+
 # My scripts need Bun and pnpm; Omarchy manages language tools with mise.
 mise which bun >/dev/null 2>&1 || mise use --global bun@latest
 mise which pnpm >/dev/null 2>&1 || mise use --global pnpm@latest
