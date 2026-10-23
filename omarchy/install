@@ -24,9 +24,10 @@ command -v stow >/dev/null || omarchy pkg add stow
 # Whole directories: replace Omarchy's seeded copy so none of its files load
 # alongside mine.
 owned_dirs=(nvim lazygit)
-# Single files merged into directories Omarchy also uses (~/.config/hypr keeps
-# its machine-local monitors.lua; ~/.agents/skills keeps Omarchy's skills).
-merged=(stow starship omarchy agents scripts)
+# Single files merged into directories Omarchy or apps also use (~/.config/hypr keeps
+# its machine-local monitors.lua, ~/.agents/skills keeps Omarchy's skills,
+# ~/.config/herdr keeps Herdr's runtime state).
+merged=(stow starship ghostty herdr omarchy agents scripts)
 
 for dir in "${owned_dirs[@]}"; do
   target=$HOME/.config/$dir

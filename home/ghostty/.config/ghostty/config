@@ -27,3 +27,6 @@ keybind = cmd+digit_6=text:\x1b6
 keybind = cmd+digit_7=text:\x1b7
 keybind = cmd+digit_8=text:\x1b8
 keybind = cmd+digit_9=text:\x1b9
+
+# Linux/Omarchy-only settings; the file only exists there (omarchy package), so macOS skips it.
+config-file = ?"linux.conf"
