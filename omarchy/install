@@ -20,18 +20,26 @@ fi
 [[ -d /usr/share/omarchy ]] || { printf 'error: Omarchy not found\n' >&2; exit 1; }
 
 command -v stow >/dev/null || omarchy pkg add stow
+# My scripts need Bun and pnpm; Omarchy manages language tools with mise.
+mise which bun >/dev/null 2>&1 || mise use --global bun@latest
+mise which pnpm >/dev/null 2>&1 || mise use --global pnpm@latest
 
 # Whole directories: replace Omarchy's seeded copy so none of its files load
 # alongside mine.
-owned_dirs=(nvim lazygit)
+owned_dirs=(.config/nvim .config/lazygit .local/share/worktree)
+folded=(nvim lazygit scripts)
 # Single files merged into directories Omarchy or apps also use (~/.config/hypr keeps
 # its machine-local monitors.lua, ~/.agents/skills keeps Omarchy's skills,
 # ~/.config/herdr keeps Herdr's runtime state).
-merged=(stow starship ghostty herdr omarchy agents scripts)
+merged=(stow starship ghostty herdr omarchy agents)
 
 for dir in "${owned_dirs[@]}"; do
-  target=$HOME/.config/$dir
+  target=$HOME/$dir
   [[ -L $target ]] || rm -rf -- "$target"
+done
+for source in "$HOME_PACKAGES"/scripts/.local/bin/*; do
+  target=$HOME/.local/bin/${source##*/}
+  [[ -L $target ]] || rm -f -- "$target"
 done
 for package in "${merged[@]}"; do
   while IFS= read -r -d '' source; do
@@ -40,9 +48,12 @@ for package in "${merged[@]}"; do
   done < <(find "$HOME_PACKAGES/$package" -type f -print0)
 done
 
-mkdir -p "$HOME/.config" "$HOME/.local/bin"
-stow --dir "$HOME_PACKAGES" --target "$HOME" --restow "${owned_dirs[@]}"
+mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/.local/share"
+stow --dir "$HOME_PACKAGES" --target "$HOME" --restow "${folded[@]}"
 stow --dir "$HOME_PACKAGES" --target "$HOME" --no-folding --restow "${merged[@]}"
+
+# Dependencies resolve from the linked source paths inside this repository.
+mise exec -- bun install --frozen-lockfile --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 
 # Workflow defaults; name and email come from the Omarchy installer.
 git config --global core.editor nvim
