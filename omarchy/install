@@ -20,6 +20,10 @@ fi
 [[ -d /usr/share/omarchy ]] || { printf 'error: Omarchy not found\n' >&2; exit 1; }
 
 omarchy pkg add stow zsh zsh-autosuggestions zsh-syntax-highlighting
+# Google Chrome instead of Omarchy's default Chromium (Omarchy installs and themes it).
+command -v google-chrome-stable >/dev/null || omarchy install browser chrome
+omarchy default browser chrome
+
 # My scripts need Bun and pnpm; Omarchy manages language tools with mise.
 mise which bun >/dev/null 2>&1 || mise use --global bun@latest
 mise which pnpm >/dev/null 2>&1 || mise use --global pnpm@latest
