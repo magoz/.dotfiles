@@ -35,6 +35,7 @@ Package groups include:
 - Shell and terminals: `ghostty`, `starship`, and `zsh`
 - Browser customization: `vimium`
 - macOS UI: `aerospace`, `borders`, and `leaderkey`
+- Omarchy desktop preferences: `omarchy`
 - Stow configuration: `stow`
 
 Not every target installs every package. [`macos/stow`](macos/stow) and [`arch/stow`](arch/stow) define their platform selections; machine-role installers may select additional packages.
@@ -92,7 +93,7 @@ The Stow command is safe to rerun. It also migrates symlinks created by the prev
 
 It then links agent skills kept in other checkouts into `~/.agents/skills`, skipping any checkout that is absent (clone it and rerun): `~/dev/repos/skills-private` as `private`, and `10x-upstream` and `10x-downstream` from `~/dev/repos/10x-factory/.agents/skills`. These links land inside this repository and are listed in `.gitignore`.
 
-## Arch Linux (including Omarchy)
+## Arch Linux (headless, e.g. Box)
 
 ### Prerequisites
 
@@ -155,6 +156,17 @@ OpenCode 2.0.3 now has additive Herdr, pane-local worktree handoff/management,
 native delegation, shared-skill adapters, `until`, and `/quota` wiring.
 Shared worktree creation still defaults to Pi; OpenCode requires `--agent opencode`.
 See [assessment setup, safety restrictions and remaining live checks](home/opencode/.config/opencode/ASSESSMENT.md).
+
+## Omarchy
+
+On an Omarchy desktop, link my configuration without changing Omarchy's packages, shell, Node or services:
+
+```sh
+git clone https://github.com/magoz/.dotfiles.git ~/.dotfiles
+~/.dotfiles/omarchy/install
+```
+
+It links `nvim`, `lazygit`, `starship`, `agents`, `scripts` and the `omarchy` package (Hyprland overrides, Omarchy shell settings, and a Ghostty fix for systemd 262: the user unit drop-in switches `Type=notify-reload` to `Type=notify`; remove it once fixed upstream), replacing Omarchy's copies of those files, and sets Git workflow defaults. Omarchy's own defaults remain in `/usr/share/omarchy`. `~/.config/hypr/monitors.lua` is machine-specific and stays local. Omarchy updates can rewrite linked files, so check `git diff` after `omarchy update`.
 
 ## Box agent host
 

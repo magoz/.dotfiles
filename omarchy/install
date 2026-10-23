@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
+HOME_PACKAGES=$REPO_ROOT/home
+
+if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+  cat <<'EOF'
+Usage: omarchy/install
+
+Link my configuration into an Omarchy desktop. Omarchy keeps its packages,
+shell, Node (mise) and services; my files replace Omarchy's copies of the same
+files. Omarchy's defaults stay available in /usr/share/omarchy. Safe to rerun.
+EOF
+  exit 0
+fi
+[[ $# -eq 0 ]] || { printf 'error: unexpected arguments\n' >&2; exit 2; }
+[[ $EUID -ne 0 ]] || { printf 'error: run as your normal user, not root\n' >&2; exit 1; }
+[[ -d /usr/share/omarchy ]] || { printf 'error: Omarchy not found\n' >&2; exit 1; }
+
+command -v stow >/dev/null || omarchy pkg add stow
+
+# Whole directories: replace Omarchy's seeded copy so none of its files load
+# alongside mine.
+owned_dirs=(nvim lazygit)
+# Single files merged into directories Omarchy also uses (~/.config/hypr keeps
+# its machine-local monitors.lua; ~/.agents/skills keeps Omarchy's skills).
+merged=(stow starship omarchy agents scripts)
+
+for dir in "${owned_dirs[@]}"; do
+  target=$HOME/.config/$dir
+  [[ -L $target ]] || rm -rf -- "$target"
+done
+for package in "${merged[@]}"; do
+  while IFS= read -r -d '' source; do
+    target=$HOME/${source#"$HOME_PACKAGES/$package/"}
+    [[ -L $target ]] || rm -f -- "$target"
+  done < <(find "$HOME_PACKAGES/$package" -type f -print0)
+done
+
+mkdir -p "$HOME/.config" "$HOME/.local/bin"
+stow --dir "$HOME_PACKAGES" --target "$HOME" --restow "${owned_dirs[@]}"
+stow --dir "$HOME_PACKAGES" --target "$HOME" --no-folding --restow "${merged[@]}"
+
+# Workflow defaults; name and email come from the Omarchy installer.
+git config --global core.editor nvim
+git config --global core.excludesFile "$HOME_PACKAGES/git/.config/git/ignore"
+git config --global pull.ff only
+git config --global init.defaultBranch main
+git config --global push.autoSetupRemote true
+
+systemctl --user daemon-reload
+if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+  hyprctl reload >/dev/null
+fi
+echo "✅ Configuration linked"
