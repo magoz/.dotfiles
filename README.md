@@ -159,14 +159,14 @@ See [assessment setup, safety restrictions and remaining live checks](home/openc
 
 ## Omarchy
 
-On an Omarchy desktop, link my configuration without changing Omarchy's packages, shell, Node or services:
+On an Omarchy desktop, link my configuration and switch to my Zsh setup without changing Omarchy's system packages, Node (mise) or services:
 
 ```sh
 git clone https://github.com/magoz/.dotfiles.git ~/.dotfiles
 ~/.dotfiles/omarchy/install
 ```
 
-It links `nvim`, `lazygit`, `starship`, `ghostty`, `herdr`, `agents`, `scripts` and the `omarchy` package (Ghostty additions in `linux.conf`, Hyprland overrides, Omarchy shell settings, and a Ghostty fix for systemd 262: the user unit drop-in switches `Type=notify-reload` to `Type=notify`; remove it once fixed upstream), replacing Omarchy's copies of those files, and sets Git workflow defaults. Omarchy's own defaults remain in `/usr/share/omarchy`. `~/.config/hypr/monitors.lua` is machine-specific and stays local. Omarchy updates can rewrite linked files, so check `git diff` after `omarchy update`.
+It installs Zsh with its plugins and Bun/pnpm via mise, makes Zsh the login shell, links `zsh`, `nvim`, `lazygit`, `starship`, `ghostty`, `herdr`, `agents`, `scripts` and the `omarchy` package (Ghostty additions in `linux.conf`, Hyprland overrides, Omarchy shell settings, and a Ghostty fix for systemd 262: the user unit drop-in switches `Type=notify-reload` to `Type=notify`; remove it once fixed upstream), replacing Omarchy's copies of those files, and sets Git workflow defaults. Omarchy's own defaults remain in `/usr/share/omarchy`. `~/.config/hypr/monitors.lua` is machine-specific and stays local. Omarchy updates can rewrite linked files, so check `git diff` after `omarchy update`.
 
 ## Box agent host
 

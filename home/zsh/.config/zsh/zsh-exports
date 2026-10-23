@@ -58,6 +58,11 @@ if (( $+commands[fnm] )); then
   eval "$(fnm env --use-on-cd --version-file-strategy=recursive --shell zsh)"
 fi
 
+# Omarchy manages language tools (Node, Bun, pnpm, OpenCode) with mise.
+if (( $+commands[mise] )); then
+  eval "$(mise activate zsh)"
+fi
+
 export CLICOLOR=1
 export EDITOR="nvim"
 # Check for Pi updates manually with `pi update`.
