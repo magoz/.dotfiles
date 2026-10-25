@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""Import a Raycast snippets export into Vicinae.
+
+Usage: raycast-snippets-import <raycast-export.json>
+
+The export comes from Raycast's "Export Snippets" command on the Mac: a JSON list of
+{"name", "text", "keyword"?}. Snippets are added to ~/.local/share/vicinae/snippets/snippets.json;
+ones whose name or keyword already exists there are skipped, so rerunning is safe. Vicinae's
+service is stopped while the file is written, since it keeps its own copy in memory.
+
+Keywords expand instantly as you type them, as in Raycast. Raycast placeholders Vicinae lacks are
+translated where possible ({time}, {datetime}, {day}) and reported otherwise.
+"""
+
+import json
+import re
+import subprocess
+import sys
+import time
+import uuid
+from pathlib import Path
+
+DB = Path.home() / ".local/share/vicinae/snippets/snippets.json"
+KEYWORD = re.compile(r"[!-~]{1,32}")  # printable ASCII, no spaces, at most 32 (Vicinae's rule)
+TRANSLATED = {
+    "{time}": '{date format="HH:mm"}',
+    "{datetime}": '{date format="yyyy-MM-dd HH:mm"}',
+    "{day}": '{date format="dddd"}',
+}
+SUPPORTED = {"uuid", "clipboard", "date", "cursor", "shell", "argument"}
+
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    raycast = json.loads(Path(sys.argv[1]).read_text())
+    if not isinstance(raycast, list):
+        sys.exit("error: expected a JSON list (Raycast's Export Snippets output)")
+
+    existing = json.loads(DB.read_text()) if DB.exists() else []
+    names = {s["name"] for s in existing}
+    keywords = {s["expansion"]["keyword"] for s in existing if s.get("expansion")}
+    now = int(time.time())
+    added = []
+
+    for item in raycast:
+        name, text, keyword = item["name"], item["text"], item.get("keyword") or None
+        if name in names or (keyword and keyword in keywords):
+            print(f"skip (exists): {name}")
+            continue
+        for old, new in TRANSLATED.items():
+            text = text.replace(old, new)
+        for placeholder in set(re.findall(r"\{([a-z-]+)", text)) - SUPPORTED:
+            print(f"warn: {name}: Vicinae has no {{{placeholder}}}; left as is")
+        if keyword and not KEYWORD.fullmatch(keyword):
+            print(f"warn: {name}: keyword {keyword!r} not allowed in Vicinae; imported without it")
+            keyword = None
+        snippet = {"id": str(uuid.uuid4()), "name": name, "data": {"text": text}, "createdAt": now}
+        if keyword:
+            snippet["expansion"] = {"keyword": keyword, "apps": [], "word": False}
+            keywords.add(keyword)
+        names.add(name)
+        added.append(snippet)
+
+    if not added:
+        print("nothing to import")
+        return
+    subprocess.run(["systemctl", "--user", "stop", "vicinae.service"], check=True)
+    try:
+        DB.parent.mkdir(parents=True, exist_ok=True)
+        DB.write_text(json.dumps(existing + added, indent=2, ensure_ascii=False) + "\n")
+    finally:
+        subprocess.run(["systemctl", "--user", "start", "vicinae.service"], check=True)
+    print(f"imported {len(added)} snippets")
+
+
+if __name__ == "__main__":
+    main()
