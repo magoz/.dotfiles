@@ -81,6 +81,18 @@ if grep -qs '0000043E:00009A70' /sys/class/hidraw/*/device/uevent; then
   fi
 fi
 
+# Hex: local voice dictation (Linux beta), from its signed installer; the speech
+# model runs on the device. 2.3.1 still needs the input group to see shortcuts;
+# releases after it use Hyprland's shortcut portal and `hex dictation` commands.
+omarchy pkg add openblas tinyxxd gtk-layer-shell
+if [[ ! -x $HOME/.local/bin/hex ]]; then
+  hex_tmp=$(mktemp -d)
+  curl --proto '=https' --tlsv1.2 -fsSL https://anoma.ly/hex/files/install-linux.sh -o "$hex_tmp/install-linux.sh"
+  sh "$hex_tmp/install-linux.sh"
+  rm -rf "$hex_tmp"
+fi
+"$HOME/.local/bin/hex" model status | grep -q '^installed' || "$HOME/.local/bin/hex" model install
+
 # Dependencies resolve from the linked source paths inside this repository.
 mise exec -- bun install --frozen-lockfile --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 
