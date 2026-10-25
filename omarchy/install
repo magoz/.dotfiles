@@ -93,6 +93,10 @@ if [[ ! -x $HOME/.local/bin/hex ]]; then
 fi
 "$HOME/.local/bin/hex" model status | grep -q '^installed' || "$HOME/.local/bin/hex" model install
 
+# Leader menu (wlr-which-key, like Leader Key on macOS) and Vicinae (Raycast-style launcher).
+omarchy pkg aur add wlr-which-key vicinae-bin
+systemctl --user enable --now vicinae.service
+
 # Dependencies resolve from the linked source paths inside this repository.
 mise exec -- bun install --frozen-lockfile --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 
