@@ -27,3 +27,16 @@
 -- o.bind("SUPER + SHIFT + S", nil, "omarchy-capture-screenshot")
 -- o.bind("SUPER + H", nil, "voxtype record toggle")
 -- o.bind("SUPER + PERIOD", nil, "omarchy-shell shell toggle omarchy.emojis")
+
+-- Brightness keys also drive LG UltraFine displays (USB HID, no DDC/CI); see brightness-display.
+for _, key in ipairs({
+  { "XF86MonBrightnessUp", "Brightness up", "+5%" },
+  { "XF86MonBrightnessDown", "Brightness down", "5%-" },
+  { "SHIFT + XF86MonBrightnessUp", "Brightness maximum", "100%" },
+  { "SHIFT + XF86MonBrightnessDown", "Brightness minimum", "1%" },
+  { "ALT + XF86MonBrightnessUp", "Brightness up precise", "+1%" },
+  { "ALT + XF86MonBrightnessDown", "Brightness down precise", "1%-" },
+}) do
+  hl.unbind(key[1])
+  o.bind(key[1], key[2], "brightness-display " .. key[3], { locked = true, repeating = true })
+end

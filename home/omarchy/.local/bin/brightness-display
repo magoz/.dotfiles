@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Brightness keys for the focused display. LG UltraFine panels have no DDC/CI and
+# take brightness over USB HID, so they go through lgbright with Omarchy's OSD;
+# every other display uses omarchy-brightness-display unchanged.
+set -euo pipefail
+
+is_lg_ultrafine() {
+  local monitor
+  command -v lgbright >/dev/null || return 1
+  monitor=$(omarchy-hyprland-monitor-focused 2>/dev/null) || return 1
+  hyprctl monitors -j | jq -e --arg m "$monitor" \
+    'any(.[]; .name == $m and (.description | test("LG UltraFine")))' >/dev/null
+}
+
+is_lg_ultrafine || exec omarchy-brightness-display "$@"
+
+case ${1:-} in
+"") exec lgbright ;;
++*%) step="+${1:1:-1}" ;; # +5% -> +5
+*%-) step="-${1%\%-}" ;;  # 5%- -> -5
+*%) step="${1%\%}" ;;     # 100% -> 100
+*) exec omarchy-brightness-display "$@" ;;
+esac
+
+# Drop overlapping key-repeat events, like omarchy-brightness-display.
+exec {lock_fd}>"${XDG_RUNTIME_DIR:-/tmp}/brightness-display.lock"
+flock -n "$lock_fd" || exit 0
+
+omarchy-osd -i brightness -p "$(lgbright "$step")"
