@@ -4,3 +4,8 @@ o.window("^google-chrome$", { workspace = "1" })        -- Chrome web apps (chro
 o.window("^com\\.mitchellh\\.ghostty$", { workspace = "2" })
 o.window("^org\\.telegram\\.desktop$", { workspace = "8" })
 o.window("^[sS]potify$", { workspace = "9" })
+
+-- Clicking a Telegram notification switches to Telegram. Omarchy turns focus_on_activate off for it
+-- because Telegram requests attention (Qt window alert) on every message; instead that is switched off
+-- in Telegram: Settings > Notifications > "Draw attention to the window".
+o.window("^org\\.telegram\\.desktop$", { focus_on_activate = true })
