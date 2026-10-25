@@ -1,5 +1,6 @@
 # Leader menu (Leader Key on macOS, home/leaderkey/.config/leaderkey/config.json).
-# Opened with the binding in hypr/bindings.lua; Escape closes it.
+# Opened with the binding in hypr/bindings.lua; Escape closes it. Apps focus an existing
+# window (omarchy-launch-or-focus, matching the window class) and only launch if none is open.
 font: JetBrainsMono Nerd Font 13
 background: "#1a1b26e6"
 color: "#c0caf5"
@@ -15,19 +16,19 @@ inhibit_compositor_keyboard_shortcuts: true
 menu:
   - key: c
     desc: Chrome
-    cmd: google-chrome-stable
+    cmd: omarchy-launch-or-focus '^google-chrome$' 'uwsm-app -- google-chrome-stable'
   - key: d
     desc: Todoist
-    cmd: omarchy-launch-webapp https://app.todoist.com
+    cmd: omarchy-launch-or-focus-webapp Todoist https://app.todoist.com
   - key: s
     desc: Spotify
-    cmd: spotify
+    cmd: omarchy-launch-or-focus '^spotify$' 'uwsm-app -- spotify'
   - key: g
     desc: Ghostty
-    cmd: ghostty
+    cmd: omarchy-launch-or-focus '^com.mitchellh.ghostty$' 'uwsm-app -- ghostty'
   - key: t
     desc: Telegram
-    cmd: Telegram
+    cmd: omarchy-launch-or-focus '^org.telegram.desktop$' 'uwsm-app -- Telegram'
   - key: f
     desc: Folders
     submenu:
