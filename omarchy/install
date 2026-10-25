@@ -59,6 +59,28 @@ mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/.local/share"
 stow --dir "$HOME_PACKAGES" --target "$HOME" --restow "${folded[@]}"
 stow --dir "$HOME_PACKAGES" --target "$HOME" --no-folding --restow "${merged[@]}"
 
+# LG UltraFine brightness (USB HID, no DDC/CI) for the brightness keys: lgbright from
+# zhengnanli's tiled-display gist, pinned to the tested revision and checksum, plus a
+# udev rule letting the logged-in user reach the display controls. Only with an LG attached.
+if grep -qs '0000043E:00009A70' /sys/class/hidraw/*/device/uevent; then
+  lgbright_url=https://gist.githubusercontent.com/zhengnanli/5ed6fb74d784efba55e5f7b64a47400a/raw/1b2993febc8a811f0f7331260808ede4db29569d/lgbright
+  lgbright_sha=125fea67dd08ecca139a63f3c2b95a4d8c232bbcab2211d1c5576c9114db15aa
+  if [[ $(sha256sum "$HOME/.local/bin/lgbright" 2>/dev/null) != "$lgbright_sha "* ]]; then
+    tmp=$(mktemp)
+    curl -fsSL "$lgbright_url" -o "$tmp"
+    [[ $(sha256sum "$tmp") == "$lgbright_sha "* ]] || { rm -f "$tmp"; printf 'error: lgbright checksum mismatch\n' >&2; exit 1; }
+    install -m755 "$tmp" "$HOME/.local/bin/lgbright"
+    rm -f "$tmp"
+  fi
+  rule='KERNEL=="hidraw*", ATTRS{idVendor}=="043e", ATTRS{idProduct}=="9a70", TAG+="uaccess"'
+  if ! grep -qsxF "$rule" /etc/udev/rules.d/70-lg-ultrafine.rules; then
+    printf '# LG UltraFine display controls: let the logged-in user set brightness\n%s\n' "$rule" |
+      sudo tee /etc/udev/rules.d/70-lg-ultrafine.rules >/dev/null
+    sudo udevadm control --reload
+    sudo udevadm trigger --subsystem-match=hidraw
+  fi
+fi
+
 # Dependencies resolve from the linked source paths inside this repository.
 mise exec -- bun install --frozen-lockfile --cwd "$HOME_PACKAGES/scripts/.local/share/worktree"
 

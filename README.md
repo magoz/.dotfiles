@@ -166,7 +166,7 @@ git clone https://github.com/magoz/.dotfiles.git ~/.dotfiles
 ~/.dotfiles/omarchy/install
 ```
 
-It installs Zsh with its plugins, Bun/pnpm via mise and Google Chrome (set as the default browser), makes Zsh the login shell, links `zsh`, `nvim`, `lazygit`, `starship`, `ghostty`, `herdr`, `agents`, `scripts` and the `omarchy` package (Ghostty additions in `linux.conf`, Hyprland overrides, Omarchy shell settings, and a Ghostty fix for systemd 262: the user unit drop-in switches `Type=notify-reload` to `Type=notify`; remove it once fixed upstream), replacing Omarchy's copies of those files, and sets Git workflow defaults. Omarchy's own defaults remain in `/usr/share/omarchy`. `~/.config/hypr/monitors.lua` is machine-specific and stays local. Omarchy updates can rewrite linked files, so check `git diff` after `omarchy update`.
+It installs Zsh with its plugins, Bun/pnpm via mise and Google Chrome (set as the default browser), makes Zsh the login shell, links `zsh`, `nvim`, `lazygit`, `starship`, `ghostty`, `herdr`, `agents`, `scripts` and the `omarchy` package (Ghostty additions in `linux.conf`, Hyprland overrides, Omarchy shell settings, and a Ghostty fix for systemd 262: the user unit drop-in switches `Type=notify-reload` to `Type=notify`; remove it once fixed upstream), replacing Omarchy's copies of those files, sets Git workflow defaults, and, when an LG UltraFine is attached, installs `lgbright` (pinned and checksummed) plus a udev rule so the brightness keys reach it. Omarchy's own defaults remain in `/usr/share/omarchy`. `~/.config/hypr/monitors.lua` is machine-specific and stays local. Omarchy updates can rewrite linked files, so check `git diff` after `omarchy update`.
 
 ## Box agent host
 
