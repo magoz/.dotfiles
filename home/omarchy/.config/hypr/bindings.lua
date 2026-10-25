@@ -53,3 +53,6 @@ for _, key in ipairs({
 }) do
   o.bind(key[1], key[2], "brightness-display " .. key[3], { locked = true, repeating = true })
 end
+
+-- Leader menu (wlr-which-key), like Leader Key on macOS; config in ~/.config/wlr-which-key/config.yaml.
+o.bind("SUPER + SHIFT + K", "Leader menu", "wlr-which-key")
