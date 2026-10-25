@@ -40,3 +40,16 @@ for _, key in ipairs({
   hl.unbind(key[1])
   o.bind(key[1], key[2], "brightness-display " .. key[3], { locked = true, repeating = true })
 end
+
+-- macOS-style F14 (down) / F15 (up), as on my ZMK keyboard's controls layer (github.com/magoz/sweep).
+-- Bound by keycode: xkb maps F14/F15 to XF86Launch5/6 (evdev KEY_F14=184, KEY_F15=185, +8).
+for _, key in ipairs({
+  { "code:193", "Brightness up", "+5%" },
+  { "code:192", "Brightness down", "5%-" },
+  { "SHIFT + code:193", "Brightness maximum", "100%" },
+  { "SHIFT + code:192", "Brightness minimum", "1%" },
+  { "ALT + code:193", "Brightness up precise", "+1%" },
+  { "ALT + code:192", "Brightness down precise", "1%-" },
+}) do
+  o.bind(key[1], key[2], "brightness-display " .. key[3], { locked = true, repeating = true })
+end
