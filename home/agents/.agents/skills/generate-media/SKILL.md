@@ -1,6 +1,6 @@
 ---
 name: generate-media
-description: Generate images, videos, music, and speech using AI models (GPT Image, Nano Banana, Seedream, Wan, Seedance, Kling, Veo, Gemini Omni, Suno, ElevenLabs, Gemini TTS, etc.). Use when user asks to create, generate, edit, upscale, or produce any visual or audio media.
+description: Generate images, videos, music, and speech, and transcribe audio, using AI models (GPT Image, Nano Banana, Seedream, FLUX, Wan, Seedance, Kling, MiniMax, Veo, Gemini Omni, OmniHuman, Suno, ElevenLabs, Gemini TTS, Nemotron, etc.). Use when user asks to create, generate, edit, upscale, transcribe, or produce any visual or audio media.
 metadata:
   opencode/slash: "true"
 ---
@@ -13,9 +13,9 @@ Powered by kie.ai — a unified API for frequently updated image, video, music, 
 
 This skill adds curated model picks and prices on top of kie's official `kie-models` agent skill, whose API guidance (catalog, schema, upload and polling rules) is merged into Steps 2–6.
 
-**Catalog last audited:** 2026-10-07 against the English entries in `https://docs.kie.ai/sitemap.xml`. Every model ID below was copied from its OpenAPI schema on that date.
+**Catalog last audited:** 2026-11-06 against the catalog API (`GET /api/v1/models`), the kie changelog and the English entries in `https://docs.kie.ai/sitemap.xml`.
 
-**Quality rankings last checked:** 2026-10-07 against LMArena (image), Artificial Analysis (video, speech, music) and recent community discussion. Rankings shift monthly; if this date is more than ~6 weeks old, treat the recommendations as a starting point and check the catalog for newer models.
+**Quality rankings last checked:** 2026-11-06 against LMArena (image), Artificial Analysis (video, speech, music, transcription) and recent community discussion. Rankings shift monthly; if this date is more than ~6 weeks old, treat the recommendations as a starting point and check the catalog for newer models.
 
 ## Prerequisites
 
@@ -46,11 +46,14 @@ Choose based on what the user wants. When in doubt, use the **recommended defaul
 |----------|-------|----|
 | **Best all-round: photorealism, text, layouts, up to 4K** | GPT Image 2.5 Sunburst | `gpt-image-2-5-sunburst-text-to-image` |
 | Same quality family, faster | GPT Image 2.5 Flare | `gpt-image-2-5-flare-text-to-image` |
+| ~50% faster, transparent backgrounds, animated GIFs | GPT Image 2.6 Sunburst / Flare | `gpt-image-2-6/sunburst-text-to-image`, `gpt-image-2-6/flare-text-to-image` |
+| Cheap GPT-quality batches (1K only, flat price) | GPT Image 2.6 Economy | `gpt-image-2-6/economy-text-to-image` |
 | **Multi-reference composition, identity, restoration, 4K** | Nano Banana 2.1 | `nano-banana-2-1` |
 | Photorealism and identity alternative | Nano Banana Pro | `nano-banana-pro` |
 | Typography/layout alternative | Grok Imagine Image 2.0 | `grok-imagine-image-2-0/text-to-image` |
 | **Product photos, e-commerce** | Seedream 5.0 Pro | `seedream/5-pro-text-to-image` |
 | Fast, cheap drafts | Seedream 5.0 Flash | `seedream/5-flash-text-to-image` |
+| Cheap 2K/4K drafts | FLUX 3 Klein | `flux-3/klein-text-to-image` |
 | Cheapest drafts and thumbnails | Z-Image | `z-image` |
 | Dense text layouts, Chinese/multilingual | Qwen3 Pro | `qwen3/pro-text-to-image` |
 | **Logos, posters, signage, packaging** | Ideogram 3.0 | `ideogram/v3-text-to-image` |
@@ -59,8 +62,10 @@ Choose based on what the user wants. When in doubt, use the **recommended defaul
 
 **How to pick:**
 
-- **Default** → GPT Image 2.5 Sunburst: #1 on LMArena text-to-image and image-edit (2026-10-06). Some users report grain/noise in skies and skin; if that shows up, try Nano Banana 2.1 or Flare
+- **Default** → GPT Image 2.5 Sunburst: still #1 on LMArena text-to-image and image-edit (2026-11-05). Some users report grain/noise in skies and skin; if that shows up, try Nano Banana 2.1 or Flare
 - **Sunburst vs Flare** → same price on kie; Sunburst is tuned for precision, Flare for speed
+- **GPT Image 2.6** (2026-11-04) → debuted #2 (Sunburst) and #4 (Flare) on LMArena, behind 2.5. Choose it for speed, `background: transparent` (1K only) or animated GIFs (`output_format: gif` + `frame_count`), not for quality. Kie bills it by token, and it uses more tokens per image than 2.5, so it usually costs more. Its IDs use a slash (`gpt-image-2-6/…`), unlike 2.5
+- **FLUX 3 Klein** → very cheap and good at multi-reference edits, but reviews call its anatomy weak and its output soft (AA #22 text-to-image). Use it only for drafts or volume
 - **Many reference images / keep a person's identity** → Nano Banana 2.1 (up to 10 refs on kie); GPT Image 2.5 I2I accepts up to 16
 - **Product photography** → Seedream 5.0 Pro (strong product identity, stricter content moderation than older Seedream)
 - **Design** (logos, posters, packaging) → Ideogram 3.0; GPT Image 2.5 is also strong at text. Ideogram 4 and Recraft V4 (vector) are not on kie
@@ -73,7 +78,9 @@ Choose based on what the user wants. When in doubt, use the **recommended defaul
 |----------|-------|----|
 | **Instruction-following edits, compositing, recolor (≤16 refs)** | GPT Image 2.5 Sunburst I2I | `gpt-image-2-5-sunburst-image-to-image` |
 | Same, faster | GPT Image 2.5 Flare I2I | `gpt-image-2-5-flare-image-to-image` |
+| Multi-round edits that must stay consistent, transparent cut-outs | GPT Image 2.6 Sunburst I2I (`input_urls`, ≤16) | `gpt-image-2-6/sunburst-image-to-image` |
 | Multi-image composition, photo restoration | Nano Banana 2.1 (`image_input`) | `nano-banana-2-1` |
+| Cheap multi-reference edits (≤10 refs, up to 4K) | FLUX 3 Klein Edit | `flux-3/klein-edit-image` |
 | Reference-based edit (1–5 images) | Grok Imagine Image 2.0 | `grok-imagine-image-2-0/image-edit` |
 | Masked segment edit: get segments first, then edit them | Grok Imagine Image 2.0 | `grok-imagine-image-2-0/segment-map` → `grok-imagine-image-2-0/segment-edit` |
 | Product-preserving edits | Seedream 5.0 Pro I2I | `seedream/5-pro-image-to-image` |
@@ -100,31 +107,42 @@ Choose based on what the user wants. When in doubt, use the **recommended defaul
 | **Best overall quality, text-to-video, up to 30s, native audio** | Wan 3.0 | `wan/3-0-video` |
 | Wan 3.0, faster tier | Wan 3.0 Prime | `wan/3-0-video-prime` |
 | **Multi-shot, ads, many references (≤30 images, 10 clips, 10 audio), 4–30s** | Seedance 2.5 | `bytedance/seedance-2-5` |
-| **Image-to-video** | MiniMax H3 I2V | `minimax-h3/image-to-video` |
+| **Image-to-video** | Seedance 2.5 | `bytedance/seedance-2-5` |
+| Image-to-video, cheaper | MiniMax H3 I2V | `minimax-h3/image-to-video` |
+| **Value: near-top text-to-video for the price** | MiniMax H3 T2V | `minimax-h3/text-to-video` |
 | Mixed references with always-on stereo audio | MiniMax H3 R2V | `minimax-h3/reference-to-video` |
+| 3–30s in one take, omni references (≤10 images, 5 videos, 7 subjects, 3 voices), native audio and lip-sync | Kling 4.0 | `kling-4.0/reference-to-video` (works as T2V without refs) |
+| Pin first, last and up to 8 middle frames | Kling 4.0 Keyframe | `kling-4.0/keyframe-to-video` |
+| Kling 4.0 at 720p, 3–20s, cheaper and faster | Kling 4.0 Flash | `kling-4.0/flash-reference-to-video`, `kling-4.0/flash-keyframe-to-video` |
 | Google's top model: characters, voices, up to 4K, 4–10s | Gemini Omni Flash 1.1 | `google/gemini-omni-flash-1-1` |
-| Motion/physics, multi-shot (≤6 shots, ≤15s) | Kling 3.0 | `kling-3.0/video` |
 | Kling with elements, first/last frame, refs | Kling 3.0 Omni | `kling-3.0-omni/text-to-video`, `kling-3.0-omni/image-to-video`, `kling-3.0-omni/reference-to-video` |
 | **Value: fast 720p/1080p clips** | Kling V3 Turbo | `kling/v3-turbo-text-to-video`, `kling/v3-turbo-image-to-video` |
 | Lip-synced dialogue, sound-designed cinematic shots | Veo 3.1 | `veo-3-1` with `input.model`: `veo3_fast` (default), `veo3`, `veo3_lite` |
 | Budget fast clips, first/last frame | Seedance 2 Mini / Fast | `bytedance/seedance-2-mini`, `bytedance/seedance-2-fast` |
 | First+last frame transitions | PixVerse V6 Transition | `pixverse-v6/transition` |
 | Named subject/background refs | PixVerse V6 Reference | `pixverse-v6/reference-to-video` |
+| Storyboard prompts (≤5,000 chars), 1–15s 1080p with dialogue, cheap | PixVerse V6 Max | `pixverse-v6-max/text-to-video`, `pixverse-v6-max/image-to-video` |
+| Character scenes with synced dialogue, ≤15 refs, up to 4K | Vidu Q4 (preview) | `vidu-q4/image-to-video`, `vidu-q4/reference-to-video` |
 | Up to 9 visual references, wide language coverage | HappyHorse 1.1 Reference | `happyhorse-1-1/reference-to-video` |
-| Quick T2V/I2V with up to 7 refs | Grok Imagine Video 1.5 Preview | `grok-imagine-video-1-5-preview` |
+| Quick, cheap T2V/I2V with ≤7 refs; first/last/mid keyframes, seamless loops | Grok Imagine Video 1.5 Preview | `grok-imagine-video-1-5-preview` |
 | **Talking heads and presentations** | Kling AI Avatar | `kling/ai-avatar-pro` |
-| Audio-driven portrait animation, longer takes | OmniHuman 1.5 | `omnihuman-1-5` |
+| **Full-body performance from one photo + audio, multi-person, ≤300s** | OmniHuman 2.0 | `omnihuman-2-0` |
 | Talking head from image + audio | Infinitalk | `infinitalk/from-audio` |
 
 **How to pick:**
 
-- **Default** → Wan 3.0: #1 on Artificial Analysis text-to-video (2026-10-07). Users report slow generation and occasional face drift; switch to Seedance 2.5 if those matter
-- **Ads, product shots, on-screen text, multi-shot stories** → Seedance 2.5 (#3 text-to-video, often called the best all-rounder). It's the most expensive option per second — see the cost snapshot
-- **Animate a still** → MiniMax H3 I2V (#2 AA image-to-video; H3 Max, the #1, is not on kie), then Seedance 2 or Gemini Omni Flash 1.1
+- **Default** → Wan 3.0: still #1 on Artificial Analysis text-to-video and video editing (2026-11-06). Users report slow generation and occasional face drift; switch to Seedance 2.5 if those matter
+- **Ads, product shots, on-screen text, multi-shot stories** → Seedance 2.5 (#5 text-to-video, often called the best all-rounder). It's the most expensive option per second — see the cost snapshot
+- **Seedance 2.5 draft-then-upgrade** → send `input.draft: true` (480p only; the draft ID stays valid for 7 days), review it, then upgrade with `bytedance/seedance-2-5-draft` + `draft_task_id`. This avoids paying 1080p rates for takes you'd throw away
+- **Animate a still** → Seedance 2.5 (#1 AA image-to-video since AA's late-October rebuild). For lower cost, use MiniMax H3 I2V (#4) or Seedance 2 (#3)
+- **Budget text-to-video** → MiniMax H3 T2V ranks #3, just behind Wan 3.0, at half Wan's 720p price
+- **Kling 4.0** (2026-10-22) → no AA ranking yet. Reviewers praise its motion and single 30s takes, and say it doesn't beat Wan 3.0 or Seedance 2.5 on physics or dialogue. Users report inconsistent characters across shots and long runs that fail and still bill. Native audio is always on
+- **Vidu Q4 / PixVerse V6 Max** → cheap and feature-rich but unproven (Vidu Q4 is #17 AA image-to-video; V6 Max isn't ranked yet). Vidu sometimes drops the audio track
 - **Recurring characters or custom voices** → Gemini Omni Flash 1.1 with free Omni helper endpoints: `POST /api/v1/omni/character/create` returns a `character_id`; `POST /api/v1/omni/audio/create` returns an `audioId`. Fetch `https://docs.kie.ai/market/gemini-omni-character` and `https://docs.kie.ai/market/gemini-omni-audio`
-- **Dialogue with tight lip-sync** → Veo 3.1 is still the safest pick, though it ranks only ~#18 overall now; Kling 3.0 Omni is the runner-up
-- **Audio defaults differ:** Seedance 2.5 and Wan 3.0 generate audio by default; Kling 3.0 Omni does not (`audio` defaults to false)
-- **Outranked, still available:** Runway Gen-4 (`runway`), Hailuo 2.3, Wan 2.6/2.7, Kling 2.x, Seedance 1.x/2.0. Kling 4.0 is expected in October 2026; check the sitemap for it
+- **Dialogue with tight lip-sync** → Veo 3.1 is still the safest pick, though it ranks low overall now; Kling 4.0 (lip-sync in 10+ languages) and Kling 3.0 Omni are alternatives
+- **Avatars** → OmniHuman 2.0 adds full-body gestures, multi-person scenes and prompt direction, and costs about half as much as OmniHuman 1.5. Kling AI Avatar is fine for simple talking heads
+- **Audio defaults differ:** Seedance 2.5 and Wan 3.0 generate audio by default; Kling 3.0 Omni does not (`audio` defaults to false); Kling 4.0 always does
+- **Outranked, still available:** Kling 3.0 (`kling-3.0/video`), OmniHuman 1.5, Runway Gen-4 (`runway`), Hailuo 2.3, Wan 2.6/2.7, Kling 2.x, Seedance 1.x/2.0
 
 #### Video Editing — "I want to modify an existing video"
 
@@ -133,17 +151,17 @@ Choose based on what the user wants. When in doubt, use the **recommended defaul
 | **Restyle or edit footage from instructions** (docs explicitly support video-editing tasks) | Seedance 2.5 | `bytedance/seedance-2-5` |
 | Top-ranked editor, but kie docs only describe `reference_video_urls`, not a dedicated edit mode | Wan 3.0 | `wan/3-0-video` |
 | Video-to-video with element references | Kling 3.0 Omni Transformation | `kling-3.0-omni/transformation` |
+| Recreate a reference video's camera moves and pacing with new characters or products | Kling 4.0 (`video_urls`) | `kling-4.0/reference-to-video` |
 | Text-instruction edit on 3–60s clips | HappyHorse Video Edit | `happyhorse/video-edit` |
 | Text-instruction edit | Wan 2.7 Edit | `wan/2-7-videoedit` |
-| Localized edits, VFX | Runway Aleph | `runway/gen4-aleph` |
 | Transfer motion from a reference video to a character | Kling 3.0 Motion Control | `kling-3.0/motion-control` (requires `callBackUrl`) |
 | Replace speech in a video with new audio | Volcengine Lip Sync | `volcengine/video-to-video-lip-sync` |
-| Extend a clip | PixVerse / Grok / Veo Extend | `pixverse-v6/extend`, `grok-imagine/extend`, Veo extend docs |
+| Extend a clip | PixVerse / Grok / Veo / Runway Extend | `pixverse-v6/extend`, `grok-imagine/extend`, `veo/extend`, `runway/extend-ai-video` |
 | Upscale video | Topaz Video | `topaz/video-upscale` |
 
-Video-editing ranking (Artificial Analysis, 2026-10-07): Wan 3.0 #1, Seedance 2.5 #2, Gemini Omni Flash 1.1 #3, Runway Aleph #8. Check each model's docs for the exact edit-mode inputs.
+Video-editing ranking (Artificial Analysis, 2026-11-06): Wan 3.0 #1, Seedance 2.5 #2, Gemini Omni Flash 1.1 #4. Runway Aleph was discontinued on kie. Check each model's docs for the exact edit-mode inputs.
 
-#### Music & Audio — "I want to create music or audio"
+#### Music & Audio — "I want to create music or audio, or transcribe speech"
 
 | Use case | Model | ID |
 |----------|-------|----|
@@ -151,29 +169,34 @@ Video-editing ranking (Artificial Analysis, 2026-10-07): Wan 3.0 #1, Seedance 2.
 | Bolder, more experimental output | Suno V6 Wild | `input.model: "V6_WILD"` |
 | Cheaper/faster | Suno V6 Mini | `input.model: "V6_MINI"` |
 | Replace a section of a song | Suno Replace Section | `ai-music-api/replace-section` |
-| Sound effects and loops | Suno Sounds | see `https://docs.kie.ai/suno-api/generate-sounds` |
+| Sound effects and loops | Suno Sounds | `ai-music-api/sounds` |
+| Split a song into stems (vocals, instruments) | Suno Separate Vocals | `ai-music-api/separate-vocals` |
 | **Voiceovers, narration, podcasts** | Gemini 3.8 Flash TTS | `google/gemini-3-8-flash-tts` |
 | High-volume, low-latency, cheapest speech | Gemini 3.8 Flash-Lite TTS | `google/gemini-3-8-flash-lite-tts` |
 | Specific ElevenLabs voices, fine voice controls | ElevenLabs Turbo 2.5 / Multilingual v2 | `elevenlabs/text-to-speech-turbo-2-5`, `elevenlabs/text-to-speech-multilingual-v2` |
 | **Multi-character dialogue** | ElevenLabs Dialogue v3 | `elevenlabs/text-to-dialogue-v3` |
 | Dialogue alternative with per-turn style | Gemini 3.8 Flash TTS (`speakers[]` + `dialogue_turns[]`) | `google/gemini-3-8-flash-tts` |
-| Remove background noise, isolate vocals | ElevenLabs Isolation | `elevenlabs/audio-isolation` |
+| **Transcribe speech** (40 languages, word timestamps, speaker labels, translation to/from English, ≤60 min) | Nemotron 3.5 Transcribe | `nvidia/nemotron-3-5-transcribe` |
 
 **How to pick:**
 
 - **Music** → Suno V6 is #1 on Artificial Analysis music arenas. Many users find it muffled or over-compressed; offer V6 Wild if the result sounds flat. V4–V5_5 are discontinued even though the docs still list them
-- **Speech** → Gemini 3.8 Flash TTS is the highest-ranked TTS on kie (AA voice Elo ~1276 vs ~1097 for ElevenLabs Turbo 2.5 / Multilingual v2). There is an open bug report about an intermittent low hum; regenerate if you hear it. ElevenLabs v4, the overall TTS leader, is not on kie yet
+- **Speech** → Gemini 3.8 Flash TTS is the highest-ranked TTS on kie (AA voice Elo ~1282, #6 overall, vs ~1097 for ElevenLabs Turbo 2.5 / Multilingual v2). There is an open bug report about an intermittent low hum; regenerate if you hear it. ElevenLabs v4, the overall TTS leader, is still not on kie
 - **Dialogue** → ElevenLabs Dialogue v3 is the most reliable; Gemini 3.8 Flash TTS is competitive but has reported voice-swapping in multi-speaker mode
+- **Transcription** → Nemotron 3.5 Transcribe is the only speech-to-text model on kie. AA measures 2.8% word error rate (tied for best open-weights model, outside the overall top 5), and it costs almost nothing. It accepts an audio URL, or a video with an audio track
 - **Outranked, still available:** Gemini 3.1 Flash TTS, Gemini 2.5 Pro TTS (`https://docs.kie.ai/google/gemini-2-5-pro-tts`)
-- **Advanced Suno operations** → cover, extend, add vocals/instrumental, lyrics, timestamped lyrics, persona, mashup, boost style, WAV, stem separation, MIDI, music video, and voice workflows
+- **Discontinued:** ElevenLabs Audio Isolation. kie has no noise-removal model now; use Suno Separate Vocals only for music stems
+- **Advanced Suno operations** → cover (including songs you already generated, by passing their `task_id` + `audio_id`), extend, add vocals/instrumental, lyrics, timestamped lyrics, persona, mashup, boost style, WAV (including separated stems), stem separation, MIDI, music video, and voice workflows
 
-#### Cost Snapshot (kie.ai, 2026-10-07)
+#### Cost Snapshot (kie.ai, 2026-11-06)
 
-USD as listed on kie.ai/pricing (1 credit ≈ $0.005). Prices change — for anything costly, look up the current price first (see below).
+USD as listed in the catalog's `pricingDesc` (1 credit ≈ $0.005). Prices change — for anything costly, look up the current price first (see below).
 
 | Model | Price |
 |-------|-------|
 | GPT Image 2.5 Sunburst/Flare (and GPT Image 2) | $0.03 1K · $0.05 2K · $0.08 4K per image |
+| GPT Image 2.6 Sunburst/Flare · Economy | per token ($27/1M image-output tokens; no per-image price — check `creditsConsumed` in `recordInfo` after the first run) · $0.025 flat per 1K image |
+| FLUX 3 Klein (T2I and edit) | $0.008 1K · $0.0125 2K · $0.0325 4K per image |
 | Nano Banana 2.1 | $0.02 1K · $0.03 2K · $0.045 4K per image |
 | Nano Banana Pro | $0.09 1–2K · $0.12 4K per image |
 | Seedream 5 Pro / 5 Flash | $0.035 1K · $0.07 2K / $0.016 per image |
@@ -182,19 +205,24 @@ USD as listed on kie.ai/pricing (1 credit ≈ $0.005). Prices change — for any
 | Wan 3.0 / Wan 3.0 Prime | $0.04 480p · ~$0.08 720p · $0.16 1080p / $0.25 1080p per second |
 | **Seedance 2.5** | $0.14 480p · $0.315 720p · **$0.79 1080p per second** (cheaper with reference video input) |
 | Seedance 2 · 2 Fast · 2 Mini (720p) | $0.205 · $0.124 · $0.041 per second |
-| MiniMax H3 | $0.04 768p · $0.065 2K per second |
-| Kling 3.0 / 3.0 Omni (1080p) · Kling V3 Turbo (1080p) | $0.09 silent, $0.135 with audio · $0.1125 per second |
+| MiniMax H3 (T2V, I2V, R2V) | $0.04 768p · $0.065 2K per second |
+| Kling 4.0 (no video input) · Kling 4.0 Flash | $0.1425 720p · $0.2125 1080p · $0.085 720p per second (cheaper rate when reference video is supplied, but input seconds are billed) |
+| Kling 3.0 (1080p) · 3.0 Omni (1080p) · Kling V3 Turbo (1080p) | $0.101 silent, $0.151 with audio · $0.101 / $0.126 · $0.126 per second |
+| Vidu Q4 | $0.076 720p · $0.096 1080p · $0.312 4K per second |
+| PixVerse V6 Max (with audio) | $0.06 720p · $0.112 1080p per second |
 | Gemini Omni Flash 1.1 | $0.315 4s · $0.525 8s · $0.63 10s per video (1080p); 4K $0.735–1.05 |
 | Veo 3.1 Lite / Fast / Quality (1080p) | $0.175 / $0.325 / $1.275 per video |
-| PixVerse V6 · HappyHorse 1.1 · Grok Video 1.5 (720p) | $0.036–0.092 · $0.11–0.145 · $0.0225 per second |
-| Kling Avatar Pro · OmniHuman 1.5 · Infinitalk 720p · Volcengine lip sync | $0.08 · $0.135 · $0.06 · $0.04 per second |
+| PixVerse V6 · HappyHorse 1.1 · Grok Video 1.5 (720p) | $0.036–0.092 · $0.1125–0.145 · $0.0225 per second |
+| OmniHuman 2.0 · Kling Avatar Pro (720p/1080p) · OmniHuman 1.5 · Infinitalk 720p · Volcengine lip sync | $0.07 · $0.0505/$0.101 · $0.135 · $0.06 · $0.04 per second |
 | Suno generate (any V6 variant) | $0.06 per request |
-| Gemini 3.8 Flash TTS / Flash-Lite TTS | $6.30 / $4.20 per 1M output audio tokens |
+| Gemini 3.8 Flash TTS / Flash-Lite TTS | $6.30 / $4.20 per 1M output audio tokens (promo price until 2026-12-31) |
 | ElevenLabs Turbo 2.5 · Multilingual v2 · Dialogue v3 | $0.03 · $0.06 · $0.07 per 1,000 characters |
+| Nemotron 3.5 Transcribe | $0.0015 per minute of audio |
 
 **Cost notes:**
 
-- Seedance 2.5 at 1080p costs ~$8 for a 10s clip — 5× Wan 3.0. Confirm with the user before long or 1080p Seedance 2.5 runs, or start at 480p/720p
+- Seedance 2.5 at 1080p costs ~$8 for a 10s clip — 5× Wan 3.0. Confirm with the user before long or 1080p Seedance 2.5 runs, or start with a 480p draft (Step 1)
+- A 30s Kling 4.0 1080p clip costs ~$6.40, and failed long runs have been reported to still bill. Confirm before long Kling 4.0 runs
 - Wan 3.0 also bills reference-video seconds; Seedance and MiniMax H3 bill reference video at their own per-second rates
 
 **Live price lookup** (no auth; `pageSize` max 100; `modelDescription` is a substring search):
@@ -263,16 +291,18 @@ Use `https://docs.kie.ai` when the schema is `null`, or when you want the prose 
 | `nano-banana-2-1` | `https://docs.kie.ai/market/google/nanobanana-2-1` |
 | `nano-banana-pro` | `https://docs.kie.ai/market/google/pro-image-to-image` |
 | `kling-3.0-omni/text-to-video` | `https://docs.kie.ai/market/kling/v3-omni-text-to-video` |
+| `kling-4.0/reference-to-video` | `https://docs.kie.ai/market/kling/v4-reference-to-video` |
+| `gpt-image-2-6/sunburst-text-to-image` | `https://docs.kie.ai/market/gpt/gpt-image-2-6-sunburst-text-to-image` |
 | `grok-imagine-video-1-5-preview` | `https://docs.kie.ai/market/grok-imagine/1-5-preview` |
 | `veo-3-1` | `https://docs.kie.ai/veo3-api/generate-veo-3-video` |
 | `ai-music-api/generate` (Suno) | `https://docs.kie.ai/suno-api/generate-music` |
-| `runway`, `runway/gen4-aleph` | `https://docs.kie.ai/runway-api/generate-ai-video`, `.../generate-aleph-video` |
+| `runway` | `https://docs.kie.ai/runway-api/generate-ai-video` |
 
-If neither the catalog nor the docs list a model, tell the user; don't guess IDs or parameters. If docs.kie.ai can't be fetched, use the `agent-browser` skill.
+If neither the catalog nor the docs list a model, tell the user; don't guess IDs or parameters. A docs page can outlive its model: pages marked `deprecated: true` / **Discontinued** (e.g. Runway Aleph, ElevenLabs Audio Isolation) return `code` 404 from the catalog. If docs.kie.ai can't be fetched, use the `agent-browser` skill.
 
 #### Discovering new models
 
-Fetch the catalog unfiltered and compare it with this skill's tables. For release dates, `https://kie.ai/changelog` loads its entries from `POST https://api.kie.ai/api/v1/common/pageApiAnnouncementList`; the HTML page itself looks empty.
+Fetch the catalog unfiltered and compare it with this skill's tables. For release dates, `https://kie.ai/changelog` loads its entries from `POST https://api.kie.ai/api/v1/common/pageApiAnnouncementList`; the HTML page itself looks empty. That endpoint needs no auth: send body `{"pageNum":1,"pageSize":40}` and read `data.records[]` (`title`, `createTime` in ms, `content` as HTML, including retirements).
 
 ### Step 3: Generate Content
 
