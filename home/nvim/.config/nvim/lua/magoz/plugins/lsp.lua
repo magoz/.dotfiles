@@ -219,8 +219,8 @@ return {
 				})
 			end
 
-			-- TypeScript 7 projects that install @effect/tsgo use its tsgo build (Effect diagnostics
-			-- included) instead of vtsls: TypeScript 7 ships no tsserver for vtsls to load.
+			-- TypeScript 7 projects that install @effect/tsgo use its tsrs (or tsgo) build, Effect
+			-- diagnostics included, instead of vtsls: TypeScript 7 ships no tsserver for vtsls to load.
 			local function effect_tsgo_root(bufnr)
 				local root = vim.fs.root(bufnr, {
 					{ "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb", "bun.lock" },
@@ -231,15 +231,26 @@ return {
 				end
 			end
 
+			-- @effect/tsgo 0.67.4+ serves the Effect-patched tsrs (the compiler those projects gate with)
+			-- through `effect-tsgo tsrs --lsp --stdio`; earlier wrappers pass a non-blocking stdin and
+			-- the server exits on its first read, so they keep the Go server.
+			local function effect_language_server_cmd(root)
+				local effect_tsgo = vim.fs.joinpath(root, "node_modules/.bin/effect-tsgo")
+				local ok, manifest = pcall(function()
+					return vim.json.decode(table.concat(vim.fn.readfile(vim.fs.joinpath(root, "node_modules/@effect/tsgo/package.json")), "\n"))
+				end)
+				if ok and vim.version.ge(vim.version.parse(manifest.version), { 0, 67, 4 }) then
+					return { effect_tsgo, "tsrs", "--lsp", "--stdio" }
+				end
+				return { vim.trim(vim.fn.system({ effect_tsgo, "get-exe-path" })), "--lsp", "--stdio" }
+			end
+
 			vim.lsp.config("effect_tsgo", {
 				capabilities = capabilities,
 				settings = vim.lsp.config.tsc.settings,
 				filetypes = vim.lsp.config.tsc.filetypes,
 				cmd = function(dispatchers, config)
-					local exe = vim.trim(
-						vim.fn.system({ vim.fs.joinpath(config.root_dir, "node_modules/.bin/effect-tsgo"), "get-exe-path" })
-					)
-					return vim.lsp.rpc.start({ exe, "--lsp", "--stdio" }, dispatchers, { cwd = config.root_dir })
+					return vim.lsp.rpc.start(effect_language_server_cmd(config.root_dir), dispatchers, { cwd = config.root_dir })
 				end,
 				root_dir = function(bufnr, on_dir)
 					local root = effect_tsgo_root(bufnr)
