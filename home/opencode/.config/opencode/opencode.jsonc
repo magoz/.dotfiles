@@ -133,6 +133,14 @@
         "oauth": false,
         "headers": { "Authorization": "Bearer {env:OO_MCP_TOKEN}" }
       },
+      // OpenCode Browse (github.com/anomalyco/browse): drives a paired browser's real tabs. The relay starts on
+      // demand; a browser on another machine connects to it over the tailnet (`browse set hostname 0.0.0.0`,
+      // then `browse pair`). The binary install updates itself and swaps this server between tool calls.
+      "browse": {
+        "type": "local",
+        "command": ["browse", "mcp"],
+        "environment": { "OPENCODE_BROWSER_RUNTIME": "auto-update" }
+      },
       // Blender Lab MCP (projects.blender.org/lab/blender_mcp): `blender-mcp` from `uv tool install`,
       // add-on `mcp` enabled in Blender 5.1+. `*_for_cli` tools spawn their own `blender --background`;
       // live tools need a Blender serving 127.0.0.1:9876 (`blender --online-mode -b --command blender_mcp`).
