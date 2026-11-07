@@ -132,7 +132,12 @@
         "url": "https://o-o.co/mcp",
         "oauth": false,
         "headers": { "Authorization": "Bearer {env:OO_MCP_TOKEN}" }
-      }
+      },
+      // Blender Lab MCP (projects.blender.org/lab/blender_mcp): `blender-mcp` from `uv tool install`,
+      // add-on `mcp` enabled in Blender 5.1+. `*_for_cli` tools spawn their own `blender --background`;
+      // live tools need a Blender serving 127.0.0.1:9876 (`blender --online-mode -b --command blender_mcp`).
+      // Runs model-written Python unguarded.
+      "blender": { "type": "local", "command": ["blender-mcp"] }
     }
   },
   // YOLO like Pi: allow everything; later rules (last match wins) still deny secrets.
