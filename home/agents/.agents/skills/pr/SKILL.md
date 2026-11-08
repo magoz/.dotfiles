@@ -292,6 +292,9 @@ verify GitHub identity and the source push URL directly instead.
    hardcode a different base.
 5. Establish intent from the conversation, linked issue, supplied plan/specification, commits, and
    repository guidance. If intent remains ambiguous, ask before reviewing or writing a PR summary.
+   Restate a broad instruction ("do everything", "go all in") as an exact scope per repository
+   before changing anything; a change a repository's own rules do not justify there (a check its
+   findings ledger has no finding for) is proposed, not made.
 
 ## Always-on preparation (load skill `pr`: full-ship, `draft`, and `ready` modes)
 
@@ -304,6 +307,9 @@ a merge-readiness claim.
    Migration consolidation to the full PR diff, not just the latest commit or uncommitted changes.
 2. Load and follow `conform` in mutation mode for intended implementation, test, and behavior-bearing
    tooling changes. Keep fixes surgical and preserve unrelated work.
+   Before building a new check, rule, script or abstraction (even one an issue or plan prescribes),
+   search for one the repository or its toolchain already ships, including rules shipped off by
+   default; the repository's anti-patterns decide between them.
 3. Run the narrowest safe checks needed to catch preparation mistakes, including `git diff --check`
    and applicable changed-file formatting or focused static checks. Broader readiness commands may
    remain `not run` in draft mode but must be reported honestly.
@@ -612,7 +618,9 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
 6. When independent review is missing or invalidated, apply Two independent review opinions. For a
    full review, both Opus and Astra cover all three axes against that same immutable target:
    - **Standards**, with the `conform` skill supplied and explicit `--check`/no-edit instructions;
-   - **Spec**, with the exact requirements and no inherited implementation rationale;
+   - **Spec**, with the exact requirements and no inherited implementation rationale, including
+     whether an existing tool or rule (built-in, type-aware, or off by default) already does what
+     the change builds;
    - **Knowledge**, with `learn` and `tidy` supplied in `--check`/no-edit mode.
      Request a separate verdict for each axis from each reviewer. Reuse unaffected opinions; a focused
      low-risk delta does not automatically require another full review. Do not launch a separate

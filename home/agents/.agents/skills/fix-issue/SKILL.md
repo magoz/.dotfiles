@@ -39,13 +39,18 @@ The argument is the issue URL (or `owner/repo#N`, or `#N` for the current reposi
    "<number> in:body"` in this repository), stop: outcome `already-handled`.
 2. **Understand and locate.** Read the repository guidance, then find the code involved. Reproduce
    the problem when it can be reproduced locally (a failing test is the best reproduction).
-3. **Decide**, and say which in one sentence before acting:
+3. **Check the prescribed fix.** An issue, ledger entry or plan that says *how* to fix (a new lint
+   rule, a script, a wrapper) is a hypothesis, not the spec. Before building it, check it against the
+   repository's anti-patterns and the tools it already has: built-in and type-aware rules (including
+   ones shipped off by default, such as a language service's rule list), existing checks and
+   helpers. When an existing tool does the job, use it and say so in the pull request.
+4. **Decide**, and say which in one sentence before acting:
    - `fixable`: the cause is in this repository and the fix is clear enough to make and test.
    - `needs-human`: the fix needs something you cannot or must not do here: a change in another
      repository or a dependency (for example an SDK this repository consumes), access, data or a
      product decision. Collect exactly what is needed.
    - `not-actionable`: not a defect, a duplicate, already fixed, or too vague to act on.
-4. **If fixable**:
+5. **If fixable**:
    1. Make the smallest change that fixes the cause, not the symptom, with a test that fails before
       and passes after.
    2. Run the repository's verification commands (the ones its guidance names; never a deploy).
@@ -53,7 +58,7 @@ The argument is the issue URL (or `owner/repo#N`, or `#N` for the current reposi
       the cause, the fix, how it was verified, and `Closes <owner>/<repo>#<number>` (the full
       reference links and closes an issue in another repository; `Closes #<number>` only when the
       issue is in this one). Stop at the draft.
-5. **If you are blocked** on one answer that would let you finish (a choice between two valid
+6. **If you are blocked** on one answer that would let you finish (a choice between two valid
    fixes, a missing fact), ask the operator one question with your question tool, then continue
    with the answer. Asking keeps a launch slot busy: only ask when the answer unblocks you; for
    everything else, finish with `needs-human`.
