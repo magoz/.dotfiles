@@ -7,11 +7,11 @@
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
-    "@opencode/schema": "2.0.22",
-    "effect": "4.0.0-rc.112"
+    "@opencode/schema": "2.2.6",
+    "effect": "4.1.0"
   },
   "devDependencies": {
-    "@opencode/plugin": "2.0.22",
+    "@opencode/plugin": "2.2.6",
     "@standard-schema/spec": "1.1.0",
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0"

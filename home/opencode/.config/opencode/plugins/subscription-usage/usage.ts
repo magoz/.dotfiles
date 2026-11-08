@@ -175,6 +175,7 @@ interface ModelLike extends Endpoint {
 export type Credential =
   | { readonly type: "oauth"; readonly access: string; readonly metadata?: Readonly<Record<string, unknown>> | undefined }
   | { readonly type: "key"; readonly key: string; readonly metadata?: Readonly<Record<string, unknown>> | undefined }
+  | { readonly type: "external"; readonly metadata?: Readonly<Record<string, unknown>> | undefined }
 export interface Connection {
   readonly type: string
   readonly id?: string | undefined
