@@ -1,12 +1,17 @@
 # Gateway fixtures
 
-`opencode-2.0.22.json`: real OpenCode 2.0.22 Anthropic Messages bodies (no plugin)
+`opencode-2.2.6.json`: real OpenCode 2.2.6 Anthropic Messages bodies (no plugin)
 for `subs-claude`: `title`, `primary` (native signed thinking, plan reminder), first
-`compaction`, `postCompaction` (checkpoint with `[Assistant reasoning]:`, "no longer in
-Plan mode" reminder) and `compactionReduced` (oversized-compaction fallback: bare
-transcript). `shared` holds the common `system`/`tools`; `headers` lists request header
-names only. `upstream-drift.test.mjs` asserts every anchor is still present and the shaped
-bodies carry no fingerprints.
+`compaction`, `postCompaction` (checkpoint, "no longer in Plan mode" reminder) and
+`compactionReduced` (oversized-compaction fallback: bare transcript). `shared` holds the
+common `system`/`tools`; `omitted` lists shared keys a request was sent without (2.2.6's
+`compactionReduced` has no `tools`); `headers` lists request header names only.
+`upstream-drift.test.mjs` asserts every anchor is still present and the shaped bodies
+carry no fingerprints.
+
+Since 2.2.6, checkpoints no longer transcribe signed thinking as `[Assistant reasoning]: `,
+so the captures lack that anchor. The binary still embeds it; the drift test checks it
+there, and `shaping.test.mjs` covers stripping it.
 
 ## Refresh (after an OpenCode upgrade)
 

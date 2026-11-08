@@ -54,14 +54,20 @@ assert len(captures) == 10, captures
 load = lambda n: json.load(open(f"/tmp/ocgw-captures/{captures[n - 1]}"))
 title, primary, compaction, post, reduced = (load(n) for n in (1, 5, 6, 7, 10))
 shared = {"system": primary["body"]["system"], "tools": primary["body"]["tools"]}
-for request in (compaction, post, reduced):
-    assert {key: request["body"][key] for key in shared} == shared, request["kind"]
+# A request may drop a shared key (2.2.6's reduced-transcript retry sends no tools); record it.
+omitted = {}
+for name, request in (("compaction", compaction), ("postCompaction", post), ("compactionReduced", reduced)):
+    present = [key for key in shared if key in request["body"]]
+    assert all(request["body"][key] == shared[key] for key in present), name
+    if len(present) < len(shared):
+        omitted[name] = [key for key in shared if key not in present]
 strip = lambda body: {k: v for k, v in body.items() if k not in shared}
 fixture = {
     "_comment": f"OpenCode {version} Anthropic Messages request bodies captured from an isolated fake server (subs-claude provider, no plugin). primary/compaction/postCompaction/compactionReduced share `shared.system` and `shared.tools`. See README.md.",
     "opencode": version,
     "headers": sorted(primary["headers"]),
     "shared": shared,
+    "omitted": omitted,
     "title": title["body"],
     "primary": strip(primary["body"]),
     "compaction": strip(compaction["body"]),

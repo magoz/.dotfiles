@@ -3,16 +3,22 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { OPENCODE_ANCHORS, shapeGatewayPayload } from "./shaping.ts";
 
-// Pinned OpenCode 2.0.22 captures (see fixtures/README.md for refreshing).
+// Pinned OpenCode 2.2.6 captures (see fixtures/README.md for refreshing).
 const fixture = JSON.parse(
-  readFileSync(new URL("./fixtures/opencode-2.0.22.json", import.meta.url), "utf8"),
+  readFileSync(new URL("./fixtures/opencode-2.2.6.json", import.meta.url), "utf8"),
 );
+// A capture plus the shared keys it was sent with (`omitted` lists the ones it lacked).
+const withShared = (name) => {
+  const body = { ...fixture.shared, ...fixture[name] };
+  for (const key of fixture.omitted?.[name] ?? []) delete body[key];
+  return body;
+};
 const requests = {
   title: { kind: "title", body: fixture.title },
-  primary: { kind: "primary", body: { ...fixture.shared, ...fixture.primary } },
-  compaction: { kind: "compaction", body: { ...fixture.shared, ...fixture.compaction } },
-  postCompaction: { kind: "primary", body: { ...fixture.shared, ...fixture.postCompaction } },
-  compactionReduced: { kind: "compaction", body: { ...fixture.shared, ...fixture.compactionReduced } },
+  primary: { kind: "primary", body: withShared("primary") },
+  compaction: { kind: "compaction", body: withShared("compaction") },
+  postCompaction: { kind: "primary", body: withShared("postCompaction") },
+  compactionReduced: { kind: "compaction", body: withShared("compactionReduced") },
 };
 const FINGERPRINTS = [
   /You are an AI agent running in OpenCode/,
@@ -42,14 +48,17 @@ function textOf(body) {
   });
 }
 
+// Since 2.2.6 checkpoints no longer transcribe signed thinking, so the captures carry no
+// `[Assistant reasoning]: `. The binary still embeds it (checked below) and shaping.test.mjs
+// covers stripping it, so the gateway keeps that rule.
+const REASONING_MARKER = "[Assistant reasoning]: ";
+
 test("fixture still contains every anchor the shaping depends on", () => {
   const all = Object.values(requests).map(({ body }) => JSON.stringify(body)).join("\n");
-  for (const anchor of OPENCODE_ANCHORS) {
+  for (const anchor of OPENCODE_ANCHORS.filter((anchor) => anchor !== REASONING_MARKER)) {
     assert.ok(all.includes(JSON.stringify(anchor).slice(1, -1)), `missing anchor: ${anchor}`);
   }
-  // Transcribed reasoning is present before shaping, so the checks below bite.
-  assert.match(JSON.stringify(requests.postCompaction.body), /\[Assistant reasoning\]: /);
-  assert.match(JSON.stringify(requests.compactionReduced.body), /\[Assistant reasoning\]: /);
+  assert.ok(OPENCODE_ANCHORS.includes(REASONING_MARKER));
   assert.ok(fixture.headers.some((name) => name.startsWith("x-opencode-")));
 });
 
