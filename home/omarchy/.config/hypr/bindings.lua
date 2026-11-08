@@ -54,5 +54,13 @@ for _, key in ipairs({
   o.bind(key[1], key[2], "brightness-display " .. key[3], { locked = true, repeating = true })
 end
 
+-- Hex dictation, Alt+Space as on macOS. Hyprland's shortcuts portal hands Hex every shortcut unbound;
+-- this bind delivers press and release, so Hex's own modes (hold, double-tap to lock) apply.
+-- Hex 3.3.0 names the shortcut after its key (dictation-ALT-space); later builds use plain "dictation".
+-- Both are bound so a self-update doesn't silently drop the key; the one Hex lacks does nothing.
+for _, name in ipairs({ "anomaly.hex:dictation", "anomaly.hex:dictation-ALT-space" }) do
+  o.bind("ALT + SPACE", "Dictation (Hex)", hl.dsp.global(name))
+end
+
 -- Leader menu (wlr-which-key), like Leader Key on macOS; config in ~/.config/wlr-which-key/config.yaml.
 o.bind("SUPER + SHIFT + K", "Leader menu", "wlr-which-key")

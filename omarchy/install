@@ -82,9 +82,11 @@ if grep -qs '0000043E:00009A70' /sys/class/hidraw/*/device/uevent; then
 fi
 
 # Hex: local voice dictation (Linux beta), from its signed installer; the speech
-# model runs on the device. 2.3.1 still needs the input group to see shortcuts;
-# releases after it use Hyprland's shortcut portal and `hex dictation` commands.
-omarchy pkg add openblas tinyxxd gtk-layer-shell
+# model runs on the device. Its shortcut comes through Hyprland's shortcuts portal
+# (Alt+Space, bound in hypr/bindings.lua), so it needs no input group.
+# Dependencies as Hex lists them for Arch (docs/linux.md); tinyxxd provides xxd.
+omarchy pkg add alsa-lib curl jq libxkbcommon libxkbcommon-x11 libx11 libxcb openblas openssl \
+  util-linux vulkan-icd-loader wl-clipboard wtype tinyxxd
 if [[ ! -x $HOME/.local/bin/hex ]]; then
   hex_tmp=$(mktemp -d)
   curl --proto '=https' --tlsv1.2 -fsSL https://anoma.ly/hex/files/install-linux.sh -o "$hex_tmp/install-linux.sh"
