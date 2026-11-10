@@ -63,16 +63,28 @@ test('child agents deny by default, never delegate, and only writers may edit or
     if (!writers.has(role)) assert.ok(!permissions.some((p) => ['shell', 'edit', 'create_worktree'].includes(p.action) && p.effect === 'allow'), role);
   }
 });
-test('read-only children may read local repos and managed references; writers may not', async () => {
+test('read-only children and general may reach local repos and managed references; other writers may not', async () => {
   const { evaluate } = await import('./permissions.mjs');
   const references = ['~/dev/repos/yolk-sdk/packages/agent/src/*', '~/.local/share/opencode/repos/github.com/vercel/next.js@v16.2.6/*'];
   for (const role of ['aha', 'explore', 'general', 'pr-reviewer', 'tech-lead', 'ui-design', 'web-researcher']) {
     const permissions = JSON.parse((await read(`agents/${role}.md`)).match(/^permissions: (.+)$/m)[1]);
-    const expected = ['explore', 'pr-reviewer', 'tech-lead', 'ui-design'].includes(role) ? 'allow' : 'deny';
+    const expected = ['explore', 'general', 'pr-reviewer', 'tech-lead', 'ui-design'].includes(role) ? 'allow' : 'deny';
     for (const resource of references) {
       assert.equal(evaluate('external_directory', resource, [...config.permissions, ...permissions]), expected, `${role} ${resource}`);
     }
     if (expected === 'allow') assert.equal(evaluate('read', '~/dev/repos/yolk-sdk/.env', [...config.permissions, ...permissions]), 'deny', role);
+  }
+});
+test('only general loads skills, never figma-* leaves, and reaches the shared skills', async () => {
+  const { evaluate } = await import('./permissions.mjs');
+  for (const role of ['aha', 'explore', 'general', 'pr-reviewer', 'tech-lead', 'ui-design', 'web-researcher']) {
+    const rules = [...config.permissions, ...JSON.parse((await read(`agents/${role}.md`)).match(/^permissions: (.+)$/m)[1])];
+    const expected = role === 'general' ? 'allow' : 'deny';
+    assert.equal(evaluate('skill', '10x-upstream', rules), expected, role);
+    assert.equal(evaluate('skill', 'figma-use', rules), 'deny', role);
+    for (const dir of ['~/.agents/skills/pr/SKILL.md', '~/.dotfiles/home/agents/.agents/skills/pr/SKILL.md']) {
+      assert.equal(evaluate('external_directory', dir, rules), expected, `${role} ${dir}`);
+    }
   }
 });
 test('Effect plugins share one dependency set, pinned to the Effect version OpenCode is built on', async () => {

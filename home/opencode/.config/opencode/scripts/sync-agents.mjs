@@ -34,8 +34,11 @@ const TOOLS = {
   contact_supervisor: [], // Pi-only; agent prompts fall back to returning the question.
 };
 // Read-only children may read local repos and OpenCode-managed references (project
-// `references`, e.g. ../yolk-sdk). Writers stay confined: external_directory gates edit too.
+// `references`, e.g. ../yolk-sdk). Writers stay confined (external_directory gates edit too),
+// except `general`, which runs cross-repo work such as 10x ports (OVERRIDES).
 const REFERENCE_DIRS = ['~/dev/repos/**', '~/.local/share/opencode/repos/**'];
+// Shared skills (~/.agents is a symlink into the dotfiles; resolved paths are checked too).
+const SKILL_DIRS = ['~/.agents/skills/**', '~/.dotfiles/home/agents/.agents/skills/**'];
 const isReadOnly = (tools) => tools.includes('read') && !tools.some((tool) => ['edit', 'write', 'bash'].includes(tool));
 // OpenCode-only differences that Pi frontmatter cannot express.
 const OVERRIDES = {
@@ -43,6 +46,15 @@ const OVERRIDES = {
   'web-researcher': { variant: null },
   // Reads ~/aha/SKILL.md and writes its page under /tmp/aha-<slug>/.
   aha: { permissions: [allow('external_directory', '~/aha/**'), allow('external_directory', '/tmp/aha-*')] },
+  // Cross-repo writer: other checkouts and worktrees under ~/dev/repos, and loads skills
+  // (keeping the global figma-* skill deny, which the child rules would otherwise override).
+  general: {
+    permissions: [
+      ...[...REFERENCE_DIRS, ...SKILL_DIRS].map((dir) => allow('external_directory', dir)),
+      allow('skill'),
+      deny('skill', 'figma-*'),
+    ],
+  },
 };
 
 export function parse(text, file) {
