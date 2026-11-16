@@ -124,14 +124,17 @@
         "oauth": false,
         "headers": { "Authorization": "Bearer {env:EAT_MCP_KEY}" }
       },
-      // o-o (../o-o docs/adr/0011): read-only Gmail/Calendar/Drive/knowledge, groups chosen in
-      // o-o Settings → MCP. No OAuth. Token (Settings → MCP → New token) in OO_MCP_TOKEN,
-      // exported from ~/.env by opencode.service (restart after changing it).
+      // o-o (../o-o docs/adr/0011, 0029): Gmail/Calendar/Drive/knowledge groups and offered remote
+      // MCP servers, chosen in o-o Settings → MCP. Protocol 2026-07-28: approval ("asks you first")
+      // tools are listed only to 2026-07-28 clients with form elicitation. No OAuth. Token
+      // (Settings → MCP → New token) in O_O_MCP_TOKEN, exported from ~/.env by opencode.service
+      // (restart after changing it).
       "o-o": {
         "type": "remote",
         "url": "https://o-o.co/mcp",
+        "protocol": "2026-07-28",
         "oauth": false,
-        "headers": { "Authorization": "Bearer {env:OO_MCP_TOKEN}" }
+        "headers": { "Authorization": "Bearer {env:O_O_MCP_TOKEN}" }
       },
       // OpenCode Browse (github.com/anomalyco/browse): drives a paired browser's real tabs. The relay starts on
       // demand; a browser on another machine connects to it over the tailnet (`browse set hostname 0.0.0.0`,
