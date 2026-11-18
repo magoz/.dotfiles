@@ -141,8 +141,15 @@
       // then `browse pair`). The binary install updates itself and swaps this server between tool calls.
       "browse": {
         "type": "local",
-        "command": ["browse", "mcp"],
-        "environment": { "OPENCODE_BROWSER_RUNTIME": "auto-update" }
+        "command": [
+          "/home/magoz/.local/bin/browse",
+          "mcp"
+        ],
+        "environment": {
+          "OPENCODE_BROWSER_RUNTIME": "auto-update"
+        },
+        "cwd": "/home/magoz",
+        "pool": true
       },
       // Blender Lab MCP lives in the studio repo's own opencode.jsonc, not here: OpenCode starts a
       // local MCP server per project directory, so a global entry ran one copy per repo and worktree.
