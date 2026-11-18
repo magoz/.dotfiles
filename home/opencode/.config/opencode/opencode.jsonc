@@ -144,11 +144,8 @@
         "command": ["browse", "mcp"],
         "environment": { "OPENCODE_BROWSER_RUNTIME": "auto-update" }
       },
-      // Blender Lab MCP (projects.blender.org/lab/blender_mcp): `blender-mcp` from `uv tool install`,
-      // add-on `mcp` enabled in Blender 5.1+. `*_for_cli` tools spawn their own `blender --background`;
-      // live tools need a Blender serving 127.0.0.1:9876 (`blender --online-mode -b --command blender_mcp`).
-      // Runs model-written Python unguarded.
-      "blender": { "type": "local", "command": ["blender-mcp"] },
+      // Blender Lab MCP lives in the studio repo's own opencode.jsonc, not here: OpenCode starts a
+      // local MCP server per project directory, so a global entry ran one copy per repo and worktree.
       // Rive editor MCP (rive.app/docs/editor/ai/mcp): served only by the Rive desktop app (macOS/Windows) on
       // 127.0.0.1:9791, no auth. On a Linux host, forward that port from a machine running Rive with a file open.
       "rive": { "type": "remote", "url": "http://127.0.0.1:9791/mcp", "oauth": false }
