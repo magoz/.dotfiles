@@ -55,9 +55,14 @@ in the foreground with a shell timeout; a configuration that needs minutes is to
 1. **Pick the promise.** One sentence the code keeps, where a break harms a user: "an answer is
    posted at most once", "one delivery starts at most one run". Take it from the code, its docs and
    ADRs; ask only what you cannot read. Prefer the strongest promise, not the easiest to model.
-2. **List every writer.** Every function, request, step, timer, worker or human action that reads
-   or writes the state the promise is about, including retries, redeliveries, Stop, deletes,
-   cleanups and the other tab. A writer left out is an interleaving never checked.
+2. **List every writer, per value.** For each row, column, key or external resource the promise
+   reads, search the code for every write to it (every `UPDATE`, `INSERT`, `DELETE`, upsert and
+   external call that changes it), not only the writers of the protocol you started from. Include
+   writers whose main job is elsewhere: a job that also stamps a counter or a status on a row it
+   reads, a cleanup, a migration path, the other tab, the agent's tools beside the owner's actions,
+   retries, redeliveries, Stop and deletes. Record the list in the report. A writer left out is an
+   interleaving never checked; a writer that writes back a value it read earlier is the most common
+   lost update.
 3. **Cut the code into atomic steps.** One TLA+ action per step that is indivisible in the real
    system, never coarser:
    - One SQL statement is one step. A conditional `UPDATE ... WHERE` is a compare-and-set.
@@ -76,6 +81,10 @@ in the foreground with a shell timeout; a configuration that needs minutes is to
    design bugs show at these sizes. Keep each kept configuration to seconds.
 5. **State the properties.** A type invariant first (it catches modelling slips), then the promise
    as an `INVARIANT` ("never bad"). Use a `PROPERTY` with fairness only for "eventually good".
+   Deadlines are promises too: for every wait with a timeout (a pickup, a lease, a step deadline,
+   a poll window), state that the other side always serves it in time, model time in ticks of
+   the code's real constants, and let time pass only when no event that the code handles at once
+   is due. A protocol that is safe but makes a waiter time out under normal operation is a bug.
 6. **Make it able to fail.** Add a constant that removes the guard the promise rests on (the fence,
    the lock, the conditional `WHERE`) and a configuration with it off that must break the
    invariant. If removing a guard breaks nothing, say what that teaches: the guard may be redundant,
@@ -109,8 +118,13 @@ them):
 
 ## Hunt mode
 
-Audit existing code for unknown bugs. Map the area's promises and writers first, then rank by the
-cost of a break and how poorly tests reach it, and model the top few with Model mode. Report
+Audit existing code for unknown bugs. Map the area's promises first, every one the code, its
+comments and docs make, including its timeouts and deadlines, then the writers of each value they
+read (Model mode, step 2). Rank by the cost of a break and how poorly tests reach it, and model
+them with Model mode until each listed promise is modelled or reported as left out with the
+reason. When the area splits into several models, every writer of a value two models share
+appears in both: a bug often sits exactly where one model's protocol writes what another's reads.
+Report
 candidates with a confidence: confirmed by replay against the code, plausible (depends on platform
 behaviour you could not verify), or doubtful. Check documented accepted risks (ADRs, `AGENTS.md`,
 comments) before reporting a behaviour as a bug, and quote them. A comment or README that promises
