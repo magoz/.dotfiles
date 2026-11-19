@@ -635,6 +635,11 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
      only to a temporary directory outside the repository and never commits one. Its findings are
      dispositioned like any reviewer's (step 7); it is not one of the two opinions and does not
      count toward the review status. Skip it for a delta that touches no shared state.
+     When the repository's model check fails on drift (a committed model's covered file changed),
+     the formal reviewer also runs the skill's maintain mode on those models and reports, per
+     model, "no effect", the model update the change needs, or a bug; the parent applies the
+     update or the repository's re-confirmation (for example a `--sync`) before freezing the next
+     target.
 7. The parent verifies and dispositions every finding. Blocker/high findings must be fixed; medium
    findings need an explicit fix-or-defer disposition. Ignore unsupported or optional churn.
 8. If accepted fixes change implementation, tests, or behavior-bearing tooling, repeat this code loop

@@ -96,15 +96,18 @@ in the foreground with a shell timeout; a configuration that needs minutes is to
 8. **Report** (below). Do not weaken a property or the model to get a pass, and do not change
    product code unless asked: a counterexample on the current code is a finding.
 
-Keep a model in the repository only when the repository's guide asks for it (a protocol that will
-keep changing). Then follow its manifest format: the covered files, a configuration that must
-pass and one that must fail, and the repository's check command.
+Start from what the repository already has: when a committed model (a `formal/` folder, or the
+repository's equivalent) covers the code you are looking at, read it first and extend it with the
+writers, steps or timings the change adds, rather than writing a new one. Keep a model in the
+repository only for a subtle protocol whose code is fairly stable, and follow the repository's
+manifest format: the covered files, a configuration that must pass and one that must fail, and the
+repository's check command.
 
 ## Maintain mode
 
 A model that still passes after its code changed is the dangerous case: it looks like proof of
 code that no longer exists. For each model whose covered code changed (the repository's check names
-them):
+them, for example a failing drift check on a pull request), whoever reviews the change runs this:
 
 1. Run the model as it is and record the result.
 2. Read every change to the covered code, and look for code that moved or new writers of the same
