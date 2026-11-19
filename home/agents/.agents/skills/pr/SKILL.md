@@ -625,6 +625,16 @@ A ready run may create the draft if necessary, but it must not mark the PR ready
      Request a separate verdict for each axis from each reviewer. Reuse unaffected opinions; a focused
      low-risk delta does not automatically require another full review. Do not launch a separate
      Knowledge reviewer when these reports already cover the unchanged documentation.
+   - **Formal** (optional, when the `formal-verification` skill is available): in the same round
+     and in parallel, launch one fresh `general` subagent (it needs a shell) as a formal reviewer of
+     the same target. It loads `formal-verification`, triages whether the diff adds or changes
+     concurrent work on shared state (claims, leases, locks, fences, single slots, retries or
+     redelivery, outboxes, cleanups racing writers, writes across stores, concurrent handlers) and
+     answers "no protocol: skip" when it does not; otherwise it models only what the diff adds or
+     changes, time-boxed to 10 minutes, and reports findings as a reviewer does. It writes models
+     only to a temporary directory outside the repository and never commits one. Its findings are
+     dispositioned like any reviewer's (step 7); it is not one of the two opinions and does not
+     count toward the review status. Skip it for a delta that touches no shared state.
 7. The parent verifies and dispositions every finding. Blocker/high findings must be fixed; medium
    findings need an explicit fix-or-defer disposition. Ignore unsupported or optional churn.
 8. If accepted fixes change implementation, tests, or behavior-bearing tooling, repeat this code loop
