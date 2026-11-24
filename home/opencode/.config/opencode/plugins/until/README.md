@@ -63,6 +63,22 @@ What makes it pleasant for agents:
   as backstop). Ticks that pass meanwhile become `missedTicks`; cadence stays anchored.
 - Limits: 32 running watches and 50 finished receipts per session.
 
+## Observers (Vltra)
+
+Other clients learn what an agent waits on from the same RPC (`dotfiles-until`), per location:
+
+- `waits` (no input): every **wait** in the location: `{ id, sessionID, label, kind, startedAt,
+  nextAt, expiresAt? }`. A wait is a watch that will wake an agent: running with `wake: agent`
+  (or `repeat`), or finished with its wake still being delivered. `sessionID` is the session
+  woken (the family root, also for a subagent's watch). `wake: notify` watches and failed
+  wakes are not waits. No condition, cwd or task text.
+- The `changed` event (`rpc.dotfiles-until.changed` on OpenCode's `/api/event`) carries
+  `{ sessionID, waits }`: that session's waits now, so an observer replaces its copy without a
+  round trip.
+
+Vltra loads `waits` for each location it reads (which also loads the location, resuming its
+saved watches) and applies `changed`; a session whose run ended while it waits counts as working.
+
 ## TUI
 
 - A dock above the composer (OpenCode's queued-prompt style) while the family's watches run:

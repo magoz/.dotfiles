@@ -6,7 +6,7 @@ import { ToolInput } from "../domain.ts"
 import { definition } from "../rpc.ts"
 import plugin, { setup, type Host, type SessionLike, type UntilTool } from "../server.ts"
 import type { TelemetryEvent } from "../telemetry.ts"
-import { advance, location, memoryStorage, run, scripted, settle, type Scripted } from "./harness.ts"
+import { advance, location, memoryStorage, run, scripted, settle, START, type Scripted } from "./harness.ts"
 
 const sessions: Record<string, SessionLike> = {
   ses_root: { id: "ses_root", location },
@@ -138,6 +138,37 @@ test("TUI RPC: views never carry the condition; failures are typed UntilError (r
     assert.equal(error._tag, "UntilError")
     assert.equal(error.message, `Watch ${started.id} is not recurring; use action=cancel to stop it`)
     assert.ok(f.emitted.some((e) => e.name === "changed"))
+  })))
+
+test("observers: `waits` lists what will wake an agent, and `changed` carries the session's waits", () =>
+  run(Effect.gen(function* () {
+    const f = yield* fixture()
+    const ci = yield* f.call({ action: "start", condition: "gh run view 1", label: "CI run 1", timeoutSeconds: 600 })
+    yield* f.call({ action: "start", condition: "test -f x", label: "toast only", wake: "notify" })
+    const nightly = yield* f.call({ action: "repeat", instruction: "Sync", quickRef: "sync", label: "sync", intervalSeconds: 60, timeoutSeconds: 3600 })
+    const sub = yield* f.call({ action: "start", condition: "test -f y", label: "from a subagent" }, "ses_grand")
+    yield* settle
+
+    const { waits } = yield* f.rpc.waits()
+    assert.deepEqual(
+      waits.map((w) => [w.id, w.sessionID, w.label, w.kind]).sort(),
+      [
+        [ci.until?.id, "ses_root", "CI run 1", "until"],
+        [nightly.until?.id, "ses_root", "sync", "recurring"],
+        [sub.until?.id, "ses_root", "from a subagent", "until"],
+      ].sort(),
+      "notify watches wake nobody; a subagent's watch wakes the main session",
+    )
+    const wait = waits.find((w) => w.id === ci.until?.id)
+    assert.equal(wait?.startedAt, START)
+    assert.equal(wait?.nextAt, START + 30_000)
+    assert.equal(wait?.expiresAt, START + 600_000)
+    assert.ok(!JSON.stringify(waits).includes("gh run view"), "never the condition")
+
+    yield* f.call({ action: "cancel", id: ci.until?.id })
+    const last = f.emitted.filter((e) => e.name === "changed").at(-1)?.data
+    assert.deepEqual(last, { sessionID: "ses_root", waits: (yield* f.rpc.waits()).waits })
+    assert.ok(!(yield* f.rpc.waits()).waits.some((w) => w.id === ci.until?.id), "a cancelled watch is no wait")
   })))
 
 test("a subagent can arm watches: they belong to the main session, which is woken with who armed them", () =>

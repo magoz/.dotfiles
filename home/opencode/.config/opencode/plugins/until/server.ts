@@ -17,12 +17,14 @@ import {
 } from "./domain.ts"
 import { makeEngine, type UiEvent } from "./engine.ts"
 import { portable } from "../shared/portable.ts"
-import { definition, view } from "./rpc.ts"
+import { definition, view, waitOf, type Wait } from "./rpc.ts"
 import { makeTelemetry, readTelemetry, summarize, summaryText, telemetryOptions, type Telemetry } from "./telemetry.ts"
 
 const MAX_FAMILY_DEPTH = 32
 const message = (error: unknown) =>
   error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String(error.message) : String(error)
+
+const waitsOf = (watches: readonly Watch[]): Wait[] => watches.flatMap((watch) => waitOf(watch) ?? [])
 
 const isDirectory = (dir: string) => {
   try {
@@ -288,6 +290,8 @@ export const setup = (ctx: Host, deps: ServerDeps = {}) =>
         telemetry.enabled
           ? readTelemetry(telemetry.filePath).pipe(Effect.map((lines) => ({ text: summaryText(summarize(lines), telemetry.filePath) })))
           : Effect.succeed({ text: "until telemetry is disabled (OPENCODE_UNTIL_TELEMETRY=0)." }),
+      /** Every wait in this location, once saved watches are loaded (a fresh location resumes them first). */
+      waits: () => ready.pipe(Effect.map(() => ({ waits: waitsOf(engine.all()) }))),
     }
     const registration = yield* ctx.rpc
       .register(definition, {
@@ -297,12 +301,13 @@ export const setup = (ctx: Host, deps: ServerDeps = {}) =>
         complete: (input, call) => api.complete(input).pipe(Effect.mapError((error) => call.error("until.error", error.message))),
         status: (input, call) => api.status(input).pipe(Effect.mapError((error) => call.error("until.error", error.message))),
         stats: () => api.stats(),
+        waits: () => api.waits(),
       })
       .pipe(Effect.orDie)
     yield* Deferred.succeed(rpc, {
       emit: (event) =>
         (event.type === "changed"
-          ? registration.events.emit("changed", { sessionID: event.sessionID })
+          ? registration.events.emit("changed", { sessionID: event.sessionID, waits: waitsOf(engine.list(event.sessionID)) })
           : registration.events.emit("notify", { sessionID: event.sessionID, title: event.title, message: event.message, variant: event.variant })
         ).pipe(Effect.ignore),
     })

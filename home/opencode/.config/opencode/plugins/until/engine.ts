@@ -319,9 +319,11 @@ export const makeEngine = Effect.fn("Until.makeEngine")(function* (deps: EngineD
 
   // ---- queries --------------------------------------------------------------------------
 
+  /** Every watch of this location, all sessions. */
+  const all = (): readonly Watch[] => [...entries.values()].map((entry) => entry.watch)
+
   const list = (sessionID: string): readonly Watch[] =>
-    [...entries.values()]
-      .map((entry) => entry.watch)
+    all()
       .filter((watch) => watch.sessionID === sessionID)
       .sort((a, b) => Number(b.facts.status === "running") - Number(a.facts.status === "running") || b.facts.startedAt - a.facts.startedAt)
 
@@ -499,6 +501,6 @@ export const makeEngine = Effect.fn("Until.makeEngine")(function* (deps: EngineD
     }
   })
 
-  return { start, settleInline, list, get, phase, cancel, complete, handleEvent, resync, restore }
+  return { start, settleInline, all, list, get, phase, cancel, complete, handleEvent, resync, restore }
 })
 
