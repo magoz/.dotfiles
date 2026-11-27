@@ -151,7 +151,7 @@ Whenever a fresh independent review is needed, launch two fresh-context, read-on
 children in parallel:
 
 - **Opus (primary):** `subs-claude/claude-opus-5-5` — use the `pr-reviewer` frontmatter default; an explicit per-launch override may pin this same model
-- **Astra (secondary):** `subs-codex/gpt-6-astra` — explicit per-launch model override
+- **Astra (secondary):** `subs-codex/gpt-6.2-astra` — explicit per-launch model override
 
 The configured review models do not have overlapping provider routes. Never retry the same model
 through another provider. Explicit user provider/model selection determines the initial model;

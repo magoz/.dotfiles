@@ -50,8 +50,8 @@
           }
         },
         {
-          "id": "gpt-6-astra",
-          "name": "GPT-6 Astra (Subs Codex Pool)",
+          "id": "gpt-6.2-astra",
+          "name": "GPT-6.2 Astra (Subs Codex Pool)",
           "reasoning": true,
           "input": ["text", "image"],
           "contextWindow": 272000,
@@ -66,10 +66,10 @@
             "max": "max"
           },
           "cost": {
-            "input": 10,
-            "output": 50,
-            "cacheRead": 1,
-            "cacheWrite": 12.5
+            "input": 8,
+            "output": 40,
+            "cacheRead": 0.4,
+            "cacheWrite": 10
           },
           "compat": {
             "supportsOpenAIGrammarTools": true

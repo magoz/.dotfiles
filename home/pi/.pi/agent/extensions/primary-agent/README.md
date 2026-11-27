@@ -69,7 +69,7 @@ no mandatory phases or delegation quota are imposed.
 | Work | Preferred model |
 | --- | --- |
 | Main coding agent | `subs-claude/claude-opus-5-5` |
-| `pr-reviewer` | `subs-claude/claude-opus-5-5` (default); the PR skill also requests `subs-codex/gpt-6-astra` for a secondary independent opinion |
+| `pr-reviewer` | `subs-claude/claude-opus-5-5` (default); the PR skill also requests `subs-codex/gpt-6.2-astra` for a secondary independent opinion |
 | `tech-lead` | `subs-claude/claude-opus-5-5` (default); automatic fallback to Astra, then public-only Muse; no further fallback |
 | `ui-design` (public or private repo) | `subs-claude/claude-opus-5-5` |
 | `aha` (one Aha page per launch) | `subs-claude/claude-opus-5-5`, thinking medium |

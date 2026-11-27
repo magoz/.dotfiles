@@ -51,7 +51,7 @@ exact route or forbids fallback. After the harness's model/authentication/execut
 parent automatically advances through this chain using a new explicit launch for each attempt:
 
 1. `subs-claude/claude-opus-5-5` (default)
-2. `subs-codex/gpt-6-astra`
+2. `subs-codex/gpt-6.2-astra`
 3. `opencode-go/muse-spark-1.3-contributor` — only if parent verified public repository and handoff
    contains no private material; otherwise skip it
 

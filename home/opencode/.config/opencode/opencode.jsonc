@@ -18,8 +18,8 @@
       "settings": { "baseURL": "https://subs.oox.sh/v1" },
       // Mirrors the built-in openai catalog entries (capabilities, limits, variants).
       "models": {
-        "gpt-6-astra": {
-          "name": "GPT-6 Astra (Subs Codex Pool)",
+        "gpt-6.2-astra": {
+          "name": "GPT-6.2 Astra (Subs Codex Pool)",
           "family": "gpt-astra",
           "capabilities": { "tools": true, "input": ["text", "image", "pdf"], "output": ["text"] },
           "limit": { "context": 400000, "input": 272000, "output": 128000 },
